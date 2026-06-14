@@ -74,22 +74,46 @@ fi
 
 # 2. Pasang Dependensi Composer Baru
 echo -e "\n${KUNING}Langkah 2: Memasang package PHP baru via Composer...${NC}"
-COMPOSER_CMD="composer"
-if ! command -v composer &> /dev/null; then
-    if [ -f "composer.phar" ]; then
-        COMPOSER_CMD="php composer.phar"
+COMPOSER_EXEC=""
+if command -v composer &> /dev/null; then
+    COMPOSER_EXEC="composer"
+elif [ -f "composer.phar" ]; then
+    COMPOSER_EXEC="php -d memory_limit=-1 composer.phar"
+else
+    echo -e "${KUNING}Composer tidak terpasang secara global. Mengunduh secara otomatis...${NC}"
+    if curl -sS https://getcomposer.org/installer | php &>/dev/null; then
+        echo -e "${HIJAU}[SUKSES] composer.phar berhasil diunduh.${NC}"
+        COMPOSER_EXEC="php -d memory_limit=-1 composer.phar"
     else
-        echo -e "${KUNING}Composer tidak terpasang secara global. Mengunduh secara otomatis...${NC}"
-        curl -sS https://getcomposer.org/installer | php
-        COMPOSER_CMD="php composer.phar"
+        echo -e "${MERAH}[ERROR] Gagal mengunduh composer.phar. Silakan pasang Composer secara manual.${NC}"
+        exit 1
     fi
 fi
 
-if php -d memory_limit=-1 $COMPOSER_CMD install --no-dev --optimize-autoloader --ignore-platform-reqs; then
-    echo -e "${HIJAU}[SUKSES] Composer install berhasil.${NC}"
+if [ "$COMPOSER_EXEC" = "composer" ]; then
+    if COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --ignore-platform-reqs; then
+        echo -e "${HIJAU}[SUKSES] Composer install berhasil.${NC}"
+    else
+        echo -e "${KUNING}[WARNING] Composer install gagal. Mencoba dengan --no-scripts...${NC}"
+        if COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts; then
+            echo -e "${HIJAU}[SUKSES] Composer install berhasil dengan --no-scripts.${NC}"
+        else
+            echo -e "${MERAH}[ERROR] Semua upaya composer install gagal!${NC}"
+            exit 1
+        fi
+    fi
 else
-    echo -e "${KUNING}[WARNING] Composer install gagal. Mencoba dengan --no-scripts...${NC}"
-    php -d memory_limit=-1 $COMPOSER_CMD install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts
+    if $COMPOSER_EXEC install --no-dev --optimize-autoloader --ignore-platform-reqs; then
+        echo -e "${HIJAU}[SUKSES] Composer install berhasil.${NC}"
+    else
+        echo -e "${KUNING}[WARNING] Composer install gagal. Mencoba dengan --no-scripts...${NC}"
+        if $COMPOSER_EXEC install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts; then
+            echo -e "${HIJAU}[SUKSES] Composer install berhasil dengan --no-scripts.${NC}"
+        else
+            echo -e "${MERAH}[ERROR] Semua upaya composer install gagal!${NC}"
+            exit 1
+        fi
+    fi
 fi
 
 # 3. Jalankan Migrasi Database Baru & Auto-Repair Admin
