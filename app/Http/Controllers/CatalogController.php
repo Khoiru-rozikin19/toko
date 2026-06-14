@@ -1,0 +1,146 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Order;
+use App\Models\Setting;
+use App\Services\QrisService;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class CatalogController extends Controller
+{
+    /**
+     * Show the product catalog.
+     */
+    public function index()
+    {
+        $products = Product::all();
+        $qris_configured = !empty(Setting::get('qris_static_string'));
+        return view('catalog', compact('products', 'qris_configured'));
+    }
+
+    /**
+     * Create a new order (Beli).
+     */
+    public function buy(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'email_or_whatsapp' => 'required|string|max:255',
+        ]);
+
+        $product = Product::findOrFail($request->product_id);
+
+        if ($product->stock <= 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stok produk ini sedang habis.',
+            ], 422);
+        }
+
+        // Get static QRIS
+        $staticQris = Setting::get('qris_static_string');
+        if (empty($staticQris)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Metode pembayaran QRIS belum dikonfigurasi oleh admin.',
+            ], 500);
+        }
+
+        // Generate a unique code (1 - 99) that does not clash with active pending orders for this product
+        $usedCodes = Order::where('product_id', $product->id)
+            ->where('status', 'pending')
+            ->where('expired_at', '>', Carbon::now())
+            ->pluck('unique_code')
+            ->toArray();
+
+        $availableCodes = array_diff(range(1, 99), $usedCodes);
+
+        if (empty($availableCodes)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terlalu banyak pesanan pending. Silakan coba lagi beberapa saat lagi.',
+            ], 422);
+        }
+
+        // Pick a random code
+        $uniqueCode = $availableCodes[array_rand($availableCodes)];
+        $totalAmount = $product->price + $uniqueCode;
+
+        // Generate dynamic QRIS string
+        $qrisPayload = QrisService::generateDynamicQris($staticQris, $totalAmount);
+
+        // Generate clean Order ID
+        $orderId = 'ORD-' . strtoupper(Str::random(8));
+
+        // Create the order
+        $order = Order::create([
+            'id' => $orderId,
+            'product_id' => $product->id,
+            'email_or_whatsapp' => $request->email_or_whatsapp,
+            'base_amount' => $product->price,
+            'unique_code' => $uniqueCode,
+            'total_amount' => $totalAmount,
+            'status' => 'pending',
+            'qris_payload' => $qrisPayload,
+            'vpn_config' => $product->config_template,
+            'expired_at' => Carbon::now()->addMinutes(15),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'order' => [
+                'id' => $order->id,
+                'product_name' => $product->name,
+                'email_or_whatsapp' => $order->email_or_whatsapp,
+                'total_amount' => $order->total_amount,
+                'qris_payload' => $order->qris_payload,
+                'expired_at' => $order->expired_at->toIso8601String(),
+                'server_time' => Carbon::now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Polling endpoint to check order status.
+     */
+    public function checkStatus($id)
+    {
+        $order = Order::findOrFail($id);
+
+        // Auto expire if pending and past expiration time
+        if ($order->status === 'pending' && $order->expired_at && $order->expired_at->isPast()) {
+            $order->update(['status' => 'expired']);
+        }
+
+        return response()->json([
+            'status' => $order->status,
+            'has_config' => !empty($order->vpn_config) && $order->status === 'success',
+        ]);
+    }
+
+    /**
+     * Download the VPN configuration file.
+     */
+    public function download($id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->status !== 'success') {
+            return abort(403, 'Akses ditolak. Pembayaran belum sukses.');
+        }
+
+        if (empty($order->vpn_config)) {
+            return abort(404, 'File konfigurasi VPN tidak ditemukan.');
+        }
+
+        $filename = 'VPN-' . Str::slug($order->product->name) . '-' . $order->id . '.ovpn';
+
+        return response($order->vpn_config)
+            ->header('Content-Type', 'application/octet-stream')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+}

@@ -1,0 +1,253 @@
+@extends('layouts.app', ['title' => 'Dashboard Seller'])
+
+@section('content')
+<div class="space-y-10">
+    
+    <!-- Welcome Banner -->
+    <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
+        <h2 class="text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">
+            Selamat Datang di Portal Seller, {{ Auth::user()->name ?? 'Admin Utama' }}!
+        </h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Kelola produk Anda, kelola stok akun, dan pantau penghasilan penjualan Anda secara langsung.
+        </p>
+    </div>
+
+    <!-- Top Cards Grid (4 Columns) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Card 1: Saldo Dompet Saya (Deep Blue) -->
+        <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
+            <div>
+                <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo Dompet Saya</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+                <span class="text-xs text-blue-100">Komisi: 0%</span>
+                <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
+                    <span>Tarik Saldo</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 2: Saldo Tertahan (Orange/Yellow) -->
+        <div class="bg-amber-500 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-500/10 min-h-44">
+            <div>
+                <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider block">Saldo Tertahan (Garansi)</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($pendingRevenue, 0, ',', '.') }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+                <span class="text-xs text-amber-100">Menunggu Garansi</span>
+                <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
+                    <span>Rincian</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Card 3: Pendapatan Kotor (White / Green Text) -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">
+            <div>
+                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Pendapatan Kotor</span>
+                <span class="text-2xl font-black mt-2 block tracking-tight text-emerald-600 dark:text-emerald-400">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-4 leading-normal">
+                <span class="flex items-center space-x-1">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Akumulasi pendapatan kotor produk Anda.</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- Card 4: Status Stok Penjualan (White / Multi Text) -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">
+            <div>
+                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Status Stok Penjualan</span>
+                <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+                    <div class="bg-blue-50 dark:bg-blue-950/20 py-2 rounded-xl border border-blue-100/50 dark:border-blue-950/50">
+                        <span class="text-sm font-extrabold text-blue-600 dark:text-blue-400 block">{{ $readyStockCount }}</span>
+                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Ready</span>
+                    </div>
+                    <div class="bg-amber-50 dark:bg-amber-950/20 py-2 rounded-xl border border-amber-100/50 dark:border-amber-950/50">
+                        <span class="text-sm font-extrabold text-amber-600 dark:text-amber-400 block">0</span>
+                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Karantina</span>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-900 py-2 rounded-xl border border-slate-150 dark:border-slate-800/80">
+                        <span class="text-sm font-extrabold text-slate-650 dark:text-slate-400 block">{{ $totalSalesCount }}</span>
+                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Terjual</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Charts Section (2 Columns: 70% and 30%) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Daily Earnings Line Chart -->
+        <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        <span>Tren Pendapatan Harian</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Statistik omset penjualan dalam 7 hari terakhir</p>
+                </div>
+                
+                <span class="text-xs font-semibold px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full">7 Hari Terakhir</span>
+            </div>
+            
+            <div class="relative h-72">
+                <canvas id="earningsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Order Ratios Donut Chart -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+            <div class="border-b border-slate-100 dark:border-slate-800 pb-4 mb-6">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                    <span>Rasio Status Order</span>
+                </h3>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Persentase sukses vs batal/expired</p>
+            </div>
+
+            <div class="relative h-56 flex items-center justify-center">
+                <canvas id="ratioChart" class="max-h-full"></canvas>
+                <!-- Central Total Overlay -->
+                <div class="absolute flex flex-col items-center justify-center">
+                    <span class="text-2xl font-black text-slate-800 dark:text-slate-100">{{ $totalOrdersCount }}</span>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Order</span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-around text-xs border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span>
+                    <span class="text-slate-650 dark:text-slate-400">Sukses ({{ $donutData[0] }})</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500 block"></span>
+                    <span class="text-slate-650 dark:text-slate-400">Pending ({{ $donutData[1] }})</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 block"></span>
+                    <span class="text-slate-650 dark:text-slate-400">Expired ({{ $donutData[2] }})</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Load Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Line Chart Settings
+        const earningsCtx = document.getElementById('earningsChart').getContext('2d');
+        const isDark = document.documentElement.classList.contains('dark');
+        
+        const gridColor = isDark ? '#1e293b' : '#f1f5f9';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        // Prepare line chart
+        const earningsChart = new Chart(earningsCtx, {
+            type: 'line',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [{
+                    label: 'Pendapatan (Rp)',
+                    data: {!! json_encode($chartData) !!},
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    borderWidth: 3.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: '#2563eb',
+                    pointHoverRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: textColor,
+                            font: { family: 'Plus Jakarta Sans', size: 10 },
+                            callback: function(value) {
+                                return 'Rp ' + (value >= 1000 ? (value/1000) + 'k' : value);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: textColor,
+                            font: { family: 'Plus Jakarta Sans', size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Donut Chart Settings
+        const ratioCtx = document.getElementById('ratioChart').getContext('2d');
+        const successVal = {{ $donutData[0] }};
+        const pendingVal = {{ $donutData[1] }};
+        const expiredVal = {{ $donutData[2] }};
+
+        const ratioChart = new Chart(ratioCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Sukses', 'Pending', 'Expired'],
+                datasets: [{
+                    data: [successVal, pendingVal, expiredVal],
+                    backgroundColor: [
+                        '#10b981', // green
+                        '#3b82f6', // blue
+                        '#f43f5e'  // rose
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '76%',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Dynamic theme updates for charts
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.attributeName === "class") {
+                    const isDarkNow = document.documentElement.classList.contains('dark');
+                    const newGridColor = isDarkNow ? '#1e293b' : '#f1f5f9';
+                    const newTextColor = isDarkNow ? '#94a3b8' : '#64748b';
+
+                    // Update config
+                    earningsChart.options.scales.y.grid.color = newGridColor;
+                    earningsChart.options.scales.y.ticks.color = newTextColor;
+                    earningsChart.options.scales.x.ticks.color = newTextColor;
+                    earningsChart.update();
+                }
+            });
+        });
+
+        observer.observe(document.documentElement, { attributes: true });
+    });
+</script>
+@endsection
