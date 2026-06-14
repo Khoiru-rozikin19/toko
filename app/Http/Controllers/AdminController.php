@@ -181,7 +181,10 @@ class AdminController extends Controller
                               ->orderBy('updated_at', 'asc')
                               ->get();
 
-        return view('admin.users', compact('newAccounts', 'sellerRequests'));
+        // Tab 3: Semua Pengguna (selain admin yang sedang login)
+        $allUsers = User::where('id', '!=', auth()->id())->orderBy('name', 'asc')->get();
+
+        return view('admin.users', compact('newAccounts', 'sellerRequests', 'allUsers'));
     }
 
     /**
@@ -234,5 +237,67 @@ class AdminController extends Controller
         ]);
 
         return redirect()->route('admin.users')->with('success', "Pengajuan Seller dari {$user->name} telah ditolak.");
+    }
+
+    /**
+     * Update user role.
+     */
+    public function updateRole(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        
+        $request->validate([
+            'role' => 'required|in:admin,seller,buyer',
+        ]);
+
+        // Cegah admin mengubah rolenya sendiri jika kebetulan masuk ke sini
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')->with('error', 'Anda tidak dapat mengubah peran Anda sendiri.');
+        }
+
+        $user->update([
+            'role' => $request->role,
+        ]);
+
+        return redirect()->route('admin.users')->with('success', "Peran untuk user {$user->name} berhasil diubah menjadi " . ucfirst($request->role) . ".");
+    }
+
+    /**
+     * Toggle status (Suspend / Aktifkan).
+     */
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Cegah mensuspend diri sendiri
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')->with('error', 'Anda tidak dapat mensuspend akun Anda sendiri.');
+        }
+
+        $newStatus = !$user->is_verified;
+        $user->update([
+            'is_verified' => $newStatus,
+        ]);
+
+        $statusText = $newStatus ? 'diaktifkan kembali' : 'ditangguhkan (suspend)';
+        return redirect()->route('admin.users')->with('success', "Akun {$user->name} berhasil {$statusText}.");
+    }
+
+    /**
+     * Delete user permanently.
+     */
+    public function deleteUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Cegah menghapus diri sendiri
+        if ($user->id === auth()->id()) {
+            return redirect()->route('admin.users')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return redirect()->route('admin.users')->with('success', "Akun {$name} berhasil dihapus secara permanen.");
     }
 }

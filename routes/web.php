@@ -52,11 +52,14 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         
-        // Manajemen User (Persetujuan Pendaftaran & Upgrade Seller)
+        // Manajemen User (Persetujuan Pendaftaran & Upgrade Seller & Kelola Akun)
         Route::get('/users', [AdminController::class, 'userManagement'])->name('users');
         Route::post('/users/{id}/approve-account', [AdminController::class, 'approveAccount']);
         Route::post('/users/{id}/reject-account', [AdminController::class, 'rejectAccount']);
         Route::post('/users/{id}/approve-seller', [AdminController::class, 'approveSeller']);
         Route::post('/users/{id}/reject-seller', [AdminController::class, 'rejectSeller']);
+        Route::post('/users/{id}/update-role', [AdminController::class, 'updateRole']);
+        Route::post('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
+        Route::post('/users/{id}/delete', [AdminController::class, 'deleteUser']);
     });
 });
