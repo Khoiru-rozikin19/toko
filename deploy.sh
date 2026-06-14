@@ -115,7 +115,7 @@ sed -i "s/DB_PASSWORD=/DB_PASSWORD=${DB_PASS}/g" "$APP_DIR/.env"
 
 # 8. Pasang Dependensi Composer (Vendor)
 echo -e "\n${KUNING}Langkah 7: Memasang package PHP via Composer...${NC}"
-composer install --no-dev --optimize-autoloader --working-dir="$APP_DIR"
+composer install --no-dev --optimize-autoloader --ignore-platform-reqs --working-dir="$APP_DIR"
 
 # 9. Generate Key & Jalankan Migrasi
 echo -e "\n${KUNING}Langkah 8: Generate APP_KEY & Migrasi Database...${NC}"
