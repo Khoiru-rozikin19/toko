@@ -3,9 +3,11 @@
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\QrisService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
@@ -41,6 +43,14 @@ test('qris service helper correctly parses and updates amount', function () {
 });
 
 test('user checkout buy route registers order with unique code and returns json', function () {
+    $user = User::create([
+        'name' => 'Test Buyer',
+        'email' => 'buyer@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+
     $product = Product::create([
         'name' => 'Test Packet',
         'price' => 5000,
@@ -49,7 +59,7 @@ test('user checkout buy route registers order with unique code and returns json'
         'stock' => 5,
     ]);
 
-    $response = $this->postJson(route('buy'), [
+    $response = $this->actingAs($user)->postJson(route('buy'), [
         'product_id' => $product->id,
         'email_or_whatsapp' => 'tester@whatsapp.com',
     ]);

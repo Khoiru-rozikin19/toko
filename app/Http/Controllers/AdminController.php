@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\PaymentLog;
 use App\Models\Setting;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -164,5 +165,74 @@ class AdminController extends Controller
         Setting::set('api_secret_key', $request->api_secret_key);
 
         return redirect()->route('admin.settings')->with('success', 'Pengaturan berhasil diperbarui.');
+    }
+
+    /**
+     * Display User Management dashboard with 2 tabs.
+     */
+    public function userManagement()
+    {
+        // Tab 1: Pendaftar Baru yang belum disetujui (is_verified = 0)
+        $newAccounts = User::where('is_verified', false)->orderBy('created_at', 'desc')->get();
+
+        // Tab 2: Buyer yang mengajukan upgrade ke Seller (role = buyer & seller_request = pending)
+        $sellerRequests = User::where('role', 'buyer')
+                              ->where('seller_request', 'pending')
+                              ->orderBy('updated_at', 'asc')
+                              ->get();
+
+        return view('admin.users', compact('newAccounts', 'sellerRequests'));
+    }
+
+    /**
+     * Approve new registration account.
+     */
+    public function approveAccount($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update([
+            'is_verified' => true,
+        ]);
+
+        return redirect()->route('admin.users')->with('success', "Akun {$user->name} berhasil disetujui dan diaktifkan.");
+    }
+
+    /**
+     * Reject and delete new registration account.
+     */
+    public function rejectAccount($id)
+    {
+        $user = User::findOrFail($id);
+        $name = $user->name;
+        $user->delete();
+
+        return redirect()->route('admin.users')->with('success', "Pendaftaran akun {$name} berhasil ditolak.");
+    }
+
+    /**
+     * Approve seller upgrade request.
+     */
+    public function approveSeller($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update([
+            'role' => 'seller',
+            'seller_request' => 'approved',
+        ]);
+
+        return redirect()->route('admin.users')->with('success', "Akun {$user->name} berhasil disetujui sebagai Seller.");
+    }
+
+    /**
+     * Reject seller upgrade request.
+     */
+    public function rejectSeller($id)
+    {
+        $user = User::findOrFail($id);
+        $user->update([
+            'seller_request' => 'rejected',
+        ]);
+
+        return redirect()->route('admin.users')->with('success', "Pengajuan Seller dari {$user->name} telah ditolak.");
     }
 }

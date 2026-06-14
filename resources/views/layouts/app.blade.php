@@ -65,14 +65,14 @@
             <!-- Profile Widget -->
             <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
                 <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20">
-                    {{ Auth::check() ? 'A' : 'U' }}
+                    {{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : 'G' }}
                 </div>
                 <div>
                     <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                        {{ Auth::check() ? 'Administrator' : 'Tamu Pengunjung' }}
+                        {{ Auth::check() ? Auth::user()->name : 'Tamu Pengunjung' }}
                     </h4>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
-                        ID: {{ Auth::check() ? '7041282239' : '1002394801' }}
+                        Role: {{ Auth::check() ? ucfirst(Auth::user()->role) : 'Guest' }}
                     </p>
                 </div>
             </div>
@@ -105,32 +105,69 @@
                     </div>
                 </div>
 
-                <!-- SELLER PORTAL / ADMIN -->
-                <div>
-                    <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Seller Portal</span>
-                    <div class="mt-2 space-y-1">
-                        <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
-                            <span>Dashboard Seller</span>
-                        </a>
-                        <a href="{{ route('admin.products') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.products') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                            <span>Produk Saya</span>
-                        </a>
-                        <a href="{{ route('admin.products') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                            <span>Stok Akun</span>
-                        </a>
-                        <a href="{{ route('admin.transactions') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.transactions') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Kelola Pesanan</span>
-                        </a>
-                        <a href="{{ route('admin.settings') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.settings') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            <span>Konfigurasi QRIS & API</span>
-                        </a>
-                    </div>
-                </div>
+                <!-- SELLER PORTAL / ADMIN / UPGRADE -->
+                @if(Auth::check())
+                    @if(Auth::user()->role === 'admin' || Auth::user()->role === 'seller')
+                        <div>
+                            <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Seller Portal</span>
+                            <div class="mt-2 space-y-1">
+                                <a href="{{ route('admin.dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
+                                    <span>Dashboard Seller</span>
+                                </a>
+                                <a href="{{ route('admin.products') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.products') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                                    <span>Produk Saya</span>
+                                </a>
+                                <a href="{{ route('admin.transactions') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.transactions') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span>Kelola Pesanan</span>
+                                </a>
+                                
+                                @if(Auth::user()->role === 'admin')
+                                    <a href="{{ route('admin.users') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.users') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                        <span>Manajemen Pengguna</span>
+                                    </a>
+                                    <a href="{{ route('admin.settings') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium {{ request()->routeIs('admin.settings') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                        <span>Konfigurasi QRIS & API</span>
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    @elseif(Auth::user()->role === 'buyer')
+                        <div>
+                            <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider font-bold">Upgrade Akun</span>
+                            <div class="mt-2 px-3">
+                                @if(Auth::user()->seller_request === 'none')
+                                    <form action="{{ route('buyer.request-seller') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/10 active:scale-95 transition-all duration-200 text-center">
+                                            Ajukan Sebagai Seller
+                                        </button>
+                                    </form>
+                                @elseif(Auth::user()->seller_request === 'pending')
+                                    <div class="py-2 px-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-450 border border-amber-250/20 rounded-xl text-xs font-semibold text-center">
+                                        Pengajuan Pending (Ditinjau)
+                                    </div>
+                                @elseif(Auth::user()->seller_request === 'rejected')
+                                    <div class="space-y-2">
+                                        <div class="py-2 px-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-450 border border-rose-250/20 rounded-xl text-xs font-semibold text-center">
+                                            Pengajuan Ditolak
+                                        </div>
+                                        <form action="{{ route('buyer.request-seller') }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-95 transition-all duration-200 text-center">
+                                                Ajukan Lagi
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                @endif
             </div>
         </aside>
 

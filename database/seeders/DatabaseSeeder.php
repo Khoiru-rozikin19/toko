@@ -21,6 +21,9 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin Utama',
                 'password' => Hash::make('password'),
+                'role' => 'admin',
+                'is_verified' => true,
+                'phone' => '081234567890',
             ]
         );
 

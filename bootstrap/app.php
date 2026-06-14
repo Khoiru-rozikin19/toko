@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/v1/payment/callback-notification',
             'api/*',
         ]);
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
