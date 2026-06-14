@@ -131,10 +131,75 @@ chown -R www-data:www-data "$APP_DIR/bootstrap/cache"
 chmod -R 775 "$APP_DIR/storage"
 chmod -R 775 "$APP_DIR/bootstrap/cache"
 
-# 11. Build Aset Frontend (npm & vite)
+# 11. Build Aset Frontend (npm & vite dengan fallback tangguh)
 echo -e "\n${KUNING}Langkah 10: Memasang paket NPM dan melakukan Build Aset Vite...${NC}"
-npm install
-npm run build
+if [ -d "node_modules" ]; then
+  chmod -R 777 node_modules &>/dev/null || true
+fi
+
+NPM_OK=false
+if npm install --no-audit --no-fund; then
+  NPM_OK=true
+else
+  echo -e "${KUNING}[WARNING] npm install standar gagal. Mengulang dengan --ignore-scripts...${NC}"
+  if npm install --ignore-scripts --no-audit --no-fund; then
+    NPM_OK=true
+  fi
+fi
+
+if [ "$NPM_OK" = true ]; then
+  # Selesaikan masalah perizinan bin
+  if [ -d "node_modules/.bin" ]; then
+    chmod -R +x node_modules/.bin 2>/dev/null || true
+    for file in node_modules/.bin/*; do
+      if [ -L "$file" ]; then
+        target=$(readlink -f "$file" 2>/dev/null)
+        if [ -f "$target" ]; then
+          chmod +x "$target" 2>/dev/null || true
+        fi
+      fi
+    done
+  fi
+
+  # Build aset
+  if npm run build; then
+    echo -e "${HIJAU}[SUKSES] npm run build berhasil.${NC}"
+  else
+    echo -e "${KUNING}[WARNING] npm run build gagal. Mengaktifkan fallback 1 (Node direct)...${NC}"
+    if [ -f "node_modules/vite/bin/vite.js" ]; then
+      if node node_modules/vite/bin/vite.js build; then
+        echo -e "${HIJAU}[SUKSES] Aset frontend berhasil di-build via Node fallback.${NC}"
+      else
+        echo -e "${KUNING}[WARNING] Node fallback gagal. Mencoba fallback 2 (npx)...${NC}"
+        if npx vite build; then
+          echo -e "${HIJAU}[SUKSES] Aset frontend berhasil di-build via npx.${NC}"
+        else
+          echo -e "${KUNING}[WARNING] npx gagal. Mencoba fallback 3 (RAM-disk isolation)...${NC}"
+          TMP_DIR="/dev/shm/vite-build-$(date +%s)"
+          mkdir -p "$TMP_DIR"
+          tar --exclude='./node_modules' --exclude='./.git' -cf - . | (cd "$TMP_DIR" && tar -xf -)
+          ln -s "$APP_DIR/node_modules" "$TMP_DIR/node_modules"
+          cd "$TMP_DIR"
+          if node node_modules/vite/bin/vite.js build; then
+            cp -r public/build "$APP_DIR/public/"
+            echo -e "${HIJAU}[SUKSES] Aset frontend berhasil di-build via RAM-disk isolation.${NC}"
+          else
+            echo -e "${MERAH}[ERROR] Semua metode build frontend gagal!${NC}"
+            exit 1
+          fi
+          cd "$APP_DIR"
+          rm -rf "$TMP_DIR"
+        fi
+      fi
+    else
+      echo -e "${MERAH}[ERROR] Berkas vite.js tidak ditemukan!${NC}"
+      exit 1
+    fi
+  fi
+else
+  echo -e "${MERAH}[ERROR] Gagal memasang dependensi NPM!${NC}"
+  exit 1
+fi
 
 # 12. Konfigurasi Nginx Server Block
 echo -e "\n${KUNING}Langkah 11: Membuat konfigurasi Nginx Server Block...${NC}"
