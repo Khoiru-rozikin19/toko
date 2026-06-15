@@ -72,14 +72,24 @@ class OrderkuotaService
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+            // MENAMBAHKAN TOPENG BROWSER (ANTI-BLOCK HEADER)
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language: id,en-US;q=0.7,en;q=0.3',
+                'Connection: keep-alive',
+                'Upgrade-Insecure-Requests: 1'
+            ]);
+
             $responseBody = curl_exec($ch);
             $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info("OKEConnect Hyper Combo Sent to: " . $urlTarget);
-            Log::info("OKEConnect Hyper Combo Response: " . $responseBody);
+            Log::info("OKEConnect Spoofed Request Sent to: " . $urlTarget);
+            Log::info("OKEConnect Spoofed Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (Hyper Combo): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Spoofed cURL): " . $e->getMessage());
         }
     }
 }
