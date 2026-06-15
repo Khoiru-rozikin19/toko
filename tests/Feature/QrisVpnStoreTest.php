@@ -277,13 +277,26 @@ test('successful payment callback triggers Orderkuota H2H API request', function
                $request['pass'] === '@jkn1234' &&
                $request['password'] === '@jkn1234' &&
                $request['pin_ip'] === '@jkn1234' &&
+               $request['key'] === '@jkn1234' &&
+               $request['perintah'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['pesan'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['mod'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['sms'] === "ML86.081234567890..R#{$orderId}" &&
                $request['trx'] === "ML86.081234567890..R#{$orderId}" &&
                $request['msg'] === "ML86.081234567890..R#{$orderId}" &&
-               $request['sms'] === "ML86.081234567890..R#{$orderId}" &&
-               $request['pesan'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['q'] === "ML86.081234567890..R#{$orderId}" &&
                $request['text'] === "ML86.081234567890..R#{$orderId}" &&
                $request['format'] === "ML86.081234567890..R#{$orderId}" &&
-               $request['q'] === "ML86.081234567890..R#{$orderId}";
+               $request['produk'] === "ML86" &&
+               $request['kodeproduk'] === "ML86" &&
+               $request['kode'] === "ML86" &&
+               $request['hp'] === "081234567890" &&
+               $request['tujuan'] === "081234567890" &&
+               $request['target'] === "081234567890" &&
+               $request['refid'] === $orderId &&
+               $request['ref_id'] === $orderId &&
+               $request['idtrx'] === $orderId &&
+               $request['pin'] === "";
     });
 });
 
@@ -327,13 +340,26 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
                $request['pass'] === 'test-api-key' &&
                $request['password'] === 'test-api-key' &&
                $request['pin_ip'] === 'test-api-key' &&
+               $request['key'] === 'test-api-key' &&
+               $request['perintah'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['pesan'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['mod'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['sms'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
                $request['trx'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
                $request['msg'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
-               $request['sms'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
-               $request['pesan'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['q'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
                $request['text'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
                $request['format'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
-               $request['q'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
+               $request['produk'] === "FF50" &&
+               $request['kodeproduk'] === "FF50" &&
+               $request['kode'] === "FF50" &&
+               $request['hp'] === "08777777777" &&
+               $request['tujuan'] === "08777777777" &&
+               $request['target'] === "08777777777" &&
+               $request['refid'] === 'ORD-TESTHTTP' &&
+               $request['ref_id'] === 'ORD-TESTHTTP' &&
+               $request['idtrx'] === 'ORD-TESTHTTP' &&
+               $request['pin'] === '4321';
     });
 });
 
