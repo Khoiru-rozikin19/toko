@@ -121,4 +121,15 @@ class OrderkuotaService
             Log::error("OKEConnect HTTP Request Failed (Shotgun URL): " . $e->getMessage());
         }
     }
+
+    /**
+     * Helper to process the pulsa transaction.
+     *
+     * @param string $orderId
+     * @return void
+     */
+    public function prosesTransaksiPulsa($orderId)
+    {
+        $this->kirimPesananKeOrderkuota($orderId);
+    }
 }

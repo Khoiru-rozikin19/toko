@@ -88,7 +88,7 @@ test('user checkout buy route registers order with unique code and returns json'
     expect($order->unique_code)->toBeGreaterThanOrEqual(1);
     expect($order->unique_code)->toBeLessThanOrEqual(99);
     expect($order->total_amount)->toBe($order->base_amount + $order->unique_code);
-    expect($order->status)->toBe('pending');
+    expect($order->status)->toBe('pending_manual');
 });
 
 test('api callback notification processes successful payments and updates order and stock', function () {

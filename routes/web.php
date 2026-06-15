@@ -10,6 +10,7 @@ use App\Http\Controllers\BuyerController;
 // API Callback (public - no auth required)
 Route::post('/api/v1/payment/callback-notification', [PaymentCallbackController::class, 'handle'])->name('api.payment.callback');
 Route::post('/api/callback/okeconnect', [App\Http\Controllers\OkeconnectCallbackController::class, 'handle'])->name('api.callback.okeconnect');
+Route::post('/webhook/telegram', [App\Http\Controllers\TelegramWebhookController::class, 'handle'])->name('webhook.telegram');
 
 // Guest Auth Routes
 Route::middleware('guest')->group(function () {

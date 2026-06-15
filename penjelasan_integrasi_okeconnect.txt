@@ -1,0 +1,100 @@
+================================================================================
+          PANDUAN DETAIL ALUR INTEGRASI HOST-TO-HOST (H2H) OKECONNECT
+================================================================================
+
+Dokumen ini menjelaskan secara terstruktur dan terperinci bagaimana proses integrasi
+otomatisasi produk dari web toko online kita ke gateway supplier OKEConnect dapat
+berjalan dari awal hingga transaksi selesai.
+
+--------------------------------------------------------------------------------
+BAGIAN 1: PERSIAPAN & OTORISASI AKUN (DASHBOARD OKECONNECT)
+--------------------------------------------------------------------------------
+Sebelum web kita dapat mengirimkan transaksi, ada langkah otorisasi wajib:
+1. Pendaftaran & KYC: Pemilik web mendaftarkan akun di OrderKuota dan melakukan 
+   verifikasi identitas resmi (KYC).
+2. Aktivasi Jalur H2H: Menghubungi Customer Service OKEConnect/OrderKuota via Telegram
+   untuk mengaktifkan fitur integrasi Host-to-Host (H2H).
+3. Konfigurasi di Dashboard OKEConnect:
+   - Whitelist IP: Mendaftarkan IP Public server/VPS web kita. Server OKEConnect 
+     hanya akan menerima request GET yang berasal dari IP ini.
+   - API Key & PIN: Mendapatkan Member ID (contoh: OK1988589) dan mengatur API Key/
+     Password (contoh: @jkn1234) serta PIN transaksi (contoh: 7761).
+
+--------------------------------------------------------------------------------
+BAGIAN 2: ALUR PEMICU TRANSAKSI (TRIGGER)
+--------------------------------------------------------------------------------
+Proses transaksi berjalan otomatis dengan alur sebagai berikut:
+1. Checkout Pembeli: Pembeli melakukan checkout produk VPN/pulsa di website kita.
+2. Pembayaran Unik: Sistem menghasilkan kode QRIS dinamis dengan kode unik transfer.
+3. Callback Pembayaran: Ketika pembeli sukses mentransfer dana, mutasi bank/QRIS
+   terbaca oleh sistem kita via callback IPN.
+4. Pemicu Service: Setelah status pembayaran diverifikasi sukses, sistem memanggil
+   service 'OrderkuotaService' untuk memproses H2H ke supplier.
+
+--------------------------------------------------------------------------------
+BAGIAN 3: MERAKIT REQUEST DENGAN METODE SAPU JAGAT (SHOTGUN METHOD)
+--------------------------------------------------------------------------------
+OKEConnect menggunakan engine server H2H (biasanya berbasis IRS atau OtomaX) yang
+memiliki sensitivitas tinggi pada penamaan parameter dan encoding URL. Kita mengatasi 
+hal ini dengan "Metode Sapu Jagat":
+
+1. Format Perintah Transaksi:
+   Kita membuat 2 format string perintah standar Jabber/SMS:
+   - Format Pendek (Short): [KODE_PRODUK].[NOMOR_TUJUAN].[PIN].R#[INVOICE_ID]
+     Contoh: SP5.082372838757.7761.R#ORD-KYEIMDMZ
+   - Format Panjang (Long): [MEMBER_ID].[PIN].[KODE_PRODUK].[NOMOR_TUJUAN].R#[INVOICE_ID]
+     Contoh: OK1988589.7761.SP5.082372838757.R#ORD-KYEIMDMZ
+
+2. Gabungan Parameter (Shotgun):
+   Agar server supplier pasti mengenali parameter kita, kita mengirimkan semua variasi
+   nama parameter yang didukung oleh berbagai versi engine IRS/OtomaX sekaligus:
+   - Variasi Member ID: id, uid, memberid, memberID
+   - Variasi Password H2H: pass, password, pin_ip, key
+   - Variasi Perintah (Format Long): perintah, pesan, q, sms
+   - Variasi Perintah (Format Short): mod, trx, msg, text, format
+   - Variasi Split Parameter: product, produk, kodeproduk, kode, dest, hp, tujuan,
+     target, refID, refid, ref_id, idtrx, pin, qty, quantity
+
+3. Mengatasi Masalah Karakter Khusus (@ dan #):
+   - Karakter '@' pada password (misal: @jkn1234) jika di-encode menjadi '%40' 
+     seringkali gagal dikenali oleh engine IRS lama. Maka, kita tidak menggunakan 
+     fungsi URL encoding bawaan Laravel (Http Client) untuk menyusun URL mentah.
+   - Karakter '#' pada perintah bertindak sebagai URI Fragment. Jika dikirim mentah
+     melalui HTTP Client, fragment tersebut akan dibuang oleh sistem operasi/browser,
+     sehingga parameter terpotong dan menghasilkan error "Too short".
+   - SOLUSI KITA: Merakit query string secara manual di mana '@' dikirim mentah 
+     tetapi '#' diubah secara spesifik menjadi '%23' agar terkirim utuh.
+
+--------------------------------------------------------------------------------
+BAGIAN 4: EKSEKUSI PENGIRIMAN REQUEST
+--------------------------------------------------------------------------------
+1. Pemilihan Fungsi Eksekusi:
+   - Mode Production: Menggunakan fungsi bawaan PHP asli `file_get_contents()` 
+     dengan stream context. Ini memastikan string URL yang sudah kita rakit secara 
+     manual terkirim persis sama ke server OKEConnect tanpa ada modifikasi encoding 
+     tambahan dari library cURL/Guzzle.
+   - Mode Testing (Pest): Menggunakan `Http::get` agar transaksi simulasi dapat 
+     di-intercept dan diverifikasi tanpa mengirimkan request asli ke internet.
+2. HTTP Timeout:
+   Pengiriman request dilengkapi dengan batas waktu (timeout) 20 detik agar jika
+   server OKEConnect sedang mengalami delay, server kita tidak hang atau blank.
+
+--------------------------------------------------------------------------------
+BAGIAN 5: ALUR SELESAI & CALLBACK DARI OKECONNECT (WEBHOOK)
+--------------------------------------------------------------------------------
+1. Antrean Transaksi: Setelah request diterima oleh OKEConnect, server OKEConnect
+   akan merespons awal dengan status sukses diterima (pending processing).
+2. Proses Pengisian: Server OKEConnect meneruskan pesanan ke provider telekomunikasi.
+3. Kirim Hasil (Callback): Setelah transaksi sukses atau gagal di provider, server
+   OKEConnect memanggil endpoint Webhook/Callback di web kita:
+   `POST /api/callback/okeconnect`
+4. Update Database:
+   - Jika Callback berstatus SUCCESS: Sistem kita menandai pesanan sebagai 'success'
+     dan menyimpan nomor SN (Serial Number / Bukti Pulsa) ke database. Pembeli 
+     menerima notifikasi bahwa pesanan selesai.
+   - Jika Callback berstatus FAILED: Sistem menandai pesanan sebagai 'failed'
+     dan dapat memicu pengembalian dana saldo pembeli jika diperlukan.
+
+================================================================================
+                          DOKUMEN INTEGRASI SELESAI
+================================================================================

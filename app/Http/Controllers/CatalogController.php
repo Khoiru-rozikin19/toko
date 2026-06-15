@@ -7,11 +7,18 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\QrisService;
+use App\Services\TelegramService;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 class CatalogController extends Controller
 {
+    protected $telegramService;
+
+    public function __construct(TelegramService $telegramService)
+    {
+        $this->telegramService = $telegramService;
+    }
     /**
      * Show the product catalog.
      */
@@ -94,11 +101,14 @@ class CatalogController extends Controller
             'base_amount' => $product->price,
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
-            'status' => 'pending',
+            'status' => 'pending_manual',
             'qris_payload' => $qrisPayload,
             'vpn_config' => $product->config_template,
             'expired_at' => Carbon::now()->addMinutes(15),
         ]);
+
+        // Kirim notifikasi ke Telegram Admin
+        $this->telegramService->sendOrderNotification($order->id, $order->total_amount, $order->email_or_whatsapp);
 
         return response()->json([
             'success' => true,
@@ -121,8 +131,8 @@ class CatalogController extends Controller
     {
         $order = Order::findOrFail($id);
 
-        // Auto expire if pending and past expiration time
-        if ($order->status === 'pending' && $order->expired_at && $order->expired_at->isPast()) {
+        // Auto expire if pending/pending_manual and past expiration time
+        if (in_array($order->status, ['pending', 'pending_manual']) && $order->expired_at && $order->expired_at->isPast()) {
             $order->update(['status' => 'expired']);
         }
 
