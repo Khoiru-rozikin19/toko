@@ -48,25 +48,24 @@ class OrderkuotaService
             // Susun teks perintah transaksinya (tanpa urlencode terlebih dahulu)
             $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
 
-            // Gabungkan URL Target secara presisi sesuai format engine IRS OKEConnect
-            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&pass=" . $passwordH2H . "&mod=" . $perintahTeks;
+            // Rakit parameter menggunakan http_build_query agar URL aman
+            $queryParams = http_build_query([
+                'id'    => $memberId,
+                'pass'  => $passwordH2H,
+                'pesan' => $perintahTeks  // Parameter standar IRS untuk format Jabber
+            ]);
 
-            Log::info("OKEConnect IRS Mod Request Sent: " . $urlTarget);
+            $urlTarget = "https://h2h.okeconnect.com/trx?" . $queryParams;
 
-            // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
-            if (app()->runningUnitTests()) {
-                $response = Http::get($urlTarget);
-                Log::info("OKEConnect HTTP Request Sent (Testing Mock): " . $urlTarget);
-                return;
-            }
+            Log::info("OKEConnect IRS Encoded Request: " . $urlTarget);
 
-            // Eksekusi menggunakan file_get_contents agar tanda '#' dan '@' terkirim murni secara raw text
-            $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
-            $responseBody = @file_get_contents($urlTarget, false, $context);
+            // Gunakan Http::get Laravel biasa karena URL sudah di-encode dengan aman
+            $response = Http::timeout(20)->get($urlTarget);
+            $responseBody = $response->body();
 
-            Log::info("OKEConnect IRS Mod Response: " . ($responseBody ?: 'TIMEOUT'));
+            Log::info("OKEConnect IRS Encoded Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (Raw URL): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Encoded URL): " . $e->getMessage());
         }
     }
 }
