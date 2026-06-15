@@ -44,8 +44,8 @@ class OrderkuotaService
         $apiKey = Setting::get('orderkuota_api_key', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
 
-        // Susun data format wajib H2H OKEConnect: KODE.NOHP.PIN.R#INVOICE
-        $message = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
+        // Susun data format wajib H2H OKEConnect: MEMBER_ID.PIN.KODE.NOHP.R#INVOICE
+        $message = "{$memberId}.{$pin}.{$code}.{$targetPhone}.R#{$orderId}";
 
         // Lakukan logging data sesuai spesifikasi tugas
         Log::info("Pesanan ID {$orderId} siap ditembak ke Orderkuota dengan kode produk {$code}");
@@ -55,8 +55,8 @@ class OrderkuotaService
             // Log format string sebelum dikirim sesuai instruksi tugas
             Log::info("Format string OKEConnect yang akan dikirim: {$message}");
 
-            // Satukan ke dalam query parameter 'q' tanpa merusak tanda '#'
-            $urlTarget = "https://h2h.okeconnect.com/trx?q=" . $message;
+            // Satukan format string langsung di belakang tanda tanya (?) URL utama
+            $urlTarget = "https://h2h.okeconnect.com/trx?" . $message;
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -65,7 +65,7 @@ class OrderkuotaService
                 return;
             }
 
-            // Kirim menggunakan cURL murni yang sudah kita buat sebelumnya
+            // Kirim menggunakan cURL murni agar karakter '#' tidak berubah menjadi '%23'
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $urlTarget);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -76,10 +76,10 @@ class OrderkuotaService
             $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info("OKEConnect Final Test Sent to: " . $urlTarget);
-            Log::info("OKEConnect Final Response: " . $responseBody);
+            Log::info("OKEConnect Real IP Request Sent to: " . $urlTarget);
+            Log::info("OKEConnect Real IP Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (Final cURL): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Real IP cURL): " . $e->getMessage());
         }
     }
 }
