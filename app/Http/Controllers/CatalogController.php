@@ -138,7 +138,7 @@ class CatalogController extends Controller
 
         return response()->json([
             'status' => $order->status,
-            'has_config' => !empty($order->vpn_config) && $order->status === 'success',
+            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid']),
         ]);
     }
 
@@ -149,7 +149,7 @@ class CatalogController extends Controller
     {
         $order = Order::findOrFail($id);
 
-        if ($order->status !== 'success') {
+        if (!in_array($order->status, ['success', 'paid'])) {
             return abort(403, 'Akses ditolak. Pembayaran belum sukses.');
         }
 

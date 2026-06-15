@@ -424,7 +424,7 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success') {
+                if (data.status === 'success' || data.status === 'paid') {
                     showSuccessState();
                 } else if (data.status === 'expired') {
                     showExpiredState();

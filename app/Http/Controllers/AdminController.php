@@ -19,14 +19,14 @@ class AdminController extends Controller
     public function dashboard()
     {
         // 1. Wallets & Earnings (Stats matching screenshot 2)
-        $totalRevenue = Order::where('status', 'success')->sum('total_amount');
+        $totalRevenue = Order::whereIn('status', ['success', 'paid'])->sum('total_amount');
         
         // Sum of pending orders' amount (simulating "held balance" or "saldo tertahan")
         $pendingRevenue = Order::where('status', 'pending')
             ->where('expired_at', '>', Carbon::now())
             ->sum('total_amount');
 
-        $totalSalesCount = Order::where('status', 'success')->count();
+        $totalSalesCount = Order::whereIn('status', ['success', 'paid'])->count();
         $totalOrdersCount = Order::count();
         $readyStockCount = Product::sum('stock');
 
@@ -37,14 +37,14 @@ class AdminController extends Controller
             $date = Carbon::now()->subDays($i);
             $chartLabels[] = $date->isoFormat('D MMM');
             
-            $revenue = Order::where('status', 'success')
+            $revenue = Order::whereIn('status', ['success', 'paid'])
                 ->whereDate('created_at', $date->format('Y-m-d'))
                 ->sum('total_amount');
             $chartData[] = $revenue;
         }
 
         // 3. Rasio Status Order (Donut Chart)
-        $statusSuccess = Order::where('status', 'success')->count();
+        $statusSuccess = Order::whereIn('status', ['success', 'paid'])->count();
         $statusPending = Order::where('status', 'pending')->count();
         $statusExpired = Order::where('status', 'expired')->count();
 
