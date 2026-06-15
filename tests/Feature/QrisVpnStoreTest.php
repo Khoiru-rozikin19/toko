@@ -273,7 +273,7 @@ test('successful payment callback triggers Orderkuota H2H API request', function
                $request->method() === 'GET' &&
                $request['id'] === 'OK1988589' &&
                $request['pass'] === '@jkn1234' &&
-               str_contains($request['perintah'], "ML86.081234567890..R");
+               str_contains($request['mod'], "ML86.081234567890..R");
     });
 });
 
@@ -313,7 +313,7 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
                $request->method() === 'GET' &&
                $request['id'] === 'OK999999' &&
                $request['pass'] === 'test-api-key' &&
-               str_contains($request['perintah'], 'FF50.08777777777.4321.R');
+               str_contains($request['mod'], 'FF50.08777777777.4321.R');
     });
 });
 

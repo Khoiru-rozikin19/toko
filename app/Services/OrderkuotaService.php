@@ -49,9 +49,10 @@ class OrderkuotaService
             $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
 
             // Gabungkan URL Target secara presisi sesuai format engine IRS OKEConnect
-            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&pass=" . $passwordH2H . "&perintah=" . $perintahTeks;
+            // SKENARIO A (Menggunakan '&mod='):
+            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&pass=" . $passwordH2H . "&mod=" . $perintahTeks;
 
-            Log::info("OKEConnect IRS Authentic Request Sent: " . $urlTarget);
+            Log::info("OKEConnect IRS Mod/Sms Request Sent: " . $urlTarget);
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -64,7 +65,7 @@ class OrderkuotaService
             $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
             $responseBody = @file_get_contents($urlTarget, false, $context);
 
-            Log::info("OKEConnect IRS Authentic Response: " . ($responseBody ?: 'TIMEOUT/NO RESPONSE'));
+            Log::info("OKEConnect IRS Mod/Sms Response: " . ($responseBody ?: 'TIMEOUT'));
         } catch (\Exception $e) {
             Log::error("OKEConnect HTTP Request Failed (Raw URL): " . $e->getMessage());
         }
