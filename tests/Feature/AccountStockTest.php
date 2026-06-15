@@ -245,3 +245,37 @@ test('automated payment callback consumes a ready configuration and maps it to t
     $product->refresh();
     expect($product->stock)->toBe(0);
 });
+
+test('automated payment callback ignores requests that match telegram notification pattern', function () {
+    $product = Product::create([
+        'name' => 'Auto VPN Block',
+        'price' => 10000,
+        'stock' => 5,
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-BLOCKTEST',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'autobuyer@test.com',
+        'base_amount' => 10000,
+        'unique_code' => 12,
+        'total_amount' => 10012,
+        'status' => 'pending_manual',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Send payment callback with Telegram raw text pattern
+    $response = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => "🔔 *Notifikasi Transaksi Baru*\n\n📦 *ID Order:* `ORD-BLOCKTEST`\n💰 *Nominal:* Rp 10.012",
+        'amount' => 10012,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJsonPath('success', false)
+             ->assertJsonPath('message', 'Ignored. Raw text matches Telegram notification pattern.');
+
+    // Verify order remains pending_manual
+    $order->refresh();
+    expect($order->status)->toBe('pending_manual');
+});

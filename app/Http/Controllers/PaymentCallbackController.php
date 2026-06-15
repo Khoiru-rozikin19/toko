@@ -49,6 +49,18 @@ class PaymentCallbackController extends Controller
             'amount' => $amount,
         ]);
 
+        // Filter out Telegram order notifications to prevent self-trigger loop
+        if (str_contains($rawText, 'Notifikasi Transaksi Baru') || 
+            str_contains($rawText, 'ID Order') || 
+            str_contains($rawText, 'Nominal:') ||
+            str_contains($rawText, 'Pelanggan:')) {
+            Log::warning("PaymentCallback: Ignored callback because raw_text matches Telegram order notification pattern.");
+            return response()->json([
+                'success' => false,
+                'message' => 'Ignored. Raw text matches Telegram notification pattern.',
+            ], 200);
+        }
+
         // Find the oldest active pending order matching this total amount
         $order = Order::whereIn('status', ['pending', 'pending_manual'])
             ->where('total_amount', $amount)
