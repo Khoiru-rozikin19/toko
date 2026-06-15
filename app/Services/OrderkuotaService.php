@@ -55,9 +55,10 @@ class OrderkuotaService
             // Log format string sebelum dikirim sesuai instruksi tugas
             Log::info("Format string OKEConnect yang akan dikirim: {$message}");
 
-            // Kirim request ke URL H2H OKEConnect menggunakan HTTP GET untuk menghindari proteksi CSRF
+            // Kirim request ke URL H2H OKEConnect menggunakan HTTP GET dengan parameter sub dan p
             $response = Http::get('https://h2h.okeconnect.com/trx', [
-                'q' => $message,
+                'sub' => $memberId,
+                'p' => $message,
             ]);
 
             Log::info("OKEConnect HTTP Request Sent (GET). Status: " . $response->status());
