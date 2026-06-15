@@ -53,10 +53,16 @@ class OrderkuotaService
 
         try {
             // Log format string sebelum dikirim sesuai instruksi tugas
-            Log::info("Format string OKEConnect yang akan dikirim: {$message}");
+            Log::info("Format string OKEConnect yang akan dikirim (IRS Format): id={$memberId}, pin={$pin}, produk={$code}, hp={$targetPhone}, refid={$orderId}");
 
-            // Satukan format string langsung di belakang tanda tanya (?) URL utama
-            $urlTarget = "https://h2h.okeconnect.com/trx?" . $message;
+            // Satukan variabel ke dalam parameter resmi IRS menggunakan http_build_query
+            $urlTarget = "https://h2h.okeconnect.com/trx?" . http_build_query([
+                'id'     => $memberId,
+                'pin'    => $pin,
+                'produk' => $code,
+                'hp'     => $targetPhone,
+                'refid'  => $orderId
+            ]);
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -65,7 +71,7 @@ class OrderkuotaService
                 return;
             }
 
-            // Kirim menggunakan cURL murni agar karakter '#' tidak berubah menjadi '%23'
+            // Jalankan menggunakan cURL seperti biasa
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $urlTarget);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -76,10 +82,10 @@ class OrderkuotaService
             $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info("OKEConnect Real IP Request Sent to: " . $urlTarget);
-            Log::info("OKEConnect Real IP Response: " . $responseBody);
+            Log::info("OKEConnect IRS API Split Sent to: " . $urlTarget);
+            Log::info("OKEConnect IRS API Split Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (Real IP cURL): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (IRS API Split): " . $e->getMessage());
         }
     }
 }
