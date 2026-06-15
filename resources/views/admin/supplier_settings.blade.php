@@ -33,6 +33,15 @@
                 </p>
             </div>
 
+            <!-- PIN Transaksi -->
+            <div class="space-y-2">
+                <label for="orderkuota_pin" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Orderkuota PIN Transaksi</label>
+                <input type="password" id="orderkuota_pin" name="orderkuota_pin" value="{{ $pin }}" placeholder="Masukkan PIN Transaksi Anda (misal: 1234)..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <p class="text-[11px] text-slate-450 dark:text-slate-500 leading-relaxed">
+                    PIN transaksi 4-6 digit yang Anda buat di panel web member H2H Orderkuota.
+                </p>
+            </div>
+
             <!-- Status Mode (Sandbox / Production Toggle) -->
             <div class="space-y-2">
                 <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Mode Transaksi API</label>

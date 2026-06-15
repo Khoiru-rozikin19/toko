@@ -4,12 +4,13 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class OrderkuotaService
 {
     /**
-     * Send order to Orderkuota API (mocked logging implementation).
+     * Send order to Orderkuota API.
      *
      * @param string $orderId
      * @return void
@@ -38,14 +39,31 @@ class OrderkuotaService
         $targetPhone = $order->email_or_whatsapp;
 
         // Ambil konfigurasi API Orderkuota dari database
-        $memberId = Setting::get('orderkuota_member_id', '');
+        $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';
+        $pin = Setting::get('orderkuota_pin', '');
         $apiKey = Setting::get('orderkuota_api_key', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
 
+        // Susun data format wajib H2H OKEConnect: KODE.NOHP.PIN.R#INVOICE
+        $message = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
+
         // Lakukan logging data sesuai spesifikasi tugas
         Log::info("Pesanan ID {$orderId} siap ditembak ke Orderkuota dengan kode produk {$code}");
-        
-        // Log tambahan informasi untuk pembuktian data terambil dengan benar
         Log::info("Detail API Orderkuota - Member ID: {$memberId}, Token/Key: " . ($apiKey ? 'TERSEDIA' : 'KOSONG') . ", Mode: {$mode}, Nomor HP Tujuan: {$targetPhone}");
+
+        try {
+            // Kirim request ke URL H2H OKEConnect
+            $response = Http::asForm()->post('https://h2h.okeconnect.com/trx', [
+                'memberID' => $memberId,
+                'pin' => $pin,
+                'dest' => $targetPhone,
+                'msg' => $message,
+            ]);
+
+            Log::info("OKEConnect HTTP Request Sent. Status: " . $response->status());
+            Log::info("OKEConnect HTTP Response Body: " . $response->body());
+        } catch (\Exception $e) {
+            Log::error("OKEConnect HTTP Request Failed: " . $e->getMessage());
+        }
     }
 }

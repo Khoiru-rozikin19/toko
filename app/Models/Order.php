@@ -22,6 +22,7 @@ class Order extends Model
         'status',
         'qris_payload',
         'vpn_config',
+        'sn',
         'expired_at',
     ];
 

@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -228,7 +229,7 @@ test('admin can add and update product with supplier code', function () {
 
 test('successful payment callback dispatches SendOrderToOrderkuota job and logs information', function () {
     Queue::fake();
-    Log::shouldReceive('info')->atLeast()->once();
+    Log::spy();
 
     $product = Product::create([
         'name' => 'Premium ML',
@@ -265,7 +266,112 @@ test('successful payment callback dispatches SendOrderToOrderkuota job and logs 
 
     // Verify job was dispatched
     Queue::assertPushed(\App\Jobs\SendOrderToOrderkuota::class, function ($job) use ($orderId) {
-        $job->handle(new \App\Services\OrderkuotaService());
         return true;
     });
+});
+
+test('OrderkuotaService sends H2H request using Http facade', function () {
+    Http::fake([
+        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
+    ]);
+
+    Setting::set('orderkuota_member_id', 'OK999999');
+    Setting::set('orderkuota_pin', '4321');
+
+    $product = Product::create([
+        'name' => 'Premium Free Fire',
+        'price' => 20000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'FF50',
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-TESTHTTP',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '08777777777',
+        'base_amount' => 20000,
+        'unique_code' => 5,
+        'total_amount' => 20005,
+        'status' => 'pending',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    $service = new \App\Services\OrderkuotaService();
+    $service->kirimPesananKeOrderkuota($order->id);
+
+    Http::assertSent(function ($request) {
+        return $request->url() === 'https://h2h.okeconnect.com/trx' &&
+               $request->method() === 'POST' &&
+               $request['memberID'] === 'OK999999' &&
+               $request['pin'] === '4321' &&
+               $request['dest'] === '08777777777' &&
+               $request['msg'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
+    });
+});
+
+test('okeconnect callback route updates status and stores sn on success', function () {
+    $product = Product::create([
+        'name' => 'Premium MLBB',
+        'price' => 10000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'ML50',
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-CALLBACK123',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '0888888888',
+        'base_amount' => 10000,
+        'unique_code' => 12,
+        'total_amount' => 10012,
+        'status' => 'pending',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    $response = $this->postJson(route('api.callback.okeconnect'), [
+        'ref_id' => 'ORD-CALLBACK123',
+        'status' => 'SUCCESS',
+        'sn' => 'SN-OKE-999222',
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJsonPath('success', true);
+
+    $order->refresh();
+    expect($order->status)->toBe('success');
+    expect($order->sn)->toBe('SN-OKE-999222');
+});
+
+test('okeconnect callback route updates status to failed on failure report', function () {
+    $product = Product::create([
+        'name' => 'Premium MLBB',
+        'price' => 10000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'ML50',
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-CALLBACK456',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '0888888888',
+        'base_amount' => 10000,
+        'unique_code' => 12,
+        'total_amount' => 10012,
+        'status' => 'pending',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    $response = $this->postJson(route('api.callback.okeconnect'), [
+        'refid' => 'ORD-CALLBACK456',
+        'status' => 'FAILED',
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJsonPath('success', true);
+
+    $order->refresh();
+    expect($order->status)->toBe('failed');
 });

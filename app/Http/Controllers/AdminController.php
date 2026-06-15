@@ -176,9 +176,10 @@ class AdminController extends Controller
     {
         $memberId = Setting::get('orderkuota_member_id', '');
         $apiKey = Setting::get('orderkuota_api_key', '');
+        $pin = Setting::get('orderkuota_pin', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
 
-        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'mode'));
+        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode'));
     }
 
     /**
@@ -189,11 +190,13 @@ class AdminController extends Controller
         $request->validate([
             'orderkuota_member_id' => 'nullable|string|max:255',
             'orderkuota_api_key' => 'nullable|string|max:255',
+            'orderkuota_pin' => 'nullable|string|max:10',
             'orderkuota_mode' => 'required|in:sandbox,production',
         ]);
 
         Setting::set('orderkuota_member_id', $request->orderkuota_member_id);
         Setting::set('orderkuota_api_key', $request->orderkuota_api_key);
+        Setting::set('orderkuota_pin', $request->orderkuota_pin);
         Setting::set('orderkuota_mode', $request->orderkuota_mode);
 
         return redirect()->route('admin.supplier_settings')->with('success', 'Pengaturan API Supplier berhasil diperbarui.');
