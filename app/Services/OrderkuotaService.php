@@ -48,24 +48,38 @@ class OrderkuotaService
             // Susun teks perintah transaksinya (tanpa urlencode terlebih dahulu)
             $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
 
-            // Rakit parameter menggunakan http_build_query agar URL aman
+            // METODE SAPU JAGAT: Masukkan semua tebakan nama parameter sekaligus!
             $queryParams = http_build_query([
-                'id'    => $memberId,
-                'pass'  => $passwordH2H,
-                'pesan' => $perintahTeks  // Parameter standar IRS untuk format Jabber
+                // Variasi penamaan ID
+                'id'       => $memberId,
+                'uid'      => $memberId,
+                'memberid' => $memberId,
+
+                // Variasi penamaan Password
+                'pass'     => $passwordH2H,
+                'password' => $passwordH2H,
+                'pin_ip'   => $passwordH2H, 
+
+                // Variasi penamaan String Transaksi
+                'trx'      => $perintahTeks,
+                'msg'      => $perintahTeks,
+                'sms'      => $perintahTeks,
+                'pesan'    => $perintahTeks,
+                'text'     => $perintahTeks,
+                'format'   => $perintahTeks,
+                'q'        => $perintahTeks
             ]);
 
             $urlTarget = "https://h2h.okeconnect.com/trx?" . $queryParams;
 
-            Log::info("OKEConnect IRS Encoded Request: " . $urlTarget);
+            Log::info("OKEConnect Shotgun Request: " . $urlTarget);
 
-            // Gunakan Http::get Laravel biasa karena URL sudah di-encode dengan aman
+            // Eksekusi request menggunakan HTTP Client Laravel
             $response = Http::timeout(20)->get($urlTarget);
-            $responseBody = $response->body();
 
-            Log::info("OKEConnect IRS Encoded Response: " . $responseBody);
+            Log::info("OKEConnect Shotgun Response: " . $response->body());
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (Encoded URL): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Shotgun URL): " . $e->getMessage());
         }
     }
 }

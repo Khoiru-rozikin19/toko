@@ -272,8 +272,18 @@ test('successful payment callback triggers Orderkuota H2H API request', function
         return str_contains($request->url(), 'h2h.okeconnect.com/trx') &&
                $request->method() === 'GET' &&
                $request['id'] === 'OK1988589' &&
+               $request['uid'] === 'OK1988589' &&
+               $request['memberid'] === 'OK1988589' &&
                $request['pass'] === '@jkn1234' &&
-               $request['pesan'] === "ML86.081234567890..R#{$orderId}";
+               $request['password'] === '@jkn1234' &&
+               $request['pin_ip'] === '@jkn1234' &&
+               $request['trx'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['msg'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['sms'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['pesan'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['text'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['format'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['q'] === "ML86.081234567890..R#{$orderId}";
     });
 });
 
@@ -312,8 +322,18 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
         return str_contains($request->url(), 'h2h.okeconnect.com/trx') &&
                $request->method() === 'GET' &&
                $request['id'] === 'OK999999' &&
+               $request['uid'] === 'OK999999' &&
+               $request['memberid'] === 'OK999999' &&
                $request['pass'] === 'test-api-key' &&
-               $request['pesan'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
+               $request['password'] === 'test-api-key' &&
+               $request['pin_ip'] === 'test-api-key' &&
+               $request['trx'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['msg'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['sms'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['pesan'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['text'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['format'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['q'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
     });
 });
 
