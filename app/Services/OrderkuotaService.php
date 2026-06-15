@@ -52,18 +52,19 @@ class OrderkuotaService
         Log::info("Detail API Orderkuota - Member ID: {$memberId}, Token/Key: " . ($apiKey ? 'TERSEDIA' : 'KOSONG') . ", Mode: {$mode}, Nomor HP Tujuan: {$targetPhone}");
 
         try {
-            // Kirim request ke URL H2H OKEConnect
-            $response = Http::asForm()->post('https://h2h.okeconnect.com/trx', [
+            // Kirim request ke URL H2H OKEConnect menggunakan HTTP GET untuk menghindari proteksi CSRF
+            $response = Http::get('https://h2h.okeconnect.com/trx', [
                 'memberID' => $memberId,
                 'pin' => $pin,
                 'dest' => $targetPhone,
                 'msg' => $message,
+                'q' => $message,
             ]);
 
-            Log::info("OKEConnect HTTP Request Sent. Status: " . $response->status());
+            Log::info("OKEConnect HTTP Request Sent (GET). Status: " . $response->status());
             Log::info("OKEConnect HTTP Response Body: " . $response->body());
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed: " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (GET): " . $e->getMessage());
         }
     }
 }

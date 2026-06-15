@@ -269,10 +269,11 @@ test('successful payment callback triggers Orderkuota H2H API request', function
 
     // Verify H2H request was sent directly to Okeconnect
     Http::assertSent(function ($request) use ($orderId) {
-        return $request->url() === 'https://h2h.okeconnect.com/trx' &&
-               $request->method() === 'POST' &&
+        return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
+               $request->method() === 'GET' &&
                $request['dest'] === '081234567890' &&
-               $request['msg'] === "ML86.081234567890..R#{$orderId}";
+               $request['msg'] === "ML86.081234567890..R#{$orderId}" &&
+               $request['q'] === "ML86.081234567890..R#{$orderId}";
     });
 });
 
@@ -307,12 +308,13 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
     $service->kirimPesananKeOrderkuota($order->id);
 
     Http::assertSent(function ($request) {
-        return $request->url() === 'https://h2h.okeconnect.com/trx' &&
-               $request->method() === 'POST' &&
+        return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
+               $request->method() === 'GET' &&
                $request['memberID'] === 'OK999999' &&
                $request['pin'] === '4321' &&
                $request['dest'] === '08777777777' &&
-               $request['msg'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
+               $request['msg'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP' &&
+               $request['q'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
     });
 });
 
