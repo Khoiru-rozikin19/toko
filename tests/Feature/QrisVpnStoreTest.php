@@ -227,8 +227,10 @@ test('admin can add and update product with supplier code', function () {
     expect($product->orderkuota_product_code)->toBe('TSEL10-NEW');
 });
 
-test('successful payment callback dispatches SendOrderToOrderkuota job and logs information', function () {
-    Queue::fake();
+test('successful payment callback triggers Orderkuota H2H API request', function () {
+    Http::fake([
+        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
+    ]);
     Log::spy();
 
     $product = Product::create([
@@ -264,9 +266,12 @@ test('successful payment callback dispatches SendOrderToOrderkuota job and logs 
 
     $response->assertStatus(200);
 
-    // Verify job was dispatched
-    Queue::assertPushed(\App\Jobs\SendOrderToOrderkuota::class, function ($job) use ($orderId) {
-        return true;
+    // Verify H2H request was sent directly to Okeconnect
+    Http::assertSent(function ($request) use ($orderId) {
+        return $request->url() === 'https://h2h.okeconnect.com/trx' &&
+               $request->method() === 'POST' &&
+               $request['dest'] === '081234567890' &&
+               $request['msg'] === "ML86.081234567890..R#{$orderId}";
     });
 });
 

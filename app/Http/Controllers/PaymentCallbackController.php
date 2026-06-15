@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentCallbackController extends Controller
 {
+    protected $orderkuotaService;
+
+    public function __construct(\App\Services\OrderkuotaService $orderkuotaService)
+    {
+        $this->orderkuotaService = $orderkuotaService;
+    }
+
     /**
      * Handle payment callback notifications from Android app.
      */
@@ -60,8 +67,8 @@ class PaymentCallbackController extends Controller
         $order->status = 'success';
         $order->save();
 
-        // Dispatch background job to trigger supplier API integration
-        \App\Jobs\SendOrderToOrderkuota::dispatch($order->id);
+        // Kirim pesanan ke Orderkuota secara langsung
+        $this->orderkuotaService->kirimPesananKeOrderkuota($order->id);
 
         // Decrement product stock if not unlimited
         if ($order->product && $order->product->stock > 0) {
