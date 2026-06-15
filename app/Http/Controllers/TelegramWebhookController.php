@@ -84,15 +84,41 @@ class TelegramWebhookController extends Controller
 
         $formattedAmount = number_format($order->total_amount, 0, ',', '.');
         $customerName = $order->email_or_whatsapp;
-
         if ($action === 'approve') {
+            // Assign local account stock if product is a local config product and uses dynamic stock
+            if ($order->product && empty($order->product->orderkuota_product_code) && $order->product->stocks()->exists()) {
+                $stock = \App\Models\AccountStock::where('product_id', $order->product_id)
+                    ->where('status', 'ready')
+                    ->first();
+
+                if (!$stock) {
+                    Log::warning("Telegram Webhook Warning: Stock exhausted for local product {$order->product_id}");
+                    if ($callbackQueryId) {
+                        $this->telegramService->answerCallbackQuery($callbackQueryId, "Gagal: Stok akun habis!");
+                    }
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Stock exhausted.',
+                    ], 400);
+                }
+
+                $stock->update([
+                    'status' => 'sold',
+                    'order_id' => $order->id,
+                ]);
+
+                $order->vpn_config = $stock->account_data;
+            }
+
             // Update order status to paid
             $order->status = 'paid';
             $order->save();
 
             // Decrement product stock if not unlimited
             if ($order->product && $order->product->stock > 0) {
-                $order->product->decrement('stock');
+                if (!empty($order->product->orderkuota_product_code) || !$order->product->stocks()->exists()) {
+                    $order->product->decrement('stock');
+                }
             }
 
             // Run the pulsa transaction

@@ -22,4 +22,26 @@ class Product extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function stocks()
+    {
+        return $this->hasMany(AccountStock::class);
+    }
+
+    /**
+     * Get dynamic stock count for local products,
+     * or column stock for supplier products.
+     *
+     * @return int
+     */
+    public function getStockAttribute()
+    {
+        if (empty($this->orderkuota_product_code)) {
+            if ($this->stocks()->exists()) {
+                return $this->stocks()->where('status', 'ready')->count();
+            }
+            return $this->attributes['stock'] ?? 0;
+        }
+        return $this->attributes['stock'] ?? 0;
+    }
 }

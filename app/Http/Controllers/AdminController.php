@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\PaymentLog;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\AccountStock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -334,5 +335,81 @@ class AdminController extends Controller
         $user->delete();
 
         return redirect()->route('admin.users')->with('success', "Akun {$name} berhasil dihapus secara permanen.");
+    }
+
+    /**
+     * Display Account Stocks management page.
+     */
+    public function accountStocks(Request $request)
+    {
+        // Get all products that do NOT use Orderkuota (local products)
+        $products = Product::whereNull('orderkuota_product_code')
+            ->orWhere('orderkuota_product_code', '')
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $productId = $request->query('product_id');
+        $stocks = collect();
+
+        if ($productId) {
+            $product = Product::findOrFail($productId);
+            $stocks = AccountStock::where('product_id', $productId)
+                ->orderBy('status', 'asc') // ready first
+                ->orderBy('created_at', 'desc')
+                ->paginate(15);
+        }
+
+        return view('admin.account_stocks', compact('products', 'productId', 'stocks'));
+    }
+
+    /**
+     * Store new account configurations in bulk.
+     */
+    public function storeAccountStocks(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'accounts_input' => 'required|string',
+        ]);
+
+        $product = Product::findOrFail($request->product_id);
+        $rawInput = $request->accounts_input;
+
+        // Split inputs by blank lines (regex matches two or more newlines with optional spaces)
+        $accounts = preg_split('/\r?\n\s*\r?\n/', $rawInput);
+
+        $insertedCount = 0;
+        foreach ($accounts as $account) {
+            $trimmed = trim($account);
+            if (!empty($trimmed)) {
+                AccountStock::create([
+                    'product_id' => $product->id,
+                    'account_data' => $trimmed,
+                    'status' => 'ready',
+                ]);
+                $insertedCount++;
+            }
+        }
+
+        return redirect()->route('admin.account_stocks', ['product_id' => $product->id])
+            ->with('success', "Berhasil menambahkan {$insertedCount} stok akun.");
+    }
+
+    /**
+     * Delete an account stock.
+     */
+    public function deleteAccountStock($id)
+    {
+        $stock = AccountStock::findOrFail($id);
+
+        if ($stock->status === 'sold') {
+            return back()->with('error', 'Tidak dapat menghapus akun yang sudah terjual.');
+        }
+
+        $productId = $stock->product_id;
+        $stock->delete();
+
+        return redirect()->route('admin.account_stocks', ['product_id' => $productId])
+            ->with('success', 'Stok akun berhasil dihapus.');
     }
 }

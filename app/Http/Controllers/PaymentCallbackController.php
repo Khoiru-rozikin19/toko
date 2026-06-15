@@ -63,6 +63,21 @@ class PaymentCallbackController extends Controller
             ], 200); // Return 200 so the Android app doesn't retry unnecessarily, but specify false
         }
 
+        // Assign local account stock if product is a local config product and uses dynamic stock
+        if ($order->product && empty($order->product->orderkuota_product_code) && $order->product->stocks()->exists()) {
+            $stock = \App\Models\AccountStock::where('product_id', $order->product_id)
+                ->where('status', 'ready')
+                ->first();
+
+            if ($stock) {
+                $stock->update([
+                    'status' => 'sold',
+                    'order_id' => $order->id,
+                ]);
+                $order->vpn_config = $stock->account_data;
+            }
+        }
+
         // Complete the order
         $order->status = 'success';
         $order->save();
@@ -72,7 +87,9 @@ class PaymentCallbackController extends Controller
 
         // Decrement product stock if not unlimited
         if ($order->product && $order->product->stock > 0) {
-            $order->product->decrement('stock');
+            if (!empty($order->product->orderkuota_product_code) || !$order->product->stocks()->exists()) {
+                $order->product->decrement('stock');
+            }
         }
 
         // Link log to the matched order

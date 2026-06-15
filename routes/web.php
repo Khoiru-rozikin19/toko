@@ -47,6 +47,9 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
     Route::post('/products', [AdminController::class, 'storeProduct'])->name('products.store');
     Route::post('/products/{id}/update', [AdminController::class, 'updateProduct'])->name('products.update');
     Route::post('/products/{id}/delete', [AdminController::class, 'deleteProduct'])->name('products.delete');
+    Route::get('/account-stocks', [AdminController::class, 'accountStocks'])->name('account_stocks');
+    Route::post('/account-stocks', [AdminController::class, 'storeAccountStocks'])->name('account_stocks.store');
+    Route::post('/account-stocks/{id}/delete', [AdminController::class, 'deleteAccountStock'])->name('account_stocks.delete');
     Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
 
     // Khusus Admin Utama (Konfigurasi QRIS & Manajemen Pengguna)
