@@ -65,10 +65,29 @@
                             <td class="py-4.5 px-6 text-center">
                                 @if(in_array($order->status, ['success', 'paid']))
                                     @if(!empty($order->vpn_config))
-                                        <a href="{{ route('order.download', $order->id) }}" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
-                                            <span>Unduh Config</span>
-                                        </a>
+                                        @php
+                                            $vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
+                                            $isNodeLink = false;
+                                            foreach ($vpnProtocols as $proto) {
+                                                if (str_starts_with(strtolower($order->vpn_config), $proto)) {
+                                                    $isNodeLink = true;
+                                                    break;
+                                                }
+                                            }
+                                            $isSingleLine = !str_contains($order->vpn_config, "\n") && !str_contains($order->vpn_config, "\r");
+                                        @endphp
+                                        
+                                        @if($isNodeLink || $isSingleLine)
+                                            <button data-config="{{ $order->vpn_config }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'))" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                <span>Lihat Akun</span>
+                                            </button>
+                                        @else
+                                            <a href="{{ route('order.download', $order->id) }}" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+                                                <span>Unduh Config</span>
+                                            </a>
+                                        @endif
                                     @else
                                         @if($order->sn)
                                             <span class="text-xs text-slate-500 font-mono select-all bg-slate-50 dark:bg-slate-850 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800" title="Serial Number / Keterangan pengisian">SN: {{ $order->sn }}</span>
@@ -222,6 +241,106 @@
             })
             .catch(err => console.error("Error polling order status:", err));
         }, 4000);
+    }
+</script>
+
+<!-- ACCOUNT DETAIL MODAL (FOR COPIABLE ACCOUNT & QR CODE DISPLAY) -->
+<div id="accountDetailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-lg border border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-2xl relative">
+        <!-- Close Button -->
+        <button onclick="closeAccountModal()" class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all duration-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="space-y-6">
+            <div class="text-center">
+                <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Detail Akun VPN Anda</h3>
+                <p id="accountModalOrderId" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Order ID: ORD-XXXXXX</p>
+            </div>
+
+            <div id="accountModalDetailsContainer" class="bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl text-slate-800 dark:text-slate-200">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openAccountModal(orderId, config) {
+        document.getElementById('accountModalOrderId').innerText = 'Order ID: ' + orderId;
+        const container = document.getElementById('accountModalDetailsContainer');
+        
+        const vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
+        const isNodeLink = config && vpnProtocols.some(proto => config.toLowerCase().startsWith(proto));
+
+        if (isNodeLink) {
+            container.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-5 items-center justify-between text-left p-1">
+                    <div class="flex-1 space-y-3 w-full">
+                        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Detail Akun VPN:</span>
+                        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
+                            <textarea readonly class="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 resize-none h-24" id="historyConfigText">${escapeHtml(config)}</textarea>
+                            <div class="flex justify-end mt-2">
+                                <button onclick="copyHistoryConfig()" class="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                                    <span id="copyHistoryBtnText">Salin Akun</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-40 h-40 bg-white p-2 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center flex-shrink-0 mx-auto shadow-sm">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(config)}" alt="QR Code" class="w-full h-full object-contain">
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="text-left space-y-3 p-1">
+                    <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Konfigurasi VPN Anda:</span>
+                    <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between gap-3">
+                        <span class="text-sm font-mono text-slate-800 dark:text-slate-200 select-all break-all" id="historyConfigTextPlain">${escapeHtml(config)}</span>
+                        <button onclick="copyHistoryConfigPlain()" class="flex-shrink-0 p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all duration-200" title="Salin Akun">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('accountDetailModal').classList.remove('hidden');
+    }
+
+    function closeAccountModal() {
+        document.getElementById('accountDetailModal').classList.add('hidden');
+    }
+
+    function copyHistoryConfig() {
+        const copyText = document.getElementById("historyConfigText");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+        
+        const btnText = document.getElementById("copyHistoryBtnText");
+        btnText.innerText = "Tersalin!";
+        setTimeout(() => {
+            btnText.innerText = "Salin Akun";
+        }, 2000);
+    }
+
+    function copyHistoryConfigPlain() {
+        const copyText = document.getElementById("historyConfigTextPlain").innerText;
+        navigator.clipboard.writeText(copyText);
+        alert("Konfigurasi VPN berhasil disalin ke clipboard!");
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 </script>
 @endsection

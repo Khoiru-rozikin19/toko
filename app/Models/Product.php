@@ -17,6 +17,7 @@ class Product extends Model
         'config_template',
         'stock',
         'orderkuota_product_code',
+        'success_instruction',
     ];
 
     public function orders()

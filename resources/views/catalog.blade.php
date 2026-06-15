@@ -193,13 +193,8 @@
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Terima kasih, pembayaran Anda berhasil diverifikasi otomatis oleh sistem.</p>
             </div>
 
-            <div class="bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl max-w-sm mx-auto space-y-2">
-                <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Konfigurasi VPN Anda:</span>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Tekan tombol di bawah untuk mengunduh konfigurasi siap pakai Anda (.ovpn):</p>
-                <a id="downloadConfigBtn" href="" class="mt-4 inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 transition-all duration-200">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    <span>Unduh Konfigurasi (.ovpn)</span>
-                </a>
+            <div id="successDetailsContainer" class="bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl max-w-lg mx-auto space-y-2 text-slate-800 dark:text-slate-200">
+                <!-- Dinamis diisi lewat JavaScript -->
             </div>
         </div>
 
@@ -429,7 +424,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success' || data.status === 'paid') {
-                    showSuccessState();
+                    showSuccessState(data.vpn_config, data.success_instruction);
                 } else if (data.status === 'expired') {
                     showExpiredState();
                 }
@@ -438,14 +433,115 @@
         }, 4000); // Poll every 4 seconds
     }
 
-    function showSuccessState() {
+    function showSuccessState(vpnConfig, successInstruction) {
         resetOrderTracker();
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.remove('hidden');
         
-        // Update download path
-        const downloadBtn = document.getElementById('downloadConfigBtn');
-        downloadBtn.href = `/orders/${activeOrderId}/download`;
+        populateSuccessDetails(vpnConfig, successInstruction, activeOrderId);
+    }
+
+    function populateSuccessDetails(config, successInstruction, orderId) {
+        const container = document.getElementById('successDetailsContainer');
+        if (!container) return;
+        
+        container.className = "bg-blue-50 dark:bg-blue-950/20 p-5 border border-blue-100 dark:border-blue-900/50 rounded-3xl max-w-lg mx-auto space-y-2 text-slate-800 dark:text-slate-200";
+
+        // Case 1: Custom success instruction
+        if (successInstruction && successInstruction.trim() !== '') {
+            container.innerHTML = `
+                <div class="text-left space-y-2 p-1">
+                    <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Petunjuk Pembayaran Sukses:</span>
+                    <div class="text-sm text-slate-700 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                </div>
+            `;
+            return;
+        }
+
+        // Case 2: Config node link (vmess, vless, trojan, ss, shadowsocks)
+        const vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
+        const isNodeLink = config && vpnProtocols.some(proto => config.toLowerCase().startsWith(proto));
+
+        if (isNodeLink) {
+            container.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-5 items-center justify-between text-left p-1">
+                    <div class="flex-1 space-y-3 w-full">
+                        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Detail Akun VPN:</span>
+                        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
+                            <textarea readonly class="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 resize-none h-24" id="successConfigText">${escapeHtml(config)}</textarea>
+                            <div class="flex justify-end mt-2">
+                                <button onclick="copySuccessConfig()" class="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                                    <span id="copySuccessBtnText">Salin Akun</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-40 h-40 bg-white p-2 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center flex-shrink-0 mx-auto shadow-sm">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(config)}" alt="QR Code" class="w-full h-full object-contain">
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Case 3: Plain single-line credentials (e.g. vip.rzkstores.my.id:80@admin123)
+        const isSingleLine = config && !config.includes('\n') && !config.includes('\r');
+        if (isSingleLine) {
+            container.innerHTML = `
+                <div class="text-left space-y-3 p-1">
+                    <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Konfigurasi VPN Anda:</span>
+                    <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between gap-3">
+                        <span class="text-sm font-mono text-slate-800 dark:text-slate-200 select-all break-all" id="successConfigTextPlain">${escapeHtml(config)}</span>
+                        <button onclick="copySuccessConfigPlain()" class="flex-shrink-0 p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all duration-200" title="Salin Akun">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Case 4: Default download button (.ovpn configuration file)
+        container.innerHTML = `
+            <div class="space-y-3 p-1">
+                <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Konfigurasi VPN Anda:</span>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Tekan tombol di bawah untuk mengunduh konfigurasi siap pakai Anda (.ovpn):</p>
+                <a href="/orders/${orderId}/download" class="mt-4 inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 transition-all duration-200">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <span>Unduh Konfigurasi (.ovpn)</span>
+                </a>
+            </div>
+        `;
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function copySuccessConfig() {
+        const copyText = document.getElementById("successConfigText");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+        
+        const btnText = document.getElementById("copySuccessBtnText");
+        btnText.innerText = "Tersalin!";
+        setTimeout(() => {
+            btnText.innerText = "Salin Akun";
+        }, 2000);
+    }
+
+    function copySuccessConfigPlain() {
+        const copyText = document.getElementById("successConfigTextPlain").innerText;
+        navigator.clipboard.writeText(copyText);
+        alert("Konfigurasi VPN berhasil disalin ke clipboard!");
     }
 
     function showExpiredState() {

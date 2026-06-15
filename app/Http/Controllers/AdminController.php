@@ -87,6 +87,7 @@ class AdminController extends Controller
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
             'orderkuota_product_code' => 'nullable|string|max:50',
+            'success_instruction' => 'nullable|string',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -111,6 +112,7 @@ class AdminController extends Controller
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
             'orderkuota_product_code' => 'nullable|string|max:50',
+            'success_instruction' => 'nullable|string',
         ]);
 
         DB::transaction(function () use ($product, $request) {

@@ -136,10 +136,17 @@ class CatalogController extends Controller
             $order->update(['status' => 'expired']);
         }
 
-        return response()->json([
+        $response = [
             'status' => $order->status,
             'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid']),
-        ]);
+        ];
+
+        if (in_array($order->status, ['success', 'paid'])) {
+            $response['vpn_config'] = $order->vpn_config;
+            $response['success_instruction'] = $order->product ? $order->product->success_instruction : null;
+        }
+
+        return response()->json($response);
     }
 
     /**

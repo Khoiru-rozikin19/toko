@@ -154,6 +154,11 @@
             </div>
 
             <div>
+                <label for="create_success_instruction" class="block text-xs font-bold text-slate-500 uppercase mb-2">Instruksi Pembayaran Sukses (Kustom)</label>
+                <textarea id="create_success_instruction" name="success_instruction" rows="3" placeholder="Contoh: Silakan tunggu 1-5 menit untuk pengisian otomatis. Hubungi admin..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+            </div>
+
+            <div>
                 <label for="create_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
                 <textarea id="create_template" name="config_template" rows="5" placeholder="Salin isi file konfigurasi VPN di sini..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
@@ -213,6 +218,11 @@
             </div>
 
             <div>
+                <label for="edit_success_instruction" class="block text-xs font-bold text-slate-500 uppercase mb-2">Instruksi Pembayaran Sukses (Kustom)</label>
+                <textarea id="edit_success_instruction" name="success_instruction" rows="3" placeholder="Instruksi sukses untuk pelanggan..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+            </div>
+
+            <div>
                 <label for="edit_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
                 <textarea id="edit_template" name="config_template" rows="5" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
@@ -246,6 +256,7 @@
         document.getElementById('edit_stock').value = product.stock;
         document.getElementById('edit_orderkuota_product_code').value = product.orderkuota_product_code || '';
         document.getElementById('edit_description').value = product.description || '';
+        document.getElementById('edit_success_instruction').value = product.success_instruction || '';
         document.getElementById('edit_template').value = product.config_template;
         
         // Dynamic action routing URL
