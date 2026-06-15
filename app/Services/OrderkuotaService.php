@@ -55,14 +55,17 @@ class OrderkuotaService
             // Log format string sebelum dikirim sesuai instruksi tugas
             Log::info("Format string OKEConnect yang akan dikirim: {$message}");
 
-            // Kirim request ke URL H2H OKEConnect menggunakan HTTP POST dengan raw body (Skenario 1)
-            $response = Http::withBody($message, 'text/plain')
-                            ->post('https://h2h.okeconnect.com/trx');
+            // Satukan format string langsung di belakang tanda tanya (?) URL utama
+            // Kita ganti '#' dengan '%23' agar client HTTP tidak menganggapnya sebagai URL fragment (client-side anchor)
+            $urlTarget = "https://h2h.okeconnect.com/trx?" . str_replace('#', '%23', $message);
 
-            Log::info("OKEConnect HTTP Request Sent (POST Raw Body). Status: " . $response->status());
+            // Kirim request GET murni ke URL tersebut
+            $response = Http::get($urlTarget);
+
+            Log::info("OKEConnect HTTP Request Sent to: " . $urlTarget);
             Log::info("OKEConnect HTTP Response Body: " . $response->body());
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (POST Raw Body): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (GET Raw String): " . $e->getMessage());
         }
     }
 }
