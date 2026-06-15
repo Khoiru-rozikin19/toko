@@ -41,8 +41,11 @@
 <body class="min-h-screen transition-colors duration-200">
     <div class="flex flex-col md:flex-row min-h-screen">
         
+        <!-- Backdrop Overlay for Mobile Sidebar -->
+        <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/60 z-40 transition-opacity duration-300 opacity-0 pointer-events-none md:hidden"></div>
+
         <!-- SIDEBAR (Left) -->
-        <aside id="sidebar" class="w-full md:w-80 bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 md:fixed md:top-0 md:bottom-0 z-30">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 max-w-[calc(100vw-3rem)] md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:fixed md:top-0 md:bottom-0 z-50 md:z-30">
             <!-- Sidebar Header & Logo -->
             <div class="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                 <a href="{{ url('/') }}" class="flex items-center space-x-3">
@@ -57,8 +60,8 @@
                 </a>
                 
                 <!-- Mobile Menu Button -->
-                <button id="mobileMenuBtn" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                <button id="mobileMenuBtn" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg" aria-label="Tutup Menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
 
@@ -212,7 +215,7 @@
             </header>
 
             <!-- PAGE CONTENT -->
-            <main class="flex-1 p-6 md:p-10">
+            <main class="flex-1 p-4 sm:p-6 md:p-10">
                 @if(session('success'))
                     <div class="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-400 rounded-2xl flex items-center space-x-3">
                         <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -282,27 +285,34 @@
         const mobileMenuOpen = document.getElementById('mobileMenuOpen');
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
 
-        function toggleSidebar() {
-            sidebar.classList.toggle('-translate-x-full');
-            sidebar.classList.toggle('active');
+        function openSidebar() {
+            sidebar.classList.remove('-translate-x-full');
+            sidebarBackdrop.classList.remove('opacity-0', 'pointer-events-none');
+            sidebarBackdrop.classList.add('opacity-100', 'pointer-events-auto');
         }
 
-        // On smaller screens, hide sidebar initially
-        if (window.innerWidth < 768) {
+        function closeSidebar() {
             sidebar.classList.add('-translate-x-full');
+            sidebarBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+            sidebarBackdrop.classList.add('opacity-0', 'pointer-events-none');
         }
 
+        if (mobileMenuOpen) mobileMenuOpen.addEventListener('click', openSidebar);
+        if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', closeSidebar);
+        if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', closeSidebar);
+
+        // Handle window resize to clean up state
         window.addEventListener('resize', function() {
             if (window.innerWidth >= 768) {
                 sidebar.classList.remove('-translate-x-full');
+                sidebarBackdrop.classList.remove('opacity-100', 'pointer-events-auto');
+                sidebarBackdrop.classList.add('opacity-0', 'pointer-events-none');
             } else {
                 sidebar.classList.add('-translate-x-full');
             }
         });
-
-        if (mobileMenuOpen) mobileMenuOpen.addEventListener('click', toggleSidebar);
-        if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', toggleSidebar);
     </script>
 </body>
 </html>

@@ -1,16 +1,16 @@
 @extends('layouts.app', ['title' => 'Konfigurasi QRIS & API'])
 
 @section('content')
-<div class="space-y-8 max-w-3xl">
+<div class="space-y-6 sm:space-y-8 max-w-3xl">
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-3xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight">Pengaturan QRIS & API</h2>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight">Pengaturan QRIS & API</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasikan QRIS dasar dan kredensial webhook Android Anda</p>
     </div>
 
     <!-- Configuration Form -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 sm:p-8 shadow-sm">
         
         <form action="{{ route('admin.settings.update') }}" method="POST" class="space-y-6">
             @csrf
@@ -27,7 +27,7 @@
             <!-- API Secret Key (Android Callback Token) -->
             <div class="space-y-2">
                 <label for="api_secret_key" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Secret API Token (Android Callback)</label>
-                <div class="flex space-x-2">
+                <div class="flex flex-col sm:flex-row gap-2">
                     <input type="text" id="api_secret_key" name="api_secret_key" value="{{ $apiSecretKey }}" placeholder="Masukkan atau generate token rahasia..." class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200">
                     <button type="button" onclick="generateApiKey()" class="px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 font-bold rounded-2xl text-xs transition-all duration-200 whitespace-nowrap">
                         Generate Token

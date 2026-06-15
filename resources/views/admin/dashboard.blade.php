@@ -1,11 +1,11 @@
 @extends('layouts.app', ['title' => 'Dashboard Seller'])
 
 @section('content')
-<div class="space-y-10">
+<div class="space-y-6 sm:space-y-10">
     
     <!-- Welcome Banner -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">
             Selamat Datang di Portal Seller, {{ Auth::user()->name ?? 'Admin Utama' }}!
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">

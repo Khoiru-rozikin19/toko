@@ -6,7 +6,7 @@
     <!-- Catalog Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Katalog Produk</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Katalog Produk</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ $products->count() }} produk tersedia</p>
         </div>
         
@@ -91,7 +91,7 @@
 
 <!-- PURCHASE MODAL -->
 <div id="purchaseModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden transition-all duration-300">
-    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-lg border border-slate-100 dark:border-slate-800 p-8 shadow-2xl relative">
+    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-lg border border-slate-100 dark:border-slate-800 p-5 sm:p-8 shadow-2xl relative max-h-[calc(100vh-2rem)] overflow-y-auto">
         <!-- Close Button -->
         <button onclick="closeModal()" class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all duration-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -112,12 +112,12 @@
                     <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
                 </div>
 
-                <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div>
                         <span class="text-xs text-slate-400 dark:text-slate-500 block">Harga Dasar:</span>
                         <span id="modalProductPrice" class="text-lg font-extrabold text-slate-800 dark:text-slate-100">Rp 0</span>
                     </div>
-                    <button type="submit" id="submitBtn" class="flex items-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
+                    <button type="submit" id="submitBtn" class="w-full sm:w-auto flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
                         <span>Lanjut ke Pembayaran</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
@@ -214,7 +214,7 @@
 
 <!-- INFO DETAIL MODAL -->
 <div id="detailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
-    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-md border border-slate-100 dark:border-slate-800 p-8 shadow-2xl relative">
+    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-md border border-slate-100 dark:border-slate-800 p-5 sm:p-8 shadow-2xl relative max-h-[calc(100vh-2rem)] overflow-y-auto">
         <button onclick="closeDetailModal()" class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all duration-200">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
