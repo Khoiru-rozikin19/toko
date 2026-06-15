@@ -229,7 +229,7 @@ test('admin can add and update product with supplier code', function () {
 
 test('successful payment callback triggers Orderkuota H2H API request', function () {
     Http::fake([
-        'api.orderkuota.com/*' => Http::response('SUCCESS', 200),
+        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
     ]);
     Log::spy();
 
@@ -269,18 +269,16 @@ test('successful payment callback triggers Orderkuota H2H API request', function
 
     // Verify request was sent directly to Orderkuota API
     Http::assertSent(function ($request) use ($orderId) {
-        return $request->url() === 'https://api.orderkuota.com/v1/transaction' &&
-               $request->method() === 'POST' &&
-               $request['member_id'] === 'OK1988589' &&
-               $request['product_code'] === 'ML86' &&
-               $request['target'] === '081234567890' &&
-               $request['ref_id'] === $orderId;
+        return str_contains($request->url(), 'h2h.okeconnect.com/trx') &&
+               $request->method() === 'GET' &&
+               $request['id'] === 'OK1988589' &&
+               str_contains($request['perintah'], "ML86.081234567890..R");
     });
 });
 
 test('OrderkuotaService sends H2H request using Http facade', function () {
     Http::fake([
-        'api.orderkuota.com/*' => Http::response('SUCCESS', 200),
+        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
     ]);
 
     Setting::set('orderkuota_member_id', 'OK999999');
@@ -310,14 +308,10 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
     $service->kirimPesananKeOrderkuota($order->id);
 
     Http::assertSent(function ($request) {
-        return $request->url() === 'https://api.orderkuota.com/v1/transaction' &&
-               $request->method() === 'POST' &&
-               $request['member_id'] === 'OK999999' &&
-               $request['product_code'] === 'FF50' &&
-               $request['target'] === '08777777777' &&
-               $request['ref_id'] === 'ORD-TESTHTTP' &&
-               $request['pin'] === '4321' &&
-               $request->hasHeader('Authorization');
+        return str_contains($request->url(), 'h2h.okeconnect.com/trx') &&
+               $request->method() === 'GET' &&
+               $request['id'] === 'OK999999' &&
+               str_contains($request['perintah'], 'FF50.08777777777.4321.R');
     });
 });
 
