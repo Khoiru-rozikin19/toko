@@ -229,7 +229,7 @@ test('admin can add and update product with supplier code', function () {
 
 test('successful payment callback triggers Orderkuota H2H API request', function () {
     Http::fake([
-        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
+        'api.orderkuota.com/*' => Http::response('SUCCESS', 200),
     ]);
     Log::spy();
 
@@ -267,22 +267,25 @@ test('successful payment callback triggers Orderkuota H2H API request', function
 
     $response->assertStatus(200);
 
-    // Verify H2H request was sent directly to Okeconnect
+    // Verify request was sent directly to Orderkuota API
     Http::assertSent(function ($request) use ($orderId) {
-        return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
-               $request->method() === 'GET' &&
-               str_contains($request->url(), 'OK1988589') &&
-               str_contains($request->url(), 'ML86.081234567890.R');
+        return $request->url() === 'https://api.orderkuota.com/v1/transaction' &&
+               $request->method() === 'POST' &&
+               $request['member_id'] === 'OK1988589' &&
+               $request['product_code'] === 'ML86' &&
+               $request['target'] === '081234567890' &&
+               $request['ref_id'] === $orderId;
     });
 });
 
 test('OrderkuotaService sends H2H request using Http facade', function () {
     Http::fake([
-        'h2h.okeconnect.com/*' => Http::response('SUCCESS', 200),
+        'api.orderkuota.com/*' => Http::response('SUCCESS', 200),
     ]);
 
     Setting::set('orderkuota_member_id', 'OK999999');
     Setting::set('orderkuota_pin', '4321');
+    Setting::set('orderkuota_api_key', 'test-api-key');
 
     $product = Product::create([
         'name' => 'Premium Free Fire',
@@ -307,9 +310,14 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
     $service->kirimPesananKeOrderkuota($order->id);
 
     Http::assertSent(function ($request) {
-        return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
-               $request->method() === 'GET' &&
-               str_contains($request->url(), 'OK999999.4321.FF50.08777777777.R');
+        return $request->url() === 'https://api.orderkuota.com/v1/transaction' &&
+               $request->method() === 'POST' &&
+               $request['member_id'] === 'OK999999' &&
+               $request['product_code'] === 'FF50' &&
+               $request['target'] === '08777777777' &&
+               $request['ref_id'] === 'ORD-TESTHTTP' &&
+               $request['pin'] === '4321' &&
+               $request->hasHeader('Authorization');
     });
 });
 
