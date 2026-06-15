@@ -19,17 +19,44 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
+        $user = auth()->user();
+        $isAdmin = $user->role === 'admin';
+
+        // Helper to query orders belonging to the user if not admin
+        $orderQuery = function () use ($isAdmin, $user) {
+            $q = Order::query();
+            if (!$isAdmin) {
+                $q->whereHas('product', function ($pq) use ($user) {
+                    $pq->where('user_id', $user->id);
+                });
+            }
+            return $q;
+        };
+
+        // Helper to query products belonging to the user if not admin
+        $productQuery = function () use ($isAdmin, $user) {
+            $q = Product::query();
+            if (!$isAdmin) {
+                $q->where('user_id', $user->id);
+            }
+            return $q;
+        };
+
         // 1. Wallets & Earnings (Stats matching screenshot 2)
-        $totalRevenue = Order::whereIn('status', ['success', 'paid'])->sum('total_amount');
+        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid'])->sum('total_amount');
         
         // Sum of pending orders' amount (simulating "held balance" or "saldo tertahan")
-        $pendingRevenue = Order::whereIn('status', ['pending', 'pending_manual'])
+        $pendingRevenue = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])
             ->where('expired_at', '>', Carbon::now())
             ->sum('total_amount');
 
-        $totalSalesCount = Order::whereIn('status', ['success', 'paid'])->count();
-        $totalOrdersCount = Order::count();
-        $readyStockCount = Product::sum('stock');
+        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
+        $totalOrdersCount = $orderQuery()->count();
+
+        $readyStockCount = 0;
+        foreach ($productQuery()->get() as $p) {
+            $readyStockCount += $p->stock;
+        }
 
         // 2. Trend Pendapatan Harian (Last 7 Days)
         $chartLabels = [];
@@ -38,16 +65,16 @@ class AdminController extends Controller
             $date = Carbon::now()->subDays($i);
             $chartLabels[] = $date->isoFormat('D MMM');
             
-            $revenue = Order::whereIn('status', ['success', 'paid'])
+            $revenue = $orderQuery()->whereIn('status', ['success', 'paid'])
                 ->whereDate('created_at', $date->format('Y-m-d'))
                 ->sum('total_amount');
             $chartData[] = $revenue;
         }
 
         // 3. Rasio Status Order (Donut Chart)
-        $statusSuccess = Order::whereIn('status', ['success', 'paid'])->count();
-        $statusPending = Order::whereIn('status', ['pending', 'pending_manual'])->count();
-        $statusExpired = Order::where('status', 'expired')->count();
+        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
+        $statusPending = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])->count();
+        $statusExpired = $orderQuery()->where('status', 'expired')->count();
 
         $donutLabels = ['Sukses', 'Pending', 'Expired'];
         $donutData = [$statusSuccess, $statusPending, $statusExpired];
@@ -70,8 +97,15 @@ class AdminController extends Controller
      */
     public function products()
     {
-        $products = Product::orderBy('created_at', 'desc')->get();
-        return view('admin.products', compact('products'));
+        $user = auth()->user();
+        if ($user->role === 'admin') {
+            $products = Product::with('seller')->orderBy('created_at', 'desc')->get();
+            $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
+        } else {
+            $products = Product::where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
+            $sellers = collect();
+        }
+        return view('admin.products', compact('products', 'sellers'));
     }
 
     /**
@@ -88,10 +122,15 @@ class AdminController extends Controller
             'stock' => 'required|integer|min:0',
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
         DB::transaction(function () use ($request) {
-            Product::create($request->all());
+            $data = $request->all();
+            if (auth()->user()->role !== 'admin' || empty($data['user_id'])) {
+                $data['user_id'] = auth()->id();
+            }
+            Product::create($data);
         });
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil ditambahkan.');
@@ -104,6 +143,11 @@ class AdminController extends Controller
     {
         $product = Product::findOrFail($id);
 
+        // Authorization check
+        if (auth()->user()->role !== 'admin' && $product->user_id !== auth()->id()) {
+            return redirect()->route('admin.products')->with('error', 'Anda tidak memiliki akses untuk memperbarui produk ini.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -113,10 +157,15 @@ class AdminController extends Controller
             'stock' => 'required|integer|min:0',
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
+            'user_id' => 'nullable|exists:users,id',
         ]);
 
         DB::transaction(function () use ($product, $request) {
-            $product->update($request->all());
+            $data = $request->all();
+            if (auth()->user()->role !== 'admin') {
+                unset($data['user_id']); // Seller cannot change the owner
+            }
+            $product->update($data);
         });
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil diperbarui.');
@@ -129,6 +178,11 @@ class AdminController extends Controller
     {
         $product = Product::findOrFail($id);
         
+        // Authorization check
+        if (auth()->user()->role !== 'admin' && $product->user_id !== auth()->id()) {
+            return redirect()->route('admin.products')->with('error', 'Anda tidak memiliki akses untuk menghapus produk ini.');
+        }
+
         DB::transaction(function () use ($product) {
             $product->delete();
         });
@@ -143,7 +197,14 @@ class AdminController extends Controller
     {
         $status = $request->query('status');
 
-        $query = Order::with('product')->orderBy('created_at', 'desc');
+        $query = Order::with('product.seller')->orderBy('created_at', 'desc');
+
+        // Filter by seller if not admin
+        if (auth()->user()->role !== 'admin') {
+            $query->whereHas('product', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
 
         if ($status) {
             if ($status === 'pending') {
@@ -154,7 +215,15 @@ class AdminController extends Controller
         }
 
         $orders = $query->paginate(15);
-        $paymentLogs = PaymentLog::with('order')->orderBy('created_at', 'desc')->limit(20)->get();
+
+        // Scoped payment logs matching the products/orders
+        $paymentLogsQuery = PaymentLog::with('order.product')->orderBy('created_at', 'desc');
+        if (auth()->user()->role !== 'admin') {
+            $paymentLogsQuery->whereHas('order.product', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+        $paymentLogs = $paymentLogsQuery->limit(20)->get();
 
         return view('admin.transactions', compact('orders', 'paymentLogs', 'status'));
     }
@@ -357,14 +426,24 @@ class AdminController extends Controller
      */
     public function accountStocks(Request $request)
     {
-        // Get all products
-        $products = Product::orderBy('name', 'asc')->get();
+        // Get all products that belong to the logged-in seller, or all products if admin
+        if (auth()->user()->role === 'admin') {
+            $products = Product::orderBy('name', 'asc')->get();
+        } else {
+            $products = Product::where('user_id', auth()->id())->orderBy('name', 'asc')->get();
+        }
 
         $productId = $request->query('product_id');
         $stocks = collect();
 
         if ($productId) {
             $product = Product::findOrFail($productId);
+
+            // Authorization check
+            if (auth()->user()->role !== 'admin' && $product->user_id !== auth()->id()) {
+                return redirect()->route('admin.account_stocks')->with('error', 'Anda tidak memiliki akses untuk mengelola stok produk ini.');
+            }
+
             $stocks = AccountStock::where('product_id', $productId)
                 ->orderBy('status', 'asc') // ready first
                 ->orderBy('created_at', 'desc')
@@ -385,6 +464,12 @@ class AdminController extends Controller
         ]);
 
         $product = Product::findOrFail($request->product_id);
+
+        // Authorization check
+        if (auth()->user()->role !== 'admin' && $product->user_id !== auth()->id()) {
+            return redirect()->route('admin.account_stocks')->with('error', 'Anda tidak memiliki akses untuk mengelola stok produk ini.');
+        }
+
         $rawInput = $request->accounts_input;
 
         // Split inputs by blank lines (regex matches two or more newlines with optional spaces)
@@ -416,6 +501,12 @@ class AdminController extends Controller
 
         if ($stock->status === 'sold') {
             return back()->with('error', 'Tidak dapat menghapus akun yang sudah terjual.');
+        }
+
+        $product = $stock->product;
+        // Authorization check
+        if (auth()->user()->role !== 'admin' && $product->user_id !== auth()->id()) {
+            return redirect()->route('admin.account_stocks')->with('error', 'Anda tidak memiliki akses untuk mengelola stok produk ini.');
         }
 
         $productId = $stock->product_id;

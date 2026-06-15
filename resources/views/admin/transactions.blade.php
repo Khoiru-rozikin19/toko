@@ -38,6 +38,9 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">Order ID</th>
                         <th class="py-4.5 px-6">Produk</th>
+                        @if(auth()->user()->role === 'admin')
+                            <th class="py-4.5 px-6">Seller</th>
+                        @endif
                         <th class="py-4.5 px-6">Email / WhatsApp</th>
                         <th class="py-4.5 px-6">Harga Dasar</th>
                         <th class="py-4.5 px-6 text-center">Kode Unik</th>
@@ -55,6 +58,11 @@
                             <td class="py-4.5 px-6 font-bold text-slate-800 dark:text-slate-200">
                                 {{ $order->product->name ?? 'Produk Dihapus' }}
                             </td>
+                            @if(auth()->user()->role === 'admin')
+                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                    {{ $order->product && $order->product->seller ? $order->product->seller->name : 'Admin Utama' }}
+                                </td>
+                            @endif
                             <td class="py-4.5 px-6 text-xs">{{ $order->email_or_whatsapp }}</td>
                             <td class="py-4.5 px-6 text-slate-400">Rp {{ number_format($order->base_amount, 0, ',', '.') }}</td>
                             <td class="py-4.5 px-6 text-center text-xs font-mono text-amber-600 dark:text-amber-400 font-bold">
@@ -116,6 +124,9 @@
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID Log</th>
+                        @if(auth()->user()->role === 'admin')
+                            <th class="py-4.5 px-6">Seller</th>
+                        @endif
                         <th class="py-4.5 px-6">Nominal Diterima</th>
                         <th class="py-4.5 px-6">Teks Raw Notifikasi</th>
                         <th class="py-4.5 px-6">Kecocokan Pesanan</th>
@@ -126,6 +137,11 @@
                     @forelse($paymentLogs as $log)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
                             <td class="py-4.5 px-6 font-mono text-xs text-slate-450">#{{ $log->id }}</td>
+                            @if(auth()->user()->role === 'admin')
+                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                    {{ $log->order && $log->order->product && $log->order->product->seller ? $log->order->product->seller->name : 'N/A' }}
+                                </td>
+                            @endif
                             <td class="py-4.5 px-6 text-emerald-600 font-extrabold">Rp {{ number_format($log->amount, 0, ',', '.') }}</td>
                             <td class="py-4.5 px-6">
                                 <span class="text-xs font-mono font-medium max-w-sm block break-all text-slate-500 dark:text-slate-400">

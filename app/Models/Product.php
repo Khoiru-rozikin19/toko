@@ -10,6 +10,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'description',
         'price',
@@ -19,6 +20,11 @@ class Product extends Model
         'orderkuota_product_code',
         'success_instruction',
     ];
+
+    public function seller()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function orders()
     {

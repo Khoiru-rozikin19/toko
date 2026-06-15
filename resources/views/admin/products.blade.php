@@ -35,6 +35,9 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID</th>
                         <th class="py-4.5 px-6">Nama Produk</th>
+                        @if(auth()->user()->role === 'admin')
+                            <th class="py-4.5 px-6">Seller</th>
+                        @endif
                         <th class="py-4.5 px-6">Harga</th>
                         <th class="py-4.5 px-6">Masa Aktif</th>
                         <th class="py-4.5 px-6">Stok</th>
@@ -59,6 +62,11 @@
                                     </span>
                                 @endif
                             </td>
+                            @if(auth()->user()->role === 'admin')
+                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                    {{ $product->seller ? $product->seller->name : 'Admin Utama' }}
+                                </td>
+                            @endif
                             <td class="py-4.5 px-6 text-blue-600 dark:text-blue-400 font-bold">
                                 Rp {{ number_format($product->price, 0, ',', '.') }}
                             </td>
@@ -127,6 +135,19 @@
                 <input type="text" id="create_name" name="name" required placeholder="Contoh: Premium SG OpenVPN" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
+            @if(auth()->user()->role === 'admin')
+            <div>
+                <label for="create_user_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Pemilik Produk (Seller)</label>
+                <select id="create_user_id" name="user_id" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    @foreach($sellers as $seller)
+                        <option value="{{ $seller->id }}" {{ $seller->id == auth()->id() ? 'selected' : '' }}>
+                            {{ $seller->name }} ({{ ucfirst($seller->role) }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label for="create_price" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga (Rp)</label>
@@ -190,6 +211,19 @@
                 <label for="edit_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Paket VPN</label>
                 <input type="text" id="edit_name" name="name" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
+
+            @if(auth()->user()->role === 'admin')
+            <div>
+                <label for="edit_user_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Pemilik Produk (Seller)</label>
+                <select id="edit_user_id" name="user_id" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    @foreach($sellers as $seller)
+                        <option value="{{ $seller->id }}">
+                            {{ $seller->name }} ({{ ucfirst($seller->role) }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -258,6 +292,9 @@
         document.getElementById('edit_description').value = product.description || '';
         document.getElementById('edit_success_instruction').value = product.success_instruction || '';
         document.getElementById('edit_template').value = product.config_template;
+        if (document.getElementById('edit_user_id')) {
+            document.getElementById('edit_user_id').value = product.user_id;
+        }
         
         // Dynamic action routing URL
         document.getElementById('editForm').action = `/admin/products/${product.id}/update`;

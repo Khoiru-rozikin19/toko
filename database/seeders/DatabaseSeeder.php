@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Create Default Admin User
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@vpn.com'],
             [
                 'name' => 'Admin Utama',
@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'Gmail Fresh Worker 1'],
             [
+                'user_id' => $admin->id,
                 'price' => 5000,
                 'duration_days' => 30,
                 'config_template' => "client\ndev tun\nproto udp\nremote sg.vpn.example.com 1194\nresolv-retry infinite\nnobind\npersist-key\npersist-tun\nca [inline]\ncert [inline]\nkey [inline]\nverb 3\n<ca>\n-----BEGIN CERTIFICATE-----\nMOCK_CA_CERT_DATA\n-----END CERTIFICATE-----\n</ca>",
@@ -48,6 +49,7 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'Gmail Fresh Worker 3'],
             [
+                'user_id' => $admin->id,
                 'price' => 5000,
                 'duration_days' => 30,
                 'config_template' => "client\ndev tun\nremote sg3.vpn.example.com 1194\nca [inline]\n<ca>\n-----BEGIN CERTIFICATE-----\nMOCK_CA_CERT_DATA\n-----END CERTIFICATE-----\n</ca>",
@@ -58,6 +60,7 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'Gmail Fresh Worker 2'],
             [
+                'user_id' => $admin->id,
                 'price' => 5000,
                 'duration_days' => 30,
                 'config_template' => "client\ndev tun\nremote sg2.vpn.example.com 1194\nca [inline]\n<ca>\n-----BEGIN CERTIFICATE-----\nMOCK_CA_CERT_DATA\n-----END CERTIFICATE-----\n</ca>",
@@ -68,6 +71,7 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'GHS Bekas'],
             [
+                'user_id' => $admin->id,
                 'price' => 10000,
                 'duration_days' => 15,
                 'config_template' => 'Mock configuration text for GHS Bekas.',
@@ -78,6 +82,7 @@ class DatabaseSeeder extends Seeder
         Product::updateOrCreate(
             ['name' => 'GitHub Student Developer Pack'],
             [
+                'user_id' => $admin->id,
                 'price' => 10000,
                 'duration_days' => 30,
                 'config_template' => 'Mock configuration text for GitHub Student Developer Pack.',
