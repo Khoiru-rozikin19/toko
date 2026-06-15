@@ -27,12 +27,21 @@ class CatalogController extends Controller
      */
     public function buy(Request $request)
     {
-        $request->validate([
+        $product = Product::findOrFail($request->product_id);
+
+        $rules = [
             'product_id' => 'required|exists:products,id',
             'email_or_whatsapp' => 'required|string|max:255',
-        ]);
+        ];
 
-        $product = Product::findOrFail($request->product_id);
+        // Validasi Nomor HP Tujuan / ID Pelanggan secara dinamis untuk produk supplier (pulsa/kuota)
+        if (!empty($product->orderkuota_product_code)) {
+            $rules['target_phone'] = 'required|regex:/^[0-9]+$/|min:10|max:13';
+        } else {
+            $rules['target_phone'] = 'nullable|string|max:255';
+        }
+
+        $request->validate($rules);
 
         if ($product->stock <= 0) {
             return response()->json([
@@ -81,6 +90,7 @@ class CatalogController extends Controller
             'id' => $orderId,
             'product_id' => $product->id,
             'email_or_whatsapp' => $request->email_or_whatsapp,
+            'target_phone' => $request->target_phone,
             'base_amount' => $product->price,
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,

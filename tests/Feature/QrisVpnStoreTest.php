@@ -248,6 +248,7 @@ test('successful payment callback triggers Orderkuota H2H API request', function
         'id' => $orderId,
         'product_id' => $product->id,
         'email_or_whatsapp' => '081234567890',
+        'target_phone' => '081234567890',
         'base_amount' => 15000,
         'unique_code' => 42,
         'total_amount' => $totalAmount,
@@ -379,4 +380,59 @@ test('okeconnect callback route updates status to failed on failure report', fun
 
     $order->refresh();
     expect($order->status)->toBe('failed');
+});
+
+test('checkout requires target_phone for supplier products with correct format', function () {
+    $user = User::create([
+        'name' => 'Test Buyer',
+        'email' => 'buyer2@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+
+    $product = Product::create([
+        'name' => 'Supplier Pulsa',
+        'price' => 10000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'P10',
+    ]);
+
+    // Checkout without target_phone should fail
+    $response1 = $this->actingAs($user)->post(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '08123456789',
+    ]);
+    $response1->assertStatus(302);
+    $response1->assertSessionHasErrors('target_phone');
+
+    // Checkout with non-numeric target_phone should fail
+    $response2 = $this->actingAs($user)->post(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '08123456789',
+        'target_phone' => '0812abc3456',
+    ]);
+    $response2->assertStatus(302);
+    $response2->assertSessionHasErrors('target_phone');
+
+    // Checkout with too short target_phone should fail
+    $response3 = $this->actingAs($user)->post(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '08123456789',
+        'target_phone' => '0812',
+    ]);
+    $response3->assertStatus(302);
+    $response3->assertSessionHasErrors('target_phone');
+
+    // Checkout with correct target_phone should succeed
+    $response4 = $this->actingAs($user)->postJson(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'buyer@example.com',
+        'target_phone' => '081234567890',
+    ]);
+    $response4->assertStatus(200);
+
+    $order = Order::where('product_id', $product->id)->first();
+    expect($order->target_phone)->toBe('081234567890');
 });

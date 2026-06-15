@@ -35,8 +35,8 @@ class OrderkuotaService
             return;
         }
 
-        // Ambil data nomor HP tujuan pembeli (disimpan di email_or_whatsapp)
-        $targetPhone = $order->email_or_whatsapp;
+        // Ambil data nomor HP tujuan pembeli (disimpan di target_phone dengan fallback ke email_or_whatsapp)
+        $targetPhone = $order->target_phone ?: $order->email_or_whatsapp;
 
         // Ambil konfigurasi API Orderkuota dari database
         $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';

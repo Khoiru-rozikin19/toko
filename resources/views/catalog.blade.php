@@ -67,7 +67,7 @@
                         </button>
                         
                         @if($product->stock > 0 && $qris_configured)
-                            <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }})" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
+                            <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                 <span>Beli</span>
                             </button>
@@ -109,7 +109,13 @@
                 <div>
                     <label for="email_or_whatsapp" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Email / WhatsApp Pembeli</label>
                     <input type="text" id="email_or_whatsapp" name="email_or_whatsapp" required placeholder="Contoh: user@gmail.com atau 08123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
+                    <p class="text-[11px] text-slate-450 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
+                </div>
+
+                <div id="targetPhoneContainer" class="hidden">
+                    <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>
+                    <input type="text" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <p class="text-[11px] text-slate-450 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
                 </div>
 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -255,10 +261,22 @@
     }
 
     // Open buy modal
-    function openBuyModal(productId, productName, productPrice) {
+    function openBuyModal(productId, productName, productPrice, hasSupplierCode) {
         document.getElementById('formProductId').value = productId;
         document.getElementById('modalProductTitle').innerText = productName;
         document.getElementById('modalProductPrice').innerText = 'Rp ' + parseInt(productPrice).toLocaleString('id-ID');
+        
+        const targetPhoneContainer = document.getElementById('targetPhoneContainer');
+        const targetPhoneInput = document.getElementById('target_phone');
+        
+        if (hasSupplierCode && hasSupplierCode !== '') {
+            targetPhoneContainer.classList.remove('hidden');
+            targetPhoneInput.required = true;
+        } else {
+            targetPhoneContainer.classList.add('hidden');
+            targetPhoneInput.required = false;
+            targetPhoneInput.value = '';
+        }
         
         // Reset states
         document.getElementById('modalStepInput').classList.remove('hidden');
@@ -286,11 +304,23 @@
         
         const emailOrWhatsapp = document.getElementById('email_or_whatsapp').value;
         const productId = document.getElementById('formProductId').value;
+        const targetPhoneInput = document.getElementById('target_phone');
+        const targetPhoneContainer = document.getElementById('targetPhoneContainer');
+        const targetPhone = targetPhoneInput.value.trim();
+        
+        // Client-side validation for target_phone if visible
+        if (!targetPhoneContainer.classList.contains('hidden')) {
+            if (!/^[0-9]+$/.test(targetPhone) || targetPhone.length < 10 || targetPhone.length > 13) {
+                alert('Nomor HP Tujuan harus berupa angka dengan panjang 10-13 karakter!');
+                return;
+            }
+        }
+        
         const submitBtn = document.getElementById('submitBtn');
         
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Memproses...';
-
+ 
         fetch("{{ route('buy') }}", {
             method: 'POST',
             headers: {
@@ -299,7 +329,8 @@
             },
             body: JSON.stringify({
                 product_id: productId,
-                email_or_whatsapp: emailOrWhatsapp
+                email_or_whatsapp: emailOrWhatsapp,
+                target_phone: targetPhone
             })
         })
         .then(response => response.json())
