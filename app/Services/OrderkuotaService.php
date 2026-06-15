@@ -53,16 +53,10 @@ class OrderkuotaService
 
         try {
             // Log format string sebelum dikirim sesuai instruksi tugas
-            Log::info("Format string OKEConnect yang akan dikirim (IRS Format): id={$memberId}, pin={$pin}, produk={$code}, hp={$targetPhone}, refid={$orderId}");
+            Log::info("Format string OKEConnect yang akan dikirim (Hyper Combo): {$message}");
 
-            // Satukan variabel ke dalam parameter resmi IRS menggunakan http_build_query
-            $urlTarget = "https://h2h.okeconnect.com/trx?" . http_build_query([
-                'id'     => $memberId,
-                'pin'    => $pin,
-                'produk' => $code,
-                'hp'     => $targetPhone,
-                'refid'  => $orderId
-            ]);
+            // Masukkan seluruh string tersebut ke dalam satu parameter 'q='
+            $urlTarget = "https://h2h.okeconnect.com/trx?q=" . $message;
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -71,7 +65,7 @@ class OrderkuotaService
                 return;
             }
 
-            // Jalankan menggunakan cURL seperti biasa
+            // Tembak menggunakan cURL murni agar tanda '#' tetap utuh sebagai tanda pagar
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $urlTarget);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -82,10 +76,10 @@ class OrderkuotaService
             $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info("OKEConnect IRS API Split Sent to: " . $urlTarget);
-            Log::info("OKEConnect IRS API Split Response: " . $responseBody);
+            Log::info("OKEConnect Hyper Combo Sent to: " . $urlTarget);
+            Log::info("OKEConnect Hyper Combo Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (IRS API Split): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Hyper Combo): " . $e->getMessage());
         }
     }
 }
