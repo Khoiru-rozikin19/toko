@@ -271,8 +271,7 @@ test('successful payment callback triggers Orderkuota H2H API request', function
     Http::assertSent(function ($request) use ($orderId) {
         return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
                $request->method() === 'GET' &&
-               $request['id'] === 'OK1988589' &&
-               $request['perintah'] === "ML86.081234567890..R#{$orderId}";
+               $request['q'] === "ML86.081234567890..R#{$orderId}";
     });
 });
 
@@ -309,8 +308,7 @@ test('OrderkuotaService sends H2H request using Http facade', function () {
     Http::assertSent(function ($request) {
         return str_starts_with($request->url(), 'https://h2h.okeconnect.com/trx') &&
                $request->method() === 'GET' &&
-               $request['id'] === 'OK999999' &&
-               $request['perintah'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
+               $request['q'] === 'FF50.08777777777.4321.R#ORD-TESTHTTP';
     });
 });
 

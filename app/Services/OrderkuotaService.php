@@ -55,8 +55,8 @@ class OrderkuotaService
             // Log format string sebelum dikirim sesuai instruksi tugas
             Log::info("Format string OKEConnect yang akan dikirim: {$message}");
 
-            // Menggunakan parameter 'id' dan 'perintah' (Standar IRS HTTP API)
-            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&perintah=" . urlencode($message);
+            // Satukan ke dalam query parameter 'q' tanpa merusak tanda '#'
+            $urlTarget = "https://h2h.okeconnect.com/trx?q=" . $message;
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -65,7 +65,7 @@ class OrderkuotaService
                 return;
             }
 
-            // Gunakan cURL manual PHP sesuai instruksi tugas agar karakter '#' terkirim utuh ke OKEConnect
+            // Kirim menggunakan cURL murni yang sudah kita buat sebelumnya
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $urlTarget);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -76,11 +76,10 @@ class OrderkuotaService
             $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            Log::info("OKEConnect IRS cURL Sent to: " . $urlTarget);
-            Log::info("OKEConnect IRS cURL Response Status: " . $httpStatus);
-            Log::info("OKEConnect IRS cURL Response: " . $responseBody);
+            Log::info("OKEConnect Final Test Sent to: " . $urlTarget);
+            Log::info("OKEConnect Final Response: " . $responseBody);
         } catch (\Exception $e) {
-            Log::error("OKEConnect HTTP Request Failed (IRS cURL): " . $e->getMessage());
+            Log::error("OKEConnect HTTP Request Failed (Final cURL): " . $e->getMessage());
         }
     }
 }
