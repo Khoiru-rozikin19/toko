@@ -81,7 +81,6 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
@@ -89,9 +88,7 @@ class AdminController extends Controller
             'orderkuota_product_code' => 'nullable|string|max:50',
         ]);
 
-        DB::transaction(function () use ($request) {
-            Product::create($request->all());
-        });
+        Product::create($request->all());
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil ditambahkan.');
     }
@@ -105,7 +102,6 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
@@ -113,9 +109,7 @@ class AdminController extends Controller
             'orderkuota_product_code' => 'nullable|string|max:50',
         ]);
 
-        DB::transaction(function () use ($product, $request) {
-            $product->update($request->all());
-        });
+        $product->update($request->all());
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil diperbarui.');
     }
@@ -126,10 +120,7 @@ class AdminController extends Controller
     public function deleteProduct($id)
     {
         $product = Product::findOrFail($id);
-        
-        DB::transaction(function () use ($product) {
-            $product->delete();
-        });
+        $product->delete();
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil dihapus.');
     }

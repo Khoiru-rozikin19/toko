@@ -50,7 +50,7 @@ class CatalogController extends Controller
 
         $request->validate($rules);
 
-        if ($product->cekStok() <= 0) {
+        if ($product->stock <= 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok produk ini sedang habis.',

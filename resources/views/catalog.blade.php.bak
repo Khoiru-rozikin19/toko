@@ -49,11 +49,7 @@
                     <!-- Title & Details -->
                     <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-tight mb-2">{{ $product->name }}</h3>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 line-clamp-3">
-                        @if($product->description)
-                            {{ $product->description }}
-                        @else
-                            Masa aktif: <strong>{{ $product->duration_days }} hari</strong>. Konfigurasi siap pakai langsung unduh setelah sukses verifikasi pembayaran.
-                        @endif
+                        Masa aktif: <strong>{{ $product->duration_days }} hari</strong>. Konfigurasi siap pakai langsung unduh setelah sukses verifikasi pembayaran.
                     </p>
                     
                     <div class="flex items-center space-x-2 text-xs text-slate-400 dark:text-slate-500 mb-6">
@@ -66,7 +62,7 @@
                 <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
                     <span class="text-lg font-extrabold text-blue-600 dark:text-blue-400">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                     <div class="flex space-x-2">
-                        <button onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $product->price }}', '{{ $product->duration_days }}', '{{ addslashes($product->description) }}')" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-650 dark:text-slate-350 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all duration-200">
+                        <button onclick="openDetailModal('{{ $product->name }}', '{{ $product->price }}', '{{ $product->duration_days }}')" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all duration-200">
                             Detail
                         </button>
                         
@@ -233,8 +229,9 @@
             <p><strong>Nama:</strong> <span id="detailName"></span></p>
             <p><strong>Harga:</strong> <span id="detailPrice"></span></p>
             <p><strong>Masa Aktif:</strong> <span id="detailDuration"></span> Hari</p>
-            <p><strong>Deskripsi:</strong></p>
-            <p id="detailDesc" class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 whitespace-pre-wrap leading-relaxed"></p>
+            <p class="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mt-4">
+                VPN ini dikonfigurasi pada server premium berkecepatan tinggi dengan latensi rendah. Sangat cocok untuk berselancar aman, bypass internet positif, dan bermain game.
+            </p>
         </div>
         <div class="mt-6 flex justify-end">
             <button onclick="closeDetailModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
@@ -252,11 +249,10 @@
     let currentRawAmount = 0;
 
     // Open detail modal
-    function openDetailModal(name, price, duration, description) {
+    function openDetailModal(name, price, duration) {
         document.getElementById('detailName').innerText = name;
         document.getElementById('detailPrice').innerText = 'Rp ' + parseInt(price).toLocaleString('id-ID');
         document.getElementById('detailDuration').innerText = duration;
-        document.getElementById('detailDesc').innerText = description || 'VPN ini dikonfigurasi pada server premium berkecepatan tinggi dengan latensi rendah. Sangat cocok untuk berselancar aman, bypass internet positif, dan bermain game.';
         document.getElementById('detailModal').classList.remove('hidden');
     }
 

@@ -6,7 +6,6 @@ use App\Http\Controllers\PaymentCallbackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BuyerController;
-use App\Http\Controllers\ProfileController;
 
 // API Callback (public - no auth required)
 Route::post('/api/v1/payment/callback-notification', [PaymentCallbackController::class, 'handle'])->name('api.payment.callback');
@@ -30,13 +29,8 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     Route::get('/', [CatalogController::class, 'index'])->name('catalog');
     Route::get('/catalog', [CatalogController::class, 'index']);
     Route::post('/buy', [CatalogController::class, 'buy'])->name('buy');
-    Route::get('/orders', [CatalogController::class, 'history'])->name('orders.history');
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
     Route::get('/orders/{id}/download', [CatalogController::class, 'download'])->name('order.download');
-    
-    // User Profile Routes
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     
     // Area Buyer (Khusus Pengajuan Upgrade Peran)
     Route::middleware('role:buyer')->prefix('buyer')->name('buyer.')->group(function () {

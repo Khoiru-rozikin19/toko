@@ -50,7 +50,7 @@ class CatalogController extends Controller
 
         $request->validate($rules);
 
-        if ($product->cekStok() <= 0) {
+        if ($product->stock <= 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'Stok produk ini sedang habis.',
@@ -162,25 +162,5 @@ class CatalogController extends Controller
         return response($order->vpn_config)
             ->header('Content-Type', 'application/octet-stream')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
-    }
-
-    /**
-     * Show buyer's order history.
-     */
-    public function history()
-    {
-        $user = auth()->user();
-
-        $orders = Order::with('product')
-            ->where(function ($query) use ($user) {
-                $query->where('email_or_whatsapp', $user->email);
-                if (!empty($user->phone)) {
-                    $query->orWhere('email_or_whatsapp', $user->phone);
-                }
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-
-        return view('orders.history', compact('orders'));
     }
 }
