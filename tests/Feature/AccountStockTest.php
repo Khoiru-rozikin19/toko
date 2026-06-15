@@ -61,7 +61,7 @@ test('product stock accessor is dynamic for local products and static for suppli
     $localProduct->refresh();
     expect($localProduct->stock)->toBe(1);
 
-    // 2. Supplier product (always uses static stock column)
+    // 2. Supplier product (uses dynamic stock if AccountStock exists, otherwise falls back to static)
     $supplierProduct = Product::create([
         'name' => 'Supplier Pulsa',
         'price' => 12000,
@@ -69,7 +69,10 @@ test('product stock accessor is dynamic for local products and static for suppli
         'orderkuota_product_code' => 'TSEL10',
     ]);
 
-    // Create AccountStock records for supplier product (just to make sure they are ignored)
+    // Falls back to static stock (10) when no AccountStock records exist
+    expect($supplierProduct->stock)->toBe(10);
+
+    // Create AccountStock records for supplier product
     AccountStock::create([
         'product_id' => $supplierProduct->id,
         'account_data' => 'vmess://supplier_config',
@@ -77,7 +80,7 @@ test('product stock accessor is dynamic for local products and static for suppli
     ]);
 
     $supplierProduct->refresh();
-    expect($supplierProduct->stock)->toBe(10);
+    expect($supplierProduct->stock)->toBe(1);
 });
 
 test('admin can upload accounts in bulk separated by double newlines', function () {

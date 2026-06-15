@@ -355,8 +355,11 @@ class AdminController extends Controller
      */
     public function accountStocks(Request $request)
     {
-        // Get all products
-        $products = Product::orderBy('name', 'asc')->get();
+        // Get all products that do NOT use Orderkuota (local products)
+        $products = Product::whereNull('orderkuota_product_code')
+            ->orWhere('orderkuota_product_code', '')
+            ->orderBy('name', 'asc')
+            ->get();
 
         $productId = $request->query('product_id');
         $stocks = collect();

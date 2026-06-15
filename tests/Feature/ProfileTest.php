@@ -132,3 +132,71 @@ test('user cannot change email to already taken email', function () {
     $user->refresh();
     expect($user->email)->toBe('original@example.com');
 });
+
+test('buyer order history retrieves orders matching formatting variations of email and phone', function () {
+    $user = User::create([
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'phone' => '+6281234567890',
+        'password' => Hash::make('password123'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+
+    $product = \App\Models\Product::create([
+        'name' => 'Dynamic Packet',
+        'price' => 5000,
+        'stock' => 5,
+    ]);
+
+    // Order 1: matching email exactly
+    \App\Models\Order::create([
+        'id' => 'ORD-VAR1',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'john@example.com',
+        'base_amount' => 5000,
+        'unique_code' => 1,
+        'total_amount' => 5001,
+        'status' => 'pending_manual',
+    ]);
+
+    // Order 2: matching phone with leading 0 (base phone 81234567890)
+    \App\Models\Order::create([
+        'id' => 'ORD-VAR2',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '081234567890',
+        'base_amount' => 5000,
+        'unique_code' => 2,
+        'total_amount' => 5002,
+        'status' => 'pending_manual',
+    ]);
+
+    // Order 3: matching phone with 62 prefix
+    \App\Models\Order::create([
+        'id' => 'ORD-VAR3',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '6281234567890',
+        'base_amount' => 5000,
+        'unique_code' => 3,
+        'total_amount' => 5003,
+        'status' => 'pending_manual',
+    ]);
+
+    // Order 4: mismatched identifier (should not appear)
+    \App\Models\Order::create([
+        'id' => 'ORD-VAR4',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'other_user@example.com',
+        'base_amount' => 5000,
+        'unique_code' => 4,
+        'total_amount' => 5004,
+        'status' => 'pending_manual',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('orders.history'));
+    $response->assertStatus(200);
+    $response->assertSee('ORD-VAR1');
+    $response->assertSee('ORD-VAR2');
+    $response->assertSee('ORD-VAR3');
+    $response->assertDontSee('ORD-VAR4');
+});

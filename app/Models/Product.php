@@ -30,17 +30,14 @@ class Product extends Model
     }
 
     /**
-     * Get dynamic stock count for local products,
-     * or column stock for supplier products.
+     * Get dynamic stock count if account stocks exist,
+     * otherwise use static column stock.
      *
      * @return int
      */
     public function getStockAttribute()
     {
-        if (empty($this->orderkuota_product_code)) {
-            return $this->cekStok();
-        }
-        return $this->attributes['stock'] ?? 0;
+        return $this->cekStok();
     }
 
     /**

@@ -11,6 +11,7 @@ class Product extends Model
 
     protected $fillable = [
         'name',
+        'description',
         'price',
         'duration_days',
         'config_template',
@@ -37,10 +38,22 @@ class Product extends Model
     public function getStockAttribute()
     {
         if (empty($this->orderkuota_product_code)) {
-            if ($this->stocks()->exists()) {
-                return $this->stocks()->where('status', 'ready')->count();
-            }
-            return $this->attributes['stock'] ?? 0;
+            return $this->cekStok();
+        }
+        return $this->attributes['stock'] ?? 0;
+    }
+
+    /**
+     * Get flexible stock count:
+     * - If account configurations exist, use dynamic stock from ready account data count.
+     * - Otherwise, use manual stock from the static column.
+     *
+     * @return int
+     */
+    public function cekStok()
+    {
+        if ($this->stocks()->exists()) {
+            return $this->stocks()->where('status', 'ready')->count();
         }
         return $this->attributes['stock'] ?? 0;
     }

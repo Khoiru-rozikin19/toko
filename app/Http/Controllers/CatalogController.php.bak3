@@ -171,36 +171,13 @@ class CatalogController extends Controller
     {
         $user = auth()->user();
 
-        // Generate variations of email and phone to catch all matching orders
-        $variations = [
-            $user->email,
-            strtolower($user->email),
-        ];
-
-        if (!empty($user->phone)) {
-            $rawPhone = preg_replace('/[^0-9]/', '', $user->phone);
-            if (!empty($rawPhone)) {
-                $basePhone = $rawPhone;
-                if (str_starts_with($rawPhone, '62')) {
-                    $basePhone = substr($rawPhone, 2);
-                } elseif (str_starts_with($rawPhone, '0')) {
-                    $basePhone = substr($rawPhone, 1);
-                }
-
-                $variations[] = $user->phone;
-                $variations[] = $rawPhone;
-                $variations[] = '0' . $basePhone;
-                $variations[] = '62' . $basePhone;
-                $variations[] = '+' . '62' . $basePhone;
-                $variations[] = $basePhone;
-            }
-        }
-
-        // Clean unique variations
-        $variations = array_unique(array_filter($variations));
-
         $orders = Order::with('product')
-            ->whereIn('email_or_whatsapp', $variations)
+            ->where(function ($query) use ($user) {
+                $query->where('email_or_whatsapp', $user->email);
+                if (!empty($user->phone)) {
+                    $query->orWhere('email_or_whatsapp', $user->phone);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
