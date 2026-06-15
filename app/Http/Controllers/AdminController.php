@@ -23,7 +23,7 @@ class AdminController extends Controller
         $totalRevenue = Order::whereIn('status', ['success', 'paid'])->sum('total_amount');
         
         // Sum of pending orders' amount (simulating "held balance" or "saldo tertahan")
-        $pendingRevenue = Order::where('status', 'pending')
+        $pendingRevenue = Order::whereIn('status', ['pending', 'pending_manual'])
             ->where('expired_at', '>', Carbon::now())
             ->sum('total_amount');
 
@@ -46,7 +46,7 @@ class AdminController extends Controller
 
         // 3. Rasio Status Order (Donut Chart)
         $statusSuccess = Order::whereIn('status', ['success', 'paid'])->count();
-        $statusPending = Order::where('status', 'pending')->count();
+        $statusPending = Order::whereIn('status', ['pending', 'pending_manual'])->count();
         $statusExpired = Order::where('status', 'expired')->count();
 
         $donutLabels = ['Sukses', 'Pending', 'Expired'];
@@ -135,7 +135,11 @@ class AdminController extends Controller
         $query = Order::with('product')->orderBy('created_at', 'desc');
 
         if ($status) {
-            $query->where('status', $status);
+            if ($status === 'pending') {
+                $query->whereIn('status', ['pending', 'pending_manual']);
+            } else {
+                $query->where('status', $status);
+            }
         }
 
         $orders = $query->paginate(15);

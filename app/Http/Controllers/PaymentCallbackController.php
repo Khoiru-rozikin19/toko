@@ -50,7 +50,7 @@ class PaymentCallbackController extends Controller
         ]);
 
         // Find the oldest active pending order matching this total amount
-        $order = Order::where('status', 'pending')
+        $order = Order::whereIn('status', ['pending', 'pending_manual'])
             ->where('total_amount', $amount)
             ->where('expired_at', '>', Carbon::now())
             ->orderBy('created_at', 'asc')

@@ -38,6 +38,6 @@ class Order extends Model
 
     public function isExpired(): bool
     {
-        return $this->status === 'pending' && $this->expired_at && $this->expired_at->isPast();
+        return in_array($this->status, ['pending', 'pending_manual']) && $this->expired_at && $this->expired_at->isPast();
     }
 }

@@ -68,7 +68,7 @@ class CatalogController extends Controller
 
         // Generate a unique code (1 - 99) that does not clash with active pending orders for this product
         $usedCodes = Order::where('product_id', $product->id)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'pending_manual'])
             ->where('expired_at', '>', Carbon::now())
             ->pluck('unique_code')
             ->toArray();
