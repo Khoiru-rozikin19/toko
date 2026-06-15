@@ -41,18 +41,17 @@ class OrderkuotaService
         // Ambil konfigurasi API Orderkuota dari database
         $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';
         $pin = Setting::get('orderkuota_pin', '');
-        $apiKey = Setting::get('orderkuota_api_key', '');
+        $passwordH2H = Setting::get('orderkuota_api_key') ?: '@jkn1234';
         $mode = Setting::get('orderkuota_mode', 'sandbox');
 
         try {
-            // Susun perintah teks asli tanpa urlencode
+            // Susun teks perintah transaksinya (tanpa urlencode terlebih dahulu)
             $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
 
-            // Gabungkan URL secara mentah (raw string)
-            // SKENARIO A (Menggunakan parameter '&key='):
-            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&key=" . $apiKey . "&perintah=" . $perintahTeks;
+            // Gabungkan URL Target secara presisi sesuai format engine IRS OKEConnect
+            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&pass=" . $passwordH2H . "&perintah=" . $perintahTeks;
 
-            Log::info("OKEConnect Raw URL Sent: " . $urlTarget);
+            Log::info("OKEConnect IRS Authentic Request Sent: " . $urlTarget);
 
             // Dalam mode testing, gunakan Http facade agar tetap bisa di-fake/mock oleh Pest
             if (app()->runningUnitTests()) {
@@ -61,11 +60,11 @@ class OrderkuotaService
                 return;
             }
 
-            // Eksekusi tembakan menggunakan file_get_contents dengan timeout 15 detik
-            $context = stream_context_create(['http' => ['timeout' => 15, 'ignore_errors' => true]]);
+            // Eksekusi menggunakan file_get_contents agar tanda '#' dan '@' terkirim murni secara raw text
+            $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
             $responseBody = @file_get_contents($urlTarget, false, $context);
 
-            Log::info("OKEConnect Raw URL Response: " . ($responseBody ?: 'TIMEOUT/NO RESPONSE'));
+            Log::info("OKEConnect IRS Authentic Response: " . ($responseBody ?: 'TIMEOUT/NO RESPONSE'));
         } catch (\Exception $e) {
             Log::error("OKEConnect HTTP Request Failed (Raw URL): " . $e->getMessage());
         }
