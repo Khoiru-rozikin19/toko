@@ -251,6 +251,9 @@ configure_telegram() {
 
     print_info "Menyimpan konfigurasi ke file .env..."
     
+    # Pastikan file .env ada agar tidak terjadi error grep/sed
+    touch .env
+    
     # Update atau Tambahkan ke .env
     for key in TELEGRAM_BOT_TOKEN TELEGRAM_ADMIN_ID; do
         if grep -q "^$key=" .env; then
