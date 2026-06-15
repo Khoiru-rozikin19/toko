@@ -49,7 +49,8 @@ class OrderkuotaService
             $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
 
             // Gabungkan URL secara mentah (raw string)
-            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&perintah=" . $perintahTeks;
+            // SKENARIO A (Menggunakan parameter '&key='):
+            $urlTarget = "https://h2h.okeconnect.com/trx?id=" . $memberId . "&key=" . $apiKey . "&perintah=" . $perintahTeks;
 
             Log::info("OKEConnect Raw URL Sent: " . $urlTarget);
 
