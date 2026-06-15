@@ -45,8 +45,9 @@ class OrderkuotaService
         $mode = Setting::get('orderkuota_mode', 'sandbox');
 
         try {
-            // Susun teks perintah transaksinya (tanpa urlencode terlebih dahulu)
-            $perintahTeks = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
+            // Susun perintah teks transaksinya (format short & long)
+            $perintahShort = "{$code}.{$targetPhone}.{$pin}.R#{$orderId}";
+            $perintahLong = "{$memberId}.{$pin}.{$code}.{$targetPhone}.R#{$orderId}";
 
             // METODE SAPU JAGAT: Masukkan semua tebakan nama parameter sekaligus!
             $params = [
@@ -54,6 +55,7 @@ class OrderkuotaService
                 'id'       => $memberId,
                 'uid'      => $memberId,
                 'memberid' => $memberId,
+                'memberID' => $memberId,
 
                 // Variasi penamaan Password
                 'pass'     => $passwordH2H,
@@ -61,28 +63,35 @@ class OrderkuotaService
                 'pin_ip'   => $passwordH2H,
                 'key'      => $passwordH2H,
 
-                // Variasi penamaan String Transaksi (Format Jabber/SMS)
-                'perintah' => $perintahTeks,
-                'pesan'    => $perintahTeks,
-                'mod'      => $perintahTeks,
-                'sms'      => $perintahTeks,
-                'trx'      => $perintahTeks,
-                'msg'      => $perintahTeks,
-                'q'        => $perintahTeks,
-                'text'     => $perintahTeks,
-                'format'   => $perintahTeks,
+                // Variasi penamaan String Transaksi (Format Jabber/SMS) - Long Format (MemberID.PIN.Kode.HP.R#Ref)
+                'perintah' => $perintahLong,
+                'pesan'    => $perintahLong,
+                'q'        => $perintahLong,
+                'sms'      => $perintahLong,
+
+                // Variasi penamaan String Transaksi (Format Jabber/SMS) - Short Format (Kode.HP.PIN.R#Ref)
+                'mod'      => $perintahShort,
+                'trx'      => $perintahShort,
+                'msg'      => $perintahShort,
+                'text'     => $perintahShort,
+                'format'   => $perintahShort,
 
                 // Variasi penamaan Split Parameter (Format API H2H Otomatis)
+                'product'    => $code,
                 'produk'     => $code,
                 'kodeproduk' => $code,
                 'kode'       => $code,
+                'dest'       => $targetPhone,
                 'hp'         => $targetPhone,
                 'tujuan'     => $targetPhone,
                 'target'     => $targetPhone,
+                'refID'      => $orderId,
                 'refid'      => $orderId,
                 'ref_id'     => $orderId,
                 'idtrx'      => $orderId,
                 'pin'        => $pin,
+                'qty'        => '1',
+                'quantity'   => '1',
             ];
 
             // Rakit query string secara manual agar karakter spesial '@' tetap terkirim mentah (raw),
