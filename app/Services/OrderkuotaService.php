@@ -55,9 +55,7 @@ class OrderkuotaService
             // Kirim request ke URL H2H OKEConnect menggunakan HTTP GET untuk menghindari proteksi CSRF
             $response = Http::get('https://h2h.okeconnect.com/trx', [
                 'memberID' => $memberId,
-                'pin' => $pin,
-                'dest' => $targetPhone,
-                'msg' => $message,
+                'id' => $memberId,
                 'q' => $message,
             ]);
 
