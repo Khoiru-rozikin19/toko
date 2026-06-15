@@ -52,10 +52,11 @@ class OrderkuotaService
         Log::info("Detail API Orderkuota - Member ID: {$memberId}, Token/Key: " . ($apiKey ? 'TERSEDIA' : 'KOSONG') . ", Mode: {$mode}, Nomor HP Tujuan: {$targetPhone}");
 
         try {
+            // Log format string sebelum dikirim sesuai instruksi tugas
+            Log::info("Format string OKEConnect yang akan dikirim: {$message}");
+
             // Kirim request ke URL H2H OKEConnect menggunakan HTTP GET untuk menghindari proteksi CSRF
             $response = Http::get('https://h2h.okeconnect.com/trx', [
-                'memberID' => $memberId,
-                'id' => $memberId,
                 'q' => $message,
             ]);
 
