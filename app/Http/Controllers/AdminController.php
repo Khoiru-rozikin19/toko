@@ -84,6 +84,7 @@ class AdminController extends Controller
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
+            'orderkuota_product_code' => 'nullable|string|max:50',
         ]);
 
         Product::create($request->all());
@@ -104,6 +105,7 @@ class AdminController extends Controller
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
+            'orderkuota_product_code' => 'nullable|string|max:50',
         ]);
 
         $product->update($request->all());
@@ -165,6 +167,36 @@ class AdminController extends Controller
         Setting::set('api_secret_key', $request->api_secret_key);
 
         return redirect()->route('admin.settings')->with('success', 'Pengaturan berhasil diperbarui.');
+    }
+
+    /**
+     * Display supplier settings page.
+     */
+    public function supplierSettings()
+    {
+        $memberId = Setting::get('orderkuota_member_id', '');
+        $apiKey = Setting::get('orderkuota_api_key', '');
+        $mode = Setting::get('orderkuota_mode', 'sandbox');
+
+        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'mode'));
+    }
+
+    /**
+     * Update supplier settings.
+     */
+    public function updateSupplierSettings(Request $request)
+    {
+        $request->validate([
+            'orderkuota_member_id' => 'nullable|string|max:255',
+            'orderkuota_api_key' => 'nullable|string|max:255',
+            'orderkuota_mode' => 'required|in:sandbox,production',
+        ]);
+
+        Setting::set('orderkuota_member_id', $request->orderkuota_member_id);
+        Setting::set('orderkuota_api_key', $request->orderkuota_api_key);
+        Setting::set('orderkuota_mode', $request->orderkuota_mode);
+
+        return redirect()->route('admin.supplier_settings')->with('success', 'Pengaturan API Supplier berhasil diperbarui.');
     }
 
     /**

@@ -15,6 +15,7 @@ class Product extends Model
         'duration_days',
         'config_template',
         'stock',
+        'orderkuota_product_code',
     ];
 
     public function orders()

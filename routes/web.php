@@ -51,6 +51,8 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
     Route::middleware('role:admin')->group(function () {
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+        Route::get('/supplier-settings', [AdminController::class, 'supplierSettings'])->name('supplier_settings');
+        Route::post('/supplier-settings', [AdminController::class, 'updateSupplierSettings'])->name('supplier_settings.update');
         
         // Manajemen User (Persetujuan Pendaftaran & Upgrade Seller & Kelola Akun)
         Route::get('/users', [AdminController::class, 'userManagement'])->name('users');

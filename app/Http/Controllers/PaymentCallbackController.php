@@ -60,6 +60,9 @@ class PaymentCallbackController extends Controller
         $order->status = 'success';
         $order->save();
 
+        // Dispatch background job to trigger supplier API integration
+        \App\Jobs\SendOrderToOrderkuota::dispatch($order->id);
+
         // Decrement product stock if not unlimited
         if ($order->product && $order->product->stock > 0) {
             $order->product->decrement('stock');

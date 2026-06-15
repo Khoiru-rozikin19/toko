@@ -8,6 +8,8 @@ use App\Services\QrisService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Log;
 
 uses(RefreshDatabase::class);
 
@@ -154,4 +156,116 @@ test('api callback notification returns unauthorized for invalid api keys', func
              ->assertJson([
                  'success' => false,
              ]);
+});
+
+test('admin can manage supplier settings', function () {
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    // Access supplier settings page
+    $response = $this->actingAs($admin)->get(route('admin.supplier_settings'));
+    $response->assertStatus(200)
+             ->assertSee('Pengaturan API Supplier');
+
+    // Update settings
+    $updateResponse = $this->actingAs($admin)->post(route('admin.supplier_settings.update'), [
+        'orderkuota_member_id' => 'MEMBER123',
+        'orderkuota_api_key' => 'token-key-abc',
+        'orderkuota_mode' => 'production',
+    ]);
+
+    $updateResponse->assertRedirect(route('admin.supplier_settings'));
+    
+    expect(Setting::get('orderkuota_member_id'))->toBe('MEMBER123');
+    expect(Setting::get('orderkuota_api_key'))->toBe('token-key-abc');
+    expect(Setting::get('orderkuota_mode'))->toBe('production');
+});
+
+test('admin can add and update product with supplier code', function () {
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    // Store product with code
+    $storeResponse = $this->actingAs($admin)->post(route('admin.products.store'), [
+        'name' => 'Supplier Product',
+        'price' => 12000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'TSEL10',
+    ]);
+
+    $storeResponse->assertRedirect(route('admin.products'));
+    
+    $product = Product::where('name', 'Supplier Product')->first();
+    expect($product)->not->toBeNull();
+    expect($product->orderkuota_product_code)->toBe('TSEL10');
+
+    // Update product code
+    $updateResponse = $this->actingAs($admin)->post(route('admin.products.update', $product->id), [
+        'name' => 'Supplier Product Updated',
+        'price' => 13000,
+        'duration_days' => 30,
+        'stock' => 15,
+        'orderkuota_product_code' => 'TSEL10-NEW',
+    ]);
+
+    $updateResponse->assertRedirect(route('admin.products'));
+    
+    $product->refresh();
+    expect($product->name)->toBe('Supplier Product Updated');
+    expect($product->orderkuota_product_code)->toBe('TSEL10-NEW');
+});
+
+test('successful payment callback dispatches SendOrderToOrderkuota job and logs information', function () {
+    Queue::fake();
+    Log::shouldReceive('info')->atLeast()->once();
+
+    $product = Product::create([
+        'name' => 'Premium ML',
+        'price' => 15000,
+        'duration_days' => 30,
+        'stock' => 10,
+        'orderkuota_product_code' => 'ML86',
+    ]);
+
+    $orderId = 'ORD-SUPPLIER123';
+    $totalAmount = 15042;
+    
+    $order = Order::create([
+        'id' => $orderId,
+        'product_id' => $product->id,
+        'email_or_whatsapp' => '081234567890',
+        'base_amount' => 15000,
+        'unique_code' => 42,
+        'total_amount' => $totalAmount,
+        'status' => 'pending',
+        'qris_payload' => 'mock-qris-payload',
+        'vpn_config' => 'config-text',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Send successful callback
+    $response = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'GOPAY TRANSFER RECEIVED Rp 15.042 FROM BOB',
+        'amount' => 15042,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response->assertStatus(200);
+
+    // Verify job was dispatched
+    Queue::assertPushed(\App\Jobs\SendOrderToOrderkuota::class, function ($job) use ($orderId) {
+        $job->handle(new \App\Services\OrderkuotaService());
+        return true;
+    });
 });

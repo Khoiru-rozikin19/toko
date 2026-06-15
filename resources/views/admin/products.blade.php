@@ -48,6 +48,11 @@
                             <td class="py-4.5 px-6 font-mono text-xs text-slate-400">#{{ $product->id }}</td>
                             <td class="py-4.5 px-6">
                                 <span class="font-bold text-slate-800 dark:text-slate-200">{{ $product->name }}</span>
+                                @if($product->orderkuota_product_code)
+                                    <span class="block text-xs text-slate-450 dark:text-slate-500 mt-0.5">
+                                        Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-4.5 px-6 text-blue-600 dark:text-blue-400 font-bold">
                                 Rp {{ number_format($product->price, 0, ',', '.') }}
@@ -134,6 +139,11 @@
             </div>
 
             <div>
+                <label for="create_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (Orderkuota)</label>
+                <input type="text" id="create_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: TSEL10, ML86 (Kosongkan jika bukan produk supplier)" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div>
                 <label for="create_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
                 <textarea id="create_template" name="config_template" rows="5" placeholder="Salin isi file konfigurasi VPN di sini..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
@@ -183,6 +193,11 @@
             </div>
 
             <div>
+                <label for="edit_orderkuota_product_code" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Produk Supplier (Orderkuota)</label>
+                <input type="text" id="edit_orderkuota_product_code" name="orderkuota_product_code" placeholder="Contoh: TSEL10, ML86" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div>
                 <label for="edit_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
                 <textarea id="edit_template" name="config_template" rows="5" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
@@ -214,6 +229,7 @@
         document.getElementById('edit_price').value = product.price;
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
+        document.getElementById('edit_orderkuota_product_code').value = product.orderkuota_product_code || '';
         document.getElementById('edit_template').value = product.config_template;
         
         // Dynamic action routing URL
