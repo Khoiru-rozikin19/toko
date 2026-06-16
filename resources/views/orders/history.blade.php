@@ -1,6 +1,28 @@
 @extends('layouts.app', ['title' => 'Riwayat Pesanan Saya'])
 
 @section('content')
+<style>
+    /* Custom scrollbar for VPN configurations */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #475569;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+</style>
 <div class="space-y-6 sm:space-y-10">
     
     <!-- Header -->
@@ -275,21 +297,21 @@
 
         if (isNodeLink) {
             container.innerHTML = `
-                <div class="flex flex-col md:flex-row gap-5 items-center justify-between text-left p-1">
-                    <div class="flex-1 space-y-3 w-full">
-                        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Detail Akun VPN:</span>
-                        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
-                            <textarea readonly class="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 resize-none h-24" id="historyConfigText">${escapeHtml(config)}</textarea>
-                            <div class="flex justify-end mt-2">
-                                <button onclick="copyHistoryConfig()" class="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                <div class="space-y-4">
+                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block uppercase tracking-wider text-left">DETAIL AKUN VPN:</span>
+                    <div class="flex flex-col md:flex-row gap-5 items-stretch justify-between text-left">
+                        <div class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl flex flex-col justify-between w-full">
+                            <textarea readonly class="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-slate-200 border-none outline-none focus:ring-0 resize-none h-28 pr-1 custom-scrollbar" id="historyConfigText">${escapeHtml(config)}</textarea>
+                            <div class="flex justify-center mt-4">
+                                <button onclick="copyHistoryConfig()" class="inline-flex items-center space-x-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
                                     <span id="copyHistoryBtnText">Salin Akun</span>
                                 </button>
                             </div>
                         </div>
-                    </div>
-                    <div class="w-40 h-40 bg-white p-2 border border-slate-100 dark:border-slate-800 rounded-2xl flex items-center justify-center flex-shrink-0 mx-auto shadow-sm">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(config)}" alt="QR Code" class="w-full h-full object-contain">
+                        <div class="w-full md:w-44 bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-sm aspect-square md:aspect-auto">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(config)}" alt="QR Code" class="w-full h-full object-contain rounded-xl">
+                        </div>
                     </div>
                 </div>
             `;
