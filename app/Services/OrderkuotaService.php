@@ -173,10 +173,11 @@ class OrderkuotaService
                     'password' => $passwordH2H,
                     'pin_ip'   => $passwordH2H,
                     'key'      => $passwordH2H,
-                    'perintah' => "S",
-                    'pesan'    => "S",
-                    'q'        => "S",
-                    'sms'      => "S",
+                    'perintah' => "S.{$pin}",
+                    'pesan'    => "S.{$pin}",
+                    'q'        => "S.{$pin}",
+                    'sms'      => "S.{$pin}",
+                    'msg'      => "S.{$pin}",
                     'pin'      => $pin,
                 ];
 
