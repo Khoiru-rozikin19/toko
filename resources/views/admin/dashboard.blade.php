@@ -13,38 +13,51 @@
         </p>
     </div>
 
-    <!-- Top Cards Grid (4 Columns) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Top Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ auth()->user()->role === 'admin' ? '4' : '3' }} gap-6">
         
-        <!-- Card 1: Saldo Dompet Saya (Deep Blue) -->
-        <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
-            <div>
-                <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo Dompet Saya</span>
-                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($totalRevenue, 0, ',', '.') }}</span>
+        @if(auth()->user()->role === 'admin')
+            <!-- Card 1: Saldo orderkuota (Deep Blue) -->
+            <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
+                <div>
+                    <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo orderkuota</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($orderkuotaBalance, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-blue-100">H2H Supplier</span>
+                </div>
             </div>
-            <div class="flex items-center justify-between mt-4">
-                <span class="text-xs text-blue-100">Komisi: 0%</span>
-                <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
-                    <span>Tarik Saldo</span>
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </button>
-            </div>
-        </div>
 
-        <!-- Card 2: Saldo Tertahan (Orange/Yellow) -->
-        <div class="bg-amber-500 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-500/10 min-h-44">
-            <div>
-                <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider block">Saldo Tertahan (Garansi)</span>
-                <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($pendingRevenue, 0, ',', '.') }}</span>
+            <!-- Card 2: Saldo dompet saya (Orange/Yellow) -->
+            <div class="bg-amber-500 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-amber-500/10 min-h-44">
+                <div>
+                    <span class="text-xs font-semibold text-amber-100 uppercase tracking-wider block">Saldo dompet saya</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($walletBalance, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-amber-100">Bersih (Setelah modal H2H)</span>
+                    <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
+                        <span>Tarik Saldo</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center justify-between mt-4">
-                <span class="text-xs text-amber-100">Menunggu Garansi</span>
-                <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
-                    <span>Rincian</span>
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </button>
+        @else
+            <!-- Card 1: Saldo dompet saya for Seller (Deep Blue) -->
+            <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
+                <div>
+                    <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo dompet saya</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($walletBalance, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-blue-100">Komisi: 0%</span>
+                    <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
+                        <span>Tarik Saldo</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
             </div>
-        </div>
+        @endif
 
         <!-- Card 3: Pendapatan Kotor (White / Green Text) -->
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm min-h-44">

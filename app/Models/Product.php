@@ -14,6 +14,7 @@ class Product extends Model
         'name',
         'description',
         'price',
+        'harga_modal',
         'duration_days',
         'config_template',
         'stock',

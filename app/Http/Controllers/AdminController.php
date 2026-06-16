@@ -45,10 +45,23 @@ class AdminController extends Controller
         // 1. Wallets & Earnings (Stats matching screenshot 2)
         $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid'])->sum('total_amount');
         
-        // Sum of pending orders' amount (simulating "held balance" or "saldo tertahan")
-        $pendingRevenue = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])
-            ->where('expired_at', '>', Carbon::now())
-            ->sum('total_amount');
+        // Saldo Dompet Saya (Profit/Wallet Balance)
+        $walletBalance = 0;
+        $successfulOrders = $orderQuery()->whereIn('status', ['success', 'paid'])->with('product')->get();
+        foreach ($successfulOrders as $order) {
+            $product = $order->product;
+            if ($product && !empty($product->orderkuota_product_code)) {
+                $walletBalance += ($order->total_amount - ($product->harga_modal ?? 0));
+            } else {
+                $walletBalance += $order->total_amount;
+            }
+        }
+
+        // Saldo Orderkuota (Admin only)
+        $orderkuotaBalance = 0;
+        if ($isAdmin) {
+            $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->cekSaldo();
+        }
 
         $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
         $totalOrdersCount = $orderQuery()->count();
@@ -81,7 +94,8 @@ class AdminController extends Controller
 
         return view('admin.dashboard', compact(
             'totalRevenue',
-            'pendingRevenue',
+            'walletBalance',
+            'orderkuotaBalance',
             'totalSalesCount',
             'totalOrdersCount',
             'readyStockCount',
@@ -117,6 +131,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
+            'harga_modal' => 'required_with:orderkuota_product_code|nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
@@ -152,6 +167,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
+            'harga_modal' => 'required_with:orderkuota_product_code|nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',

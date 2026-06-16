@@ -200,6 +200,7 @@ test('admin can add and update product with supplier code', function () {
     $storeResponse = $this->actingAs($admin)->post(route('admin.products.store'), [
         'name' => 'Supplier Product',
         'price' => 12000,
+        'harga_modal' => 10000,
         'duration_days' => 30,
         'stock' => 10,
         'orderkuota_product_code' => 'TSEL10',
@@ -215,6 +216,7 @@ test('admin can add and update product with supplier code', function () {
     $updateResponse = $this->actingAs($admin)->post(route('admin.products.update', $product->id), [
         'name' => 'Supplier Product Updated',
         'price' => 13000,
+        'harga_modal' => 11000,
         'duration_days' => 30,
         'stock' => 15,
         'orderkuota_product_code' => 'TSEL10-NEW',
@@ -225,6 +227,7 @@ test('admin can add and update product with supplier code', function () {
     $product->refresh();
     expect($product->name)->toBe('Supplier Product Updated');
     expect($product->orderkuota_product_code)->toBe('TSEL10-NEW');
+    expect($product->harga_modal)->toBe(11000);
 });
 
 test('successful payment callback triggers Orderkuota H2H API request', function () {
