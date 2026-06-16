@@ -203,7 +203,7 @@
                     <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
-                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ $title ?? 'RZK' }}</h1>
+                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ $title ?? 'Dashboard' }}</h1>
                 </div>
 
                 <div class="flex items-center space-x-4">
