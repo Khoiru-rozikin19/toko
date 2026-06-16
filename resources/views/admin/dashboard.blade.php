@@ -21,7 +21,13 @@
             <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
                 <div>
                     <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo orderkuota</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($orderkuotaBalance, 0, ',', '.') }}</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">
+                        @if(is_numeric($orderkuotaBalance))
+                            Rp {{ number_format($orderkuotaBalance, 0, ',', '.') }}
+                        @else
+                            {{ $orderkuotaBalance }}
+                        @endif
+                    </span>
                 </div>
                 <div class="flex items-center justify-between mt-4">
                     <span class="text-xs text-blue-100">H2H Supplier</span>

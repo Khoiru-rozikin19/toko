@@ -140,6 +140,17 @@ class OrderkuotaService
      */
     public function cekSaldo()
     {
+        $res = $this->getSaldoOrderkuota();
+        return is_numeric($res) ? (int) $res : 0;
+    }
+
+    /**
+     * Get real-time/cached balance from Orderkuota API.
+     *
+     * @return string|int
+     */
+    public function getSaldoOrderkuota()
+    {
         return \Illuminate\Support\Facades\Cache::remember('orderkuota_saldo', 300, function () {
             $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';
             $pin = Setting::get('orderkuota_pin', '');
@@ -185,7 +196,7 @@ class OrderkuotaService
                 Log::error("OrderkuotaService: Failed to fetch balance: " . $e->getMessage());
             }
 
-            return 0;
+            return 'Gagal Muat';
         });
     }
 }

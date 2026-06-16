@@ -498,3 +498,41 @@ test('checkout requires target_phone for supplier products with correct format',
     $order = Order::where('product_id', $product->id)->first();
     expect($order->target_phone)->toBe('081234567890');
 });
+
+test('admin dashboard displays real-time and cached orderkuota balance with error fallback', function () {
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    // Clear cache to make sure we hit the service
+    \Illuminate\Support\Facades\Cache::forget('orderkuota_saldo');
+
+    // 1. Successful case (returns numeric balance)
+    // In unit testing environment, OrderkuotaService getSaldoOrderkuota returns 500000 by default.
+    $service = new \App\Services\OrderkuotaService();
+    $balance = $service->getSaldoOrderkuota();
+    expect($balance)->toBe(500000);
+
+    // Verify cache has the key
+    expect(\Illuminate\Support\Facades\Cache::has('orderkuota_saldo'))->toBeTrue();
+    expect(\Illuminate\Support\Facades\Cache::get('orderkuota_saldo'))->toBe(500000);
+
+    // Visit dashboard and verify it renders the balance formatted
+    $response = $this->actingAs($admin)->get(route('admin.dashboard'));
+    $response->assertStatus(200);
+    $response->assertSee('Rp 500.000');
+
+    // 2. Error case fallback
+    // Put 'Gagal Muat' manually in cache or mock it
+    \Illuminate\Support\Facades\Cache::put('orderkuota_saldo', 'Gagal Muat', 300);
+
+    // Visit dashboard again and verify it displays 'Gagal Muat' without erroring
+    $response2 = $this->actingAs($admin)->get(route('admin.dashboard'));
+    $response2->assertStatus(200);
+    $response2->assertSee('Gagal Muat');
+    $response2->assertDontSee('Rp Gagal Muat');
+});

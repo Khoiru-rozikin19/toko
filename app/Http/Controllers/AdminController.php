@@ -60,7 +60,7 @@ class AdminController extends Controller
         // Saldo Orderkuota (Admin only)
         $orderkuotaBalance = 0;
         if ($isAdmin) {
-            $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->cekSaldo();
+            $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->getSaldoOrderkuota();
         }
 
         $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
