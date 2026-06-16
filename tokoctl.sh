@@ -82,6 +82,29 @@ get_server_info() {
     fi
 }
 
+show_dashboard() {
+    get_server_info
+    print_border
+    echo -e "      ${BOLD}${GREEN}🚀   DASHBOARD MANAJEMEN VPS & WEBSITE   🚀${NC}"
+    print_border
+    echo -e "  ${BOLD}${WHITE}💻 Info Server:${NC}"
+    echo -e "    • CPU Load : ${CYAN}$cpu_load${NC}"
+    echo -e "    • RAM      : ${CYAN}${ram_used}MB${NC} / ${CYAN}${ram_total}MB${NC}"
+    echo -e "    • Disk /   : ${CYAN}$disk_used${NC}"
+    print_border
+    echo -e "  ${BOLD}${WHITE}Pilih Opsi Manajemen:${NC}"
+    echo -e "    [1] 🔄  Update Website (Git Pull & Deploy)"
+    echo -e "    [2] 👤  Lihat Pengguna Website & Peran"
+    echo -e "    [3] ⚡  Cek Status Layanan & Sistem"
+    echo -e "    [4] 📊  Pantau Aktivitas Pengunjung (Access Log)"
+    echo -e "    [5] 📂  Backup & Restore Website (Files & DB)"
+    echo -e "    [6] 🤖  Konfigurasi Bot Telegram & Webhook"
+    echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
+    echo -e "    [0] 🚪  Keluar dari Panel"
+    print_border
+    echo -n "Pilih menu [0-7]: "
+}
+
 # 4. Instalasi & Konfigurasi Alias "set" Global
 install_alias() {
     local target_script="/var/www/toko/tokoctl.sh"
