@@ -89,9 +89,15 @@
                                 @endif
                             </td>
                             <td class="py-4.5 px-6">
-                                <span class="text-xs text-slate-400 font-mono block max-w-xs truncate">
-                                    {{ Str::limit($product->config_template, 30) ?: 'Belum diisi' }}
-                                </span>
+                                @if($product->vpsServer)
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-mono" title="{{ $product->vps_command_template }}">
+                                        VPS: {{ $product->vpsServer->name }}
+                                    </span>
+                                @else
+                                    <span class="text-xs text-slate-405 font-mono block max-w-xs truncate">
+                                        {{ Str::limit($product->config_template, 30) ?: 'Belum diisi' }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-4.5 px-6 text-center">
                                 <div class="flex items-center justify-center space-x-2">
@@ -147,6 +153,22 @@
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
                 </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="create_vps_server_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Otomatisasi VPS (Opsional)</label>
+                    <select id="create_vps_server_id" name="vps_server_id" onchange="toggleVpsCommandInput('create')" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                        <option value="">-- Tanpa Otomatisasi --</option>
+                        @foreach($vpsServers as $server)
+                            <option value="{{ $server->id }}">{{ $server->name }} ({{ $server->ip_address }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div id="create_vps_command_container" class="hidden">
+                    <label for="create_vps_command_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Template Perintah CLI</label>
+                    <input type="text" id="create_vps_command_template" name="vps_command_template" placeholder="Contoh: user-add-xray {username} {duration}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
             </div>
 
             @if(auth()->user()->role === 'admin')
@@ -279,6 +301,22 @@
                 </select>
             </div>
 
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="edit_vps_server_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Otomatisasi VPS (Opsional)</label>
+                    <select id="edit_vps_server_id" name="vps_server_id" onchange="toggleVpsCommandInput('edit')" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                        <option value="">-- Tanpa Otomatisasi --</option>
+                        @foreach($vpsServers as $server)
+                            <option value="{{ $server->id }}">{{ $server->name }} ({{ $server->ip_address }})</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div id="edit_vps_command_container" class="hidden">
+                    <label for="edit_vps_command_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Template Perintah CLI</label>
+                    <input type="text" id="edit_vps_command_template" name="vps_command_template" placeholder="Contoh: user-add-xray {username} {duration}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
+            </div>
+
             @if(auth()->user()->role === 'admin')
             <div class="bg-slate-50 dark:bg-slate-900/60 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl">
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kelola Kategori (Admin Only)</label>
@@ -399,6 +437,9 @@
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
         document.getElementById('edit_category_id').value = product.category_id || '';
+        document.getElementById('edit_vps_server_id').value = product.vps_server_id || '';
+        document.getElementById('edit_vps_command_template').value = product.vps_command_template || '';
+        toggleVpsCommandInput('edit');
         if (document.getElementById('edit_harga_modal')) {
             document.getElementById('edit_harga_modal').value = product.harga_modal || 0;
         }
@@ -426,6 +467,24 @@
             modal.classList.remove('hidden');
         } else {
             modal.classList.add('hidden');
+        }
+    }
+
+    // Toggle VPS inputs
+    function toggleVpsCommandInput(prefix) {
+        const select = document.getElementById(`${prefix}_vps_server_id`);
+        const container = document.getElementById(`${prefix}_vps_command_container`);
+        const input = document.getElementById(`${prefix}_vps_command_template`);
+        
+        if (select && select.value !== '') {
+            container.classList.remove('hidden');
+            input.required = true;
+        } else {
+            container.classList.add('hidden');
+            input.required = false;
+            if (prefix === 'create') {
+                input.value = '';
+            }
         }
     }
 

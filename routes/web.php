@@ -81,5 +81,12 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         // Kelola Kategori Produk
         Route::post('/categories', [AdminController::class, 'storeCategory'])->name('categories.store');
         Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('categories.delete');
+
+        // Kelola VPN Panel
+        Route::get('/vpn-panel', [AdminController::class, 'vpnPanel'])->name('vpn_panel');
+        Route::post('/vpn-panel', [AdminController::class, 'storeVpnServer'])->name('vpn_panel.store');
+        Route::post('/vpn-panel/{id}/update', [AdminController::class, 'updateVpnServer'])->name('vpn_panel.update');
+        Route::post('/vpn-panel/{id}/delete', [AdminController::class, 'deleteVpnServer'])->name('vpn_panel.delete');
+        Route::post('/vpn-panel/test-connection', [AdminController::class, 'testVpnServerConnection'])->name('vpn_panel.test');
     });
 });

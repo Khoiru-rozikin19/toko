@@ -120,14 +120,15 @@ class AdminController extends Controller
     {
         $user = auth()->user();
         $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+        $vpsServers = \App\Models\VpsServer::orderBy('name', 'asc')->get();
         if ($user->role === 'admin') {
-            $products = Product::with(['seller', 'category'])->orderBy('created_at', 'desc')->get();
+            $products = Product::with(['seller', 'category', 'vpsServer'])->orderBy('created_at', 'desc')->get();
             $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
         } else {
-            $products = Product::with('category')->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
+            $products = Product::with(['category', 'vpsServer'])->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
             $sellers = collect();
         }
-        return view('admin.products', compact('products', 'sellers', 'categories'));
+        return view('admin.products', compact('products', 'sellers', 'categories', 'vpsServers'));
     }
 
     /**
@@ -138,6 +139,8 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'vps_server_id' => 'nullable|exists:vps_servers,id',
+            'vps_command_template' => 'nullable|string|max:1000',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'harga_modal' => 'nullable|integer|min:0',
@@ -175,6 +178,8 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
+            'vps_server_id' => 'nullable|exists:vps_servers,id',
+            'vps_command_template' => 'nullable|string|max:1000',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'harga_modal' => 'nullable|integer|min:0',
@@ -585,5 +590,109 @@ class AdminController extends Controller
             'success' => true,
             'categories' => $categories,
         ]);
+    }
+
+    /**
+     * Display VPN Panel management page.
+     */
+    public function vpnPanel()
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+        $servers = \App\Models\VpsServer::orderBy('created_at', 'desc')->get();
+        return view('admin.vpn_panel', compact('servers'));
+    }
+
+    /**
+     * Store new VPS server settings.
+     */
+    public function storeVpnServer(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'ip_address' => 'required|string|max:255',
+            'ssh_port' => 'required|integer|min:1|max:65535',
+            'ssh_username' => 'required|string|max:255',
+            'ssh_password' => 'nullable|string',
+            'ssh_private_key' => 'nullable|string',
+        ]);
+
+        \App\Models\VpsServer::create($request->all());
+
+        return redirect()->route('admin.vpn_panel')->with('success', 'Server VPS berhasil ditambahkan.');
+    }
+
+    /**
+     * Update VPS server settings.
+     */
+    public function updateVpnServer(Request $request, $id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $server = \App\Models\VpsServer::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'ip_address' => 'required|string|max:255',
+            'ssh_port' => 'required|integer|min:1|max:65535',
+            'ssh_username' => 'required|string|max:255',
+            'ssh_password' => 'nullable|string',
+            'ssh_private_key' => 'nullable|string',
+        ]);
+
+        $server->update($request->all());
+
+        return redirect()->route('admin.vpn_panel')->with('success', 'Server VPS berhasil diperbarui.');
+    }
+
+    /**
+     * Delete VPS server settings.
+     */
+    public function deleteVpnServer($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $server = \App\Models\VpsServer::findOrFail($id);
+        $server->delete();
+
+        return redirect()->route('admin.vpn_panel')->with('success', 'Server VPS berhasil dihapus.');
+    }
+
+    /**
+     * Test VPS SSH connection via AJAX.
+     */
+    public function testVpnServerConnection(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'ip_address' => 'required|string',
+            'ssh_port' => 'required|integer',
+            'ssh_username' => 'required|string',
+            'ssh_password' => 'nullable|string',
+            'ssh_private_key' => 'nullable|string',
+        ]);
+
+        $service = app(\App\Services\VpsSshService::class);
+        $result = $service->testConnection($request->only([
+            'ip_address', 'ssh_port', 'ssh_username', 'ssh_password', 'ssh_private_key'
+        ]));
+
+        if ($result === true) {
+            return response()->json(['success' => true, 'message' => 'Koneksi SSH berhasil terhubung ke server VPS!']);
+        }
+
+        return response()->json(['success' => false, 'message' => $result]);
     }
 }

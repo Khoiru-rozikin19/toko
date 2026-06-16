@@ -12,6 +12,8 @@ class Product extends Model
     protected $fillable = [
         'user_id',
         'category_id',
+        'vps_server_id',
+        'vps_command_template',
         'name',
         'description',
         'price',
@@ -31,6 +33,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function vpsServer()
+    {
+        return $this->belongsTo(VpsServer::class);
     }
 
     public function orders()

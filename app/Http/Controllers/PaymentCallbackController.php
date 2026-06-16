@@ -90,6 +90,11 @@ class PaymentCallbackController extends Controller
             }
         }
 
+        // Run VPS account creation if product is linked to a VPS server
+        if ($order->product && $order->product->vps_server_id) {
+            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+        }
+
         // Complete the order
         $order->status = 'success';
         $order->save();

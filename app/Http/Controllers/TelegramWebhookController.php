@@ -110,6 +110,11 @@ class TelegramWebhookController extends Controller
                 $order->vpn_config = $stock->account_data;
             }
 
+            // Run VPS account creation if product is linked to a VPS server
+            if ($order->product && $order->product->vps_server_id) {
+                app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+            }
+
             // Update order status to paid
             $order->status = 'paid';
             $order->save();
