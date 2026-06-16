@@ -22,11 +22,19 @@ class CatalogController extends Controller
     /**
      * Show the product catalog.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::all();
+        $query = Product::query();
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $products = $query->get();
+        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
         $qris_configured = !empty(Setting::get('qris_static_string'));
-        return view('catalog', compact('products', 'qris_configured'));
+
+        return view('catalog', compact('products', 'categories', 'qris_configured'));
     }
 
     /**

@@ -35,6 +35,7 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID</th>
                         <th class="py-4.5 px-6">Nama Produk</th>
+                        <th class="py-4.5 px-6">Kategori</th>
                         @if(auth()->user()->role === 'admin')
                             <th class="py-4.5 px-6">Seller</th>
                         @endif
@@ -61,6 +62,9 @@
                                         Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
                                     </span>
                                 @endif
+                            </td>
+                            <td class="py-4.5 px-6 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                                {{ $product->category ? $product->category->name : '-' }}
                             </td>
                             @if(auth()->user()->role === 'admin')
                                 <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
@@ -134,6 +138,38 @@
                 <label for="create_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Paket VPN</label>
                 <input type="text" id="create_name" name="name" required placeholder="Contoh: Premium SG OpenVPN" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
+
+            <div>
+                <label for="create_category_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori</label>
+                <select id="create_category_id" name="category_id" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <option value="">-- Tanpa Kategori --</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            @if(auth()->user()->role === 'admin')
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kelola Kategori (Admin Only)</label>
+                <div class="flex flex-wrap gap-2 mb-3 adminCategoryList" id="adminCategoryList_create">
+                    @foreach($categories as $category)
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800" data-category-id="{{ $category->id }}">
+                            <span>{{ $category->name }}</span>
+                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </span>
+                    @endforeach
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="newCategoryName_create" placeholder="Kategori Baru..." class="flex-1 px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <button type="button" onclick="createCategory('newCategoryName_create')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                        Tambah
+                    </button>
+                </div>
+            </div>
+            @endif
 
             @if(auth()->user()->role === 'admin')
             <div>
@@ -233,6 +269,38 @@
                 <input type="text" id="edit_name" name="name" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
+            <div>
+                <label for="edit_category_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori</label>
+                <select id="edit_category_id" name="category_id" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <option value="">-- Tanpa Kategori --</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}">{{ $category->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            @if(auth()->user()->role === 'admin')
+            <div class="bg-slate-50 dark:bg-slate-900/60 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kelola Kategori (Admin Only)</label>
+                <div class="flex flex-wrap gap-2 mb-3 adminCategoryList" id="adminCategoryList_edit">
+                    @foreach($categories as $category)
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800" data-category-id="{{ $category->id }}">
+                            <span>{{ $category->name }}</span>
+                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </span>
+                    @endforeach
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="newCategoryName_edit" placeholder="Kategori Baru..." class="flex-1 px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <button type="button" onclick="createCategory('newCategoryName_edit')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                        Tambah
+                    </button>
+                </div>
+            </div>
+            @endif
+
             @if(auth()->user()->role === 'admin')
             <div>
                 <label for="edit_user_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Pemilik Produk (Seller)</label>
@@ -330,6 +398,7 @@
         document.getElementById('edit_price').value = product.price;
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
+        document.getElementById('edit_category_id').value = product.category_id || '';
         if (document.getElementById('edit_harga_modal')) {
             document.getElementById('edit_harga_modal').value = product.harga_modal || 0;
         }
@@ -358,6 +427,106 @@
         } else {
             modal.classList.add('hidden');
         }
+    }
+
+    // AJAX Category management functions
+    function updateCategoryDropdowns(categories) {
+        const dropdowns = [
+            document.getElementById('create_category_id'),
+            document.getElementById('edit_category_id')
+        ];
+        
+        dropdowns.forEach(dropdown => {
+            if (!dropdown) return;
+            const selectedVal = dropdown.value;
+            dropdown.innerHTML = '<option value="">-- Tanpa Kategori --</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.innerText = cat.name;
+                if (cat.id == selectedVal) {
+                    option.selected = true;
+                }
+                dropdown.appendChild(option);
+            });
+        });
+
+        // Update list views
+        const listIds = ['adminCategoryList_create', 'adminCategoryList_edit'];
+        listIds.forEach(id => {
+            const list = document.getElementById(id);
+            if (!list) return;
+            list.innerHTML = '';
+            categories.forEach(cat => {
+                const span = document.createElement('span');
+                span.className = 'inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800';
+                span.dataset.categoryId = cat.id;
+                span.innerHTML = `
+                    <span>${escapeHtml(cat.name)}</span>
+                    <button type="button" onclick="deleteCategory(${cat.id})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                `;
+                list.appendChild(span);
+            });
+        });
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function createCategory(inputElementId) {
+        const input = document.getElementById(inputElementId);
+        const name = input.value.trim();
+        if (!name) return;
+        
+        fetch("{{ route('admin.categories.store') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ name: name })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                updateCategoryDropdowns(data.categories);
+                input.value = '';
+            } else {
+                alert(data.message || 'Gagal menambahkan kategori.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
+        });
+    }
+
+    function deleteCategory(id) {
+        if (!confirm('Apakah Anda yakin ingin menghapus kategori ini? Kategori produk yang terpilih akan berubah menjadi Tanpa Kategori.')) {
+            return;
+        }
+        
+        fetch(`/admin/categories/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                updateCategoryDropdowns(data.categories);
+            } else {
+                alert(data.message || 'Gagal menghapus kategori.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
+        });
     }
 </script>
 @endsection

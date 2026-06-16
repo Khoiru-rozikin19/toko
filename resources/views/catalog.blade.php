@@ -17,6 +17,18 @@
         </div>
         @endif
     </div>
+ 
+    <!-- Categories Filter -->
+    <div class="flex items-center space-x-2 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <a href="{{ route('catalog') }}" class="px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap {{ !request()->filled('category_id') ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+            Semua
+        </a>
+        @foreach($categories as $category)
+            <a href="{{ route('catalog', ['category_id' => $category->id]) }}" class="px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap {{ request('category_id') == $category->id ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700' }}">
+                {{ $category->name }}
+            </a>
+        @endforeach
+    </div>
 
     <!-- Product Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -71,10 +83,17 @@
                         </button>
                         
                         @if($product->stock > 0 && $qris_configured)
-                            <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                <span>Beli</span>
-                            </button>
+                            @auth
+                                <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    <span>Beli</span>
+                                </button>
+                            @else
+                                <a href="{{ route('login') }}" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                    <span>Beli</span>
+                                </a>
+                            @endauth
                         @else
                             <button disabled class="flex items-center space-x-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-xl text-xs font-bold cursor-not-allowed">
                                 <span>Beli</span>

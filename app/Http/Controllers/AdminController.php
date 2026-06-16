@@ -119,14 +119,15 @@ class AdminController extends Controller
     public function products()
     {
         $user = auth()->user();
+        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
         if ($user->role === 'admin') {
-            $products = Product::with('seller')->orderBy('created_at', 'desc')->get();
+            $products = Product::with(['seller', 'category'])->orderBy('created_at', 'desc')->get();
             $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
         } else {
-            $products = Product::where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
+            $products = Product::with('category')->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
             $sellers = collect();
         }
-        return view('admin.products', compact('products', 'sellers'));
+        return view('admin.products', compact('products', 'sellers', 'categories'));
     }
 
     /**
@@ -136,6 +137,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'category_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'harga_modal' => 'nullable|integer|min:0',
@@ -172,6 +174,7 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'category_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'harga_modal' => 'nullable|integer|min:0',
@@ -537,5 +540,50 @@ class AdminController extends Controller
 
         return redirect()->route('admin.account_stocks', ['product_id' => $productId])
             ->with('success', 'Stok akun berhasil dihapus.');
+    }
+
+    /**
+     * Store a new category via AJAX.
+     */
+    public function storeCategory(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:50|unique:categories,name',
+        ]);
+
+        \App\Models\Category::create([
+            'name' => $request->name,
+        ]);
+
+        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+
+        return response()->json([
+            'success' => true,
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Delete a category via AJAX.
+     */
+    public function deleteCategory($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $category = \App\Models\Category::findOrFail($id);
+        $category->delete();
+
+        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+
+        return response()->json([
+            'success' => true,
+            'categories' => $categories,
+        ]);
     }
 }

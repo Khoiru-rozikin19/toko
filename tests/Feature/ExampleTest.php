@@ -1,7 +1,7 @@
 <?php
 
-test('the application redirects guest to login', function () {
+test('the application shows the catalog to guest users', function () {
     $response = $this->get('/');
 
-    $response->assertRedirect('/login');
+    $response->assertStatus(200);
 });

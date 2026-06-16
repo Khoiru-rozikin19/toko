@@ -23,12 +23,14 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Public Catalog Routes
+Route::get('/', [CatalogController::class, 'index'])->name('catalog');
+Route::get('/catalog', [CatalogController::class, 'index']);
+
 // Rute Terkunci (Wajib Login & Terverifikasi - Semua Peran)
 Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     
     // User Frontend Routes
-    Route::get('/', [CatalogController::class, 'index'])->name('catalog');
-    Route::get('/catalog', [CatalogController::class, 'index']);
     Route::post('/buy', [CatalogController::class, 'buy'])->name('buy');
     Route::get('/orders', [CatalogController::class, 'history'])->name('orders.history');
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
@@ -75,5 +77,9 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/users/{id}/update-role', [AdminController::class, 'updateRole']);
         Route::post('/users/{id}/toggle-status', [AdminController::class, 'toggleStatus']);
         Route::post('/users/{id}/delete', [AdminController::class, 'deleteUser']);
+
+        // Kelola Kategori Produk
+        Route::post('/categories', [AdminController::class, 'storeCategory'])->name('categories.store');
+        Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('categories.delete');
     });
 });
