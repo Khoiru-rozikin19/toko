@@ -20,8 +20,15 @@
             <!-- Card 1: Saldo orderkuota (Deep Blue) -->
             <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
                 <div>
-                    <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo orderkuota</span>
-                    <span class="text-2xl font-black mt-2 block tracking-tight">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-blue-200 uppercase tracking-wider block">Saldo orderkuota</span>
+                        <button id="refreshOrderkuotaBtn" class="text-blue-200 hover:text-white transition-colors duration-150 focus:outline-none" title="Refresh Saldo Real-time">
+                            <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <span id="orderkuotaBalanceText" class="text-2xl font-black mt-2 block tracking-tight">
                         @if(is_numeric($orderkuotaBalance))
                             Rp {{ number_format($orderkuotaBalance, 0, ',', '.') }}
                         @else
@@ -265,6 +272,41 @@
                 }
             });
         });
+
+        // Real-time Orderkuota Balance Fetcher (Admin Only)
+        const refreshBtn = document.getElementById('refreshOrderkuotaBtn');
+        const refreshIcon = document.getElementById('refreshIcon');
+        const balanceText = document.getElementById('orderkuotaBalanceText');
+
+        function fetchRealtimeBalance() {
+            if (!refreshIcon || !refreshBtn || !balanceText) return;
+            
+            refreshIcon.classList.add('animate-spin');
+            refreshBtn.disabled = true;
+
+            fetch("{{ route('admin.orderkuota_balance') }}")
+                .then(res => res.json())
+                .then(data => {
+                    refreshIcon.classList.remove('animate-spin');
+                    refreshBtn.disabled = false;
+                    if (data.success) {
+                        balanceText.innerText = data.formatted_balance;
+                    } else {
+                        balanceText.innerText = data.balance;
+                    }
+                })
+                .catch(err => {
+                    refreshIcon.classList.remove('animate-spin');
+                    refreshBtn.disabled = false;
+                    console.error('Failed to fetch balance:', err);
+                });
+        }
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', fetchRealtimeBalance);
+            // Auto-fetch on page load for real-time update
+            fetchRealtimeBalance();
+        }
 
         observer.observe(document.documentElement, { attributes: true });
     });

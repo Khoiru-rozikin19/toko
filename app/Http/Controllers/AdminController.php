@@ -107,6 +107,24 @@ class AdminController extends Controller
     }
 
     /**
+     * Get real-time Orderkuota balance.
+     */
+    public function orderkuotaBalance()
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $balance = app(\App\Services\OrderkuotaService::class)->getSaldoOrderkuota(true);
+
+        return response()->json([
+            'success' => is_numeric($balance),
+            'balance' => $balance,
+            'formatted_balance' => is_numeric($balance) ? 'Rp ' . number_format($balance, 0, ',', '.') : $balance
+        ]);
+    }
+
+    /**
      * Display products page (CRUD).
      */
     public function products()

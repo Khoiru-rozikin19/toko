@@ -149,8 +149,11 @@ class OrderkuotaService
      *
      * @return string|int
      */
-    public function getSaldoOrderkuota()
+    public function getSaldoOrderkuota($force = false)
     {
+        if ($force) {
+            \Illuminate\Support\Facades\Cache::forget('orderkuota_saldo');
+        }
         return \Illuminate\Support\Facades\Cache::remember('orderkuota_saldo', 300, function () {
             $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';
             $pin = Setting::get('orderkuota_pin', '');

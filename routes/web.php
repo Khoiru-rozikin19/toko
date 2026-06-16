@@ -60,6 +60,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
 
     // Khusus Admin Utama (Konfigurasi QRIS & Manajemen Pengguna)
     Route::middleware('role:admin')->group(function () {
+        Route::get('/orderkuota-balance', [AdminController::class, 'orderkuotaBalance'])->name('orderkuota_balance');
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         Route::get('/supplier-settings', [AdminController::class, 'supplierSettings'])->name('supplier_settings');
