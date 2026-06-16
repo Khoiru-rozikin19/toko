@@ -173,11 +173,6 @@ class OrderkuotaService
                     'password' => $passwordH2H,
                     'pin_ip'   => $passwordH2H,
                     'key'      => $passwordH2H,
-                    'perintah' => "S.{$pin}",
-                    'pesan'    => "S.{$pin}",
-                    'q'        => "S.{$pin}",
-                    'sms'      => "S.{$pin}",
-                    'msg'      => "S.{$pin}",
                     'pin'      => $pin,
                 ];
 
@@ -185,7 +180,7 @@ class OrderkuotaService
                 foreach ($params as $key => $value) {
                     $queryParts[] = $key . '=' . str_replace('#', '%23', $value);
                 }
-                $urlTarget = "https://h2h.okeconnect.com/trx?" . implode('&', $queryParts);
+                $urlTarget = "https://h2h.okeconnect.com/balance?" . implode('&', $queryParts);
 
                 $context = stream_context_create(['http' => ['timeout' => 10, 'ignore_errors' => true]]);
                 $responseBody = @file_get_contents($urlTarget, false, $context);
