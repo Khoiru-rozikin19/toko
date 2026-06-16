@@ -156,7 +156,7 @@ class OrderkuotaService
         }
         return \Illuminate\Support\Facades\Cache::remember('orderkuota_saldo', 300, function () {
             $memberId = Setting::get('orderkuota_member_id') ?: 'OK1988589';
-            $pin = Setting::get('orderkuota_pin', '');
+            $pin = Setting::get('orderkuota_pin') ?: '7761';
             $passwordH2H = Setting::get('orderkuota_api_key') ?: '@jkn1234';
 
             if (app()->runningUnitTests()) {
@@ -194,6 +194,16 @@ class OrderkuotaService
                         $cleaned = preg_replace('/[^\d]/', '', $matches[1]);
                         return (int) $cleaned;
                     }
+
+                    if (preg_match('/gagal\.\s*(.+)/i', $responseBody, $matches)) {
+                        return 'Gagal: ' . trim($matches[1]);
+                    } elseif (stripos($responseBody, 'gagal') !== false) {
+                        return trim($responseBody);
+                    }
+
+                    return trim($responseBody);
+                } else {
+                    return 'Gagal Koneksi / Timeout';
                 }
             } catch (\Exception $e) {
                 Log::error("OrderkuotaService: Failed to fetch balance: " . $e->getMessage());
