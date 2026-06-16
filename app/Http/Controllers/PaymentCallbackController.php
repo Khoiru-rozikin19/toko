@@ -23,10 +23,10 @@ class PaymentCallbackController extends Controller
      */
     public function handle(Request $request)
     {
-        // Validate request structure
+        // Validate request structure (loosen amount check to support dot/comma formatted values)
         $request->validate([
             'raw_text' => 'required|string',
-            'amount' => 'required|integer',
+            'amount' => 'required',
             'secret_key' => 'required|string',
         ]);
 
@@ -40,7 +40,8 @@ class PaymentCallbackController extends Controller
             ], 401);
         }
 
-        $amount = (int) $request->amount;
+        // Clean amount to ensure it is a valid integer
+        $amount = (int) preg_replace('/[^0-9]/', '', $request->amount);
         $rawText = $request->raw_text;
 
         // Log the incoming payment notification

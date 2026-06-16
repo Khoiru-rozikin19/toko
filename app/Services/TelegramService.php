@@ -9,11 +9,13 @@ class TelegramService
 {
     protected $token;
     protected $adminId;
+    protected $apiBase;
 
     public function __construct()
     {
         $this->token = env('TELEGRAM_BOT_TOKEN');
         $this->adminId = env('TELEGRAM_ADMIN_ID');
+        $this->apiBase = rtrim(env('TELEGRAM_API_BASE', 'https://api.telegram.org'), '/');
     }
 
     /**
@@ -73,7 +75,7 @@ class TelegramService
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("https://api.telegram.org/bot{$this->token}/sendMessage", $payload);
+                ->post("{$this->apiBase}/bot{$this->token}/sendMessage", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService sendMessage Failed: " . $response->body());
                 return false;
@@ -105,7 +107,7 @@ class TelegramService
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("https://api.telegram.org/bot{$this->token}/answerCallbackQuery", $payload);
+                ->post("{$this->apiBase}/bot{$this->token}/answerCallbackQuery", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService answerCallbackQuery Failed: " . $response->body());
                 return false;
@@ -137,7 +139,7 @@ class TelegramService
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("https://api.telegram.org/bot{$this->token}/editMessageText", $payload);
+                ->post("{$this->apiBase}/bot{$this->token}/editMessageText", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService editMessageText Failed: " . $response->body());
                 return false;
