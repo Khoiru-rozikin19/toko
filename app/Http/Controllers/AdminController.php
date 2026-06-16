@@ -22,24 +22,16 @@ class AdminController extends Controller
         $user = auth()->user();
         $isAdmin = $user->role === 'admin';
 
-        // Helper to query orders belonging to the user if not admin
-        $orderQuery = function () use ($isAdmin, $user) {
-            $q = Order::query();
-            if (!$isAdmin) {
-                $q->whereHas('product', function ($pq) use ($user) {
-                    $pq->where('user_id', $user->id);
-                });
-            }
-            return $q;
+        // Helper to query orders belonging to the user
+        $orderQuery = function () use ($user) {
+            return Order::whereHas('product', function ($pq) use ($user) {
+                $pq->where('user_id', $user->id);
+            });
         };
 
-        // Helper to query products belonging to the user if not admin
-        $productQuery = function () use ($isAdmin, $user) {
-            $q = Product::query();
-            if (!$isAdmin) {
-                $q->where('user_id', $user->id);
-            }
-            return $q;
+        // Helper to query products belonging to the user
+        $productQuery = function () use ($user) {
+            return Product::where('user_id', $user->id);
         };
 
         // 1. Wallets & Earnings (Stats matching screenshot 2)
@@ -50,11 +42,8 @@ class AdminController extends Controller
         $successfulOrders = $orderQuery()->whereIn('status', ['success', 'paid'])->with('product')->get();
         foreach ($successfulOrders as $order) {
             $product = $order->product;
-            if ($product && !empty($product->orderkuota_product_code)) {
-                $walletBalance += ($order->total_amount - ($product->harga_modal ?? 0));
-            } else {
-                $walletBalance += $order->total_amount;
-            }
+            $modal = $product ? ($product->harga_modal ?? 0) : 0;
+            $walletBalance += ($order->total_amount - $modal);
         }
 
         // Saldo Orderkuota (Admin only)
@@ -149,7 +138,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
-            'harga_modal' => 'required_with:orderkuota_product_code|nullable|integer|min:0',
+            'harga_modal' => 'nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',
@@ -185,7 +174,7 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
-            'harga_modal' => 'required_with:orderkuota_product_code|nullable|integer|min:0',
+            'harga_modal' => 'nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'required|integer|min:0',

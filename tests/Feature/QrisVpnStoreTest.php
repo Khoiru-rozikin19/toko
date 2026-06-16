@@ -536,3 +536,90 @@ test('admin dashboard displays real-time and cached orderkuota balance with erro
     $response2->assertSee('Gagal Muat');
     $response2->assertDontSee('Rp Gagal Muat');
 });
+
+test('dashboard statistics are separated per user and wallet balance subtracts harga_modal for all products', function () {
+    // Clear cache
+    \Illuminate\Support\Facades\Cache::forget('orderkuota_saldo');
+
+    // Create Admin and Seller users
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    $seller = User::create([
+        'name' => 'Seller User',
+        'email' => 'seller@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'seller',
+        'is_verified' => true,
+    ]);
+
+    // Create Admin product (local VPN) with price 15,000 and harga_modal 5,000
+    $adminProduct = Product::create([
+        'name' => 'Admin VPN',
+        'user_id' => $admin->id,
+        'price' => 15000,
+        'harga_modal' => 5000,
+        'duration_days' => 30,
+        'stock' => 10,
+    ]);
+
+    // Create Seller product (local VPN) with price 20,000 and harga_modal 12,000
+    $sellerProduct = Product::create([
+        'name' => 'Seller VPN',
+        'user_id' => $seller->id,
+        'price' => 20000,
+        'harga_modal' => 12000,
+        'duration_days' => 30,
+        'stock' => 10,
+    ]);
+
+    // Create dynamic/sandbox mock balance
+    \Illuminate\Support\Facades\Cache::put('orderkuota_saldo', 500000, 300);
+
+    // Create a successful order for Admin's product (total paid = 15000)
+    Order::create([
+        'id' => 'ORD-ADMIN-1',
+        'product_id' => $adminProduct->id,
+        'email_or_whatsapp' => 'admin-buyer@example.com',
+        'base_amount' => 15000,
+        'unique_code' => 0,
+        'total_amount' => 15000,
+        'status' => 'success',
+        'expired_at' => Carbon::now()->addDays(1),
+    ]);
+
+    // Create a successful order for Seller's product (total paid = 20000)
+    Order::create([
+        'id' => 'ORD-SELLER-1',
+        'product_id' => $sellerProduct->id,
+        'email_or_whatsapp' => 'seller-buyer@example.com',
+        'base_amount' => 20000,
+        'unique_code' => 0,
+        'total_amount' => 20000,
+        'status' => 'success',
+        'expired_at' => Carbon::now()->addDays(1),
+    ]);
+
+    // 1. Visit dashboard as Admin
+    // Admin revenue should be 15,000 (Pendapatan Kotor)
+    // Admin wallet balance should be 15,000 - 5,000 = 10,000 (Saldo Dompet Saya)
+    $adminResponse = $this->actingAs($admin)->get(route('admin.dashboard'));
+    $adminResponse->assertStatus(200);
+    $adminResponse->assertSee('Rp 15.000'); // Gross revenue
+    $adminResponse->assertSee('Rp 10.000'); // Wallet profit
+    $adminResponse->assertDontSee('Rp 20.000'); // Shouldn't see seller's revenue
+
+    // 2. Visit dashboard as Seller
+    // Seller revenue should be 20,000 (Pendapatan Kotor)
+    // Seller wallet balance should be 20,000 - 12,000 = 8,000 (Saldo Dompet Saya)
+    $sellerResponse = $this->actingAs($seller)->get(route('admin.dashboard'));
+    $sellerResponse->assertStatus(200);
+    $sellerResponse->assertSee('Rp 20.000'); // Gross revenue
+    $sellerResponse->assertSee('Rp 8.000'); // Wallet profit
+    $sellerResponse->assertDontSee('Rp 15.000'); // Shouldn't see admin's revenue
+});
