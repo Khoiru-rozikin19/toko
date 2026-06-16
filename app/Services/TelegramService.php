@@ -71,7 +71,9 @@ class TelegramService
         }
 
         try {
-            $response = Http::post("https://api.telegram.org/bot{$this->token}/sendMessage", $payload);
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->post("https://api.telegram.org/bot{$this->token}/sendMessage", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService sendMessage Failed: " . $response->body());
                 return false;
@@ -101,7 +103,9 @@ class TelegramService
         }
 
         try {
-            $response = Http::post("https://api.telegram.org/bot{$this->token}/answerCallbackQuery", $payload);
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->post("https://api.telegram.org/bot{$this->token}/answerCallbackQuery", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService answerCallbackQuery Failed: " . $response->body());
                 return false;
@@ -131,7 +135,9 @@ class TelegramService
         ];
 
         try {
-            $response = Http::post("https://api.telegram.org/bot{$this->token}/editMessageText", $payload);
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->post("https://api.telegram.org/bot{$this->token}/editMessageText", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService editMessageText Failed: " . $response->body());
                 return false;

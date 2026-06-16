@@ -115,8 +115,8 @@ class CatalogController extends Controller
             'expired_at' => Carbon::now()->addMinutes(15),
         ]);
 
-        // Kirim notifikasi ke Telegram Admin
-        $this->telegramService->sendOrderNotification($order->id, $order->total_amount, $order->email_or_whatsapp);
+        // Kirim notifikasi ke Telegram Admin secara asynchronous via background queue
+        \App\Jobs\SendTelegramNotificationJob::dispatch($order->id, $order->total_amount, $order->email_or_whatsapp);
 
         return response()->json([
             'success' => true,
