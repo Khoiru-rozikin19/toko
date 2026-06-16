@@ -137,25 +137,23 @@ class AdminController extends Controller
         $pin = \App\Models\Setting::get('orderkuota_pin') ?: '7761';
         $passwordH2H = \App\Models\Setting::get('orderkuota_api_key') ?: '@jkn1234';
 
-        $formats = [
-            'S' => 'S',
-            'S.pin' => "S.{$pin}",
-            'SAL' => 'SAL',
-            'SAL.pin' => "SAL.{$pin}",
-            'SALDO' => 'SALDO',
-            'SALDO.pin' => "SALDO.{$pin}",
-            'CEK' => 'CEK',
-            'CEK.pin' => "CEK.{$pin}",
-            'memberId.pin.S' => "{$memberId}.{$pin}.S",
-            'memberId.pin.SAL' => "{$memberId}.{$pin}.SAL",
-            'memberId.pin.SALDO' => "{$memberId}.{$pin}.SALDO",
-            'memberId.S.pin' => "{$memberId}.S.{$pin}",
-            'memberId.SAL.pin' => "{$memberId}.SAL.{$pin}",
+        $endpoints = [
+            'trx_S' => ['url' => 'https://h2h.okeconnect.com/trx', 'cmd' => 'S'],
+            'trx_S_pin' => ['url' => 'https://h2h.okeconnect.com/trx', 'cmd' => "S.{$pin}"],
+            'trx_SAL_pin' => ['url' => 'https://h2h.okeconnect.com/trx', 'cmd' => "SAL.{$pin}"],
+            'saldo' => ['url' => 'https://h2h.okeconnect.com/saldo', 'cmd' => ''],
+            'balance' => ['url' => 'https://h2h.okeconnect.com/balance', 'cmd' => ''],
+            'cek_saldo' => ['url' => 'https://h2h.okeconnect.com/cek_saldo', 'cmd' => ''],
+            'ceksaldo' => ['url' => 'https://h2h.okeconnect.com/ceksaldo', 'cmd' => ''],
+            'profile' => ['url' => 'https://h2h.okeconnect.com/profile', 'cmd' => ''],
         ];
 
         $results = [];
 
-        foreach ($formats as $name => $cmd) {
+        foreach ($endpoints as $name => $info) {
+            $url = $info['url'];
+            $cmd = $info['cmd'];
+
             $params = [
                 'id'       => $memberId,
                 'uid'      => $memberId,
@@ -165,30 +163,33 @@ class AdminController extends Controller
                 'password' => $passwordH2H,
                 'pin_ip'   => $passwordH2H,
                 'key'      => $passwordH2H,
-                'perintah' => $cmd,
-                'pesan'    => $cmd,
-                'q'        => $cmd,
-                'sms'      => $cmd,
-                'msg'      => $cmd,
                 'pin'      => $pin,
             ];
+
+            if ($cmd) {
+                $params['perintah'] = $cmd;
+                $params['pesan'] = $cmd;
+                $params['q'] = $cmd;
+                $params['sms'] = $cmd;
+                $params['msg'] = $cmd;
+            }
 
             $queryParts = [];
             foreach ($params as $key => $value) {
                 $queryParts[] = $key . '=' . str_replace('#', '%23', $value);
             }
-            $urlTarget = "https://h2h.okeconnect.com/trx?" . implode('&', $queryParts);
+            $urlTarget = $url . "?" . implode('&', $queryParts);
 
             try {
                 $context = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true]]);
                 $responseBody = @file_get_contents($urlTarget, false, $context);
                 $results[$name] = [
-                    'command' => $cmd,
+                    'url' => $urlTarget,
                     'response' => $responseBody ?: 'TIMEOUT/EMPTY'
                 ];
             } catch (\Exception $e) {
                 $results[$name] = [
-                    'command' => $cmd,
+                    'url' => $urlTarget,
                     'response' => 'ERROR: ' . $e->getMessage()
                 ];
             }
