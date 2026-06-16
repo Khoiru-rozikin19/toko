@@ -77,7 +77,7 @@ class PaymentCallbackController extends Controller
         }
 
         // Assign local account stock if product uses dynamic stock
-        if ($order->product && $order->product->stocks()->exists()) {
+        if ($order->product && $order->product->stocks()->where('status', 'ready')->exists()) {
             $stock = \App\Models\AccountStock::where('product_id', $order->product_id)
                 ->where('status', 'ready')
                 ->first();
@@ -105,7 +105,7 @@ class PaymentCallbackController extends Controller
 
         // Decrement product stock if not unlimited
         if ($order->product && $order->product->stock > 0) {
-            if (!$order->product->stocks()->exists()) {
+            if (!$order->product->stocks()->where('status', 'ready')->exists()) {
                 $order->product->decrement('stock');
             }
         }

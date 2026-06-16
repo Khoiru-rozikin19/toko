@@ -70,7 +70,7 @@ class Product extends Model
      */
     public function cekStok()
     {
-        if ($this->stocks()->exists()) {
+        if ($this->stocks()->where('status', 'ready')->exists()) {
             return $this->stocks()->where('status', 'ready')->count();
         }
         return $this->attributes['stock'] ?? 0;

@@ -234,9 +234,15 @@
             </div>
             @endif
 
-            <div>
-                <label for="create_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Stok Akun</label>
-                <input type="number" id="create_stock" name="stock" required placeholder="Contoh: 10" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label for="create_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
+                    <input type="number" id="create_stock" name="stock" placeholder="Contoh: 10" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
+                <div>
+                    <label for="create_accounts_input" class="block text-xs font-bold text-slate-500 uppercase mb-2">Data Akun / Config Unik (Opsional, pisahkan dengan baris kosong)</label>
+                    <textarea id="create_accounts_input" name="accounts_input" rows="4" placeholder="Masukkan akun/config di sini. Jika diisi, Jumlah Stok di atas otomatis diabaikan dan dihitung dari jumlah akun ini." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+                </div>
             </div>
 
             @if(auth()->user()->role === 'admin')
@@ -375,9 +381,15 @@
             </div>
             @endif
 
-            <div>
-                <label for="edit_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Stok Akun</label>
-                <input type="number" id="edit_stock" name="stock" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label for="edit_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
+                    <input type="number" id="edit_stock" name="stock" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
+                <div>
+                    <label for="edit_accounts_input" class="block text-xs font-bold text-slate-500 uppercase mb-2">Data Akun / Config Unik (Opsional, pisahkan dengan baris kosong)</label>
+                    <textarea id="edit_accounts_input" name="accounts_input" rows="4" placeholder="Masukkan akun/config di sini. Jika diisi, Jumlah Stok di atas otomatis diabaikan dan dihitung dari jumlah akun ini." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+                </div>
             </div>
 
             @if(auth()->user()->role === 'admin')
@@ -426,6 +438,10 @@
         document.getElementById('edit_price').value = product.price;
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
+        
+        const readyStocks = product.stocks ? product.stocks.filter(s => s.status === 'ready').map(s => s.account_data).join('\n\n') : '';
+        document.getElementById('edit_accounts_input').value = readyStocks;
+
         document.getElementById('edit_category_id').value = product.category_id || '';
         document.getElementById('edit_vps_server_id').value = product.vps_server_id || '';
         document.getElementById('edit_vps_command_template').value = product.vps_command_template || '';

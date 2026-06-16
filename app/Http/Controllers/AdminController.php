@@ -122,10 +122,10 @@ class AdminController extends Controller
         $categories = \App\Models\Category::orderBy('name', 'asc')->get();
         $vpsServers = \App\Models\VpsServer::orderBy('name', 'asc')->get();
         if ($user->role === 'admin') {
-            $products = Product::with(['seller', 'category', 'vpsServer'])->orderBy('created_at', 'desc')->get();
+            $products = Product::with(['seller', 'category', 'vpsServer', 'stocks'])->orderBy('created_at', 'desc')->get();
             $sellers = User::whereIn('role', ['seller', 'admin'])->where('is_verified', true)->orderBy('name', 'asc')->get();
         } else {
-            $products = Product::with(['category', 'vpsServer'])->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
+            $products = Product::with(['category', 'vpsServer', 'stocks'])->where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
             $sellers = collect();
         }
         return view('admin.products', compact('products', 'sellers', 'categories', 'vpsServers'));
@@ -146,7 +146,8 @@ class AdminController extends Controller
             'harga_modal' => 'nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
+            'accounts_input' => 'nullable|string',
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
             'user_id' => 'nullable|exists:users,id',
@@ -157,7 +158,27 @@ class AdminController extends Controller
             if (auth()->user()->role !== 'admin' || empty($data['user_id'])) {
                 $data['user_id'] = auth()->id();
             }
-            Product::create($data);
+
+            // Parse accounts input if present
+            $accounts = [];
+            if ($request->filled('accounts_input')) {
+                $accounts = preg_split('/\r?\n\s*\r?\n/', $request->accounts_input);
+                $accounts = array_filter(array_map('trim', $accounts));
+                $data['stock'] = count($accounts);
+            } else {
+                $data['stock'] = $data['stock'] ?? 0;
+            }
+
+            $product = Product::create($data);
+
+            // Create account stocks
+            foreach ($accounts as $accountData) {
+                AccountStock::create([
+                    'product_id' => $product->id,
+                    'account_data' => $accountData,
+                    'status' => 'ready',
+                ]);
+            }
         });
 
         return redirect()->route('admin.products')->with('success', 'Produk berhasil ditambahkan.');
@@ -185,7 +206,8 @@ class AdminController extends Controller
             'harga_modal' => 'nullable|integer|min:0',
             'duration_days' => 'required|integer|min:1',
             'config_template' => 'nullable|string',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
+            'accounts_input' => 'nullable|string',
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
             'user_id' => 'nullable|exists:users,id',
@@ -196,6 +218,32 @@ class AdminController extends Controller
             if (auth()->user()->role !== 'admin') {
                 unset($data['user_id']); // Seller cannot change the owner
             }
+
+            if ($request->has('accounts_input')) {
+                $accounts = preg_split('/\r?\n\s*\r?\n/', $request->accounts_input);
+                $accounts = array_filter(array_map('trim', $accounts));
+                
+                // Delete existing ready stocks
+                $product->stocks()->where('status', 'ready')->delete();
+
+                // Create new ready stocks
+                foreach ($accounts as $accountData) {
+                    AccountStock::create([
+                        'product_id' => $product->id,
+                        'account_data' => $accountData,
+                        'status' => 'ready',
+                    ]);
+                }
+
+                if (!empty($accounts)) {
+                    $data['stock'] = count($accounts);
+                } else {
+                    $data['stock'] = $data['stock'] ?? 0;
+                }
+            } else {
+                $data['stock'] = $data['stock'] ?? 0;
+            }
+
             $product->update($data);
         });
 
