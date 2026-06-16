@@ -125,6 +125,83 @@ class AdminController extends Controller
     }
 
     /**
+     * Test various Orderkuota balance check command formats.
+     */
+    public function testOrderkuota()
+    {
+        if (auth()->user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $memberId = \App\Models\Setting::get('orderkuota_member_id') ?: 'OK1988589';
+        $pin = \App\Models\Setting::get('orderkuota_pin') ?: '7761';
+        $passwordH2H = \App\Models\Setting::get('orderkuota_api_key') ?: '@jkn1234';
+
+        $formats = [
+            'S' => 'S',
+            'S.pin' => "S.{$pin}",
+            'SAL' => 'SAL',
+            'SAL.pin' => "SAL.{$pin}",
+            'SALDO' => 'SALDO',
+            'SALDO.pin' => "SALDO.{$pin}",
+            'CEK' => 'CEK',
+            'CEK.pin' => "CEK.{$pin}",
+            'memberId.pin.S' => "{$memberId}.{$pin}.S",
+            'memberId.pin.SAL' => "{$memberId}.{$pin}.SAL",
+            'memberId.pin.SALDO' => "{$memberId}.{$pin}.SALDO",
+            'memberId.S.pin' => "{$memberId}.S.{$pin}",
+            'memberId.SAL.pin' => "{$memberId}.SAL.{$pin}",
+        ];
+
+        $results = [];
+
+        foreach ($formats as $name => $cmd) {
+            $params = [
+                'id'       => $memberId,
+                'uid'      => $memberId,
+                'memberid' => $memberId,
+                'memberID' => $memberId,
+                'pass'     => $passwordH2H,
+                'password' => $passwordH2H,
+                'pin_ip'   => $passwordH2H,
+                'key'      => $passwordH2H,
+                'perintah' => $cmd,
+                'pesan'    => $cmd,
+                'q'        => $cmd,
+                'sms'      => $cmd,
+                'msg'      => $cmd,
+                'pin'      => $pin,
+            ];
+
+            $queryParts = [];
+            foreach ($params as $key => $value) {
+                $queryParts[] = $key . '=' . str_replace('#', '%23', $value);
+            }
+            $urlTarget = "https://h2h.okeconnect.com/trx?" . implode('&', $queryParts);
+
+            try {
+                $context = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true]]);
+                $responseBody = @file_get_contents($urlTarget, false, $context);
+                $results[$name] = [
+                    'command' => $cmd,
+                    'response' => $responseBody ?: 'TIMEOUT/EMPTY'
+                ];
+            } catch (\Exception $e) {
+                $results[$name] = [
+                    'command' => $cmd,
+                    'response' => 'ERROR: ' . $e->getMessage()
+                ];
+            }
+        }
+
+        return response()->json([
+            'member_id' => $memberId,
+            'pin' => $pin,
+            'results' => $results
+        ]);
+    }
+
+    /**
      * Display products page (CRUD).
      */
     public function products()
