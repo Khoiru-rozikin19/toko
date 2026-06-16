@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Jualan - Toko VPN' }}</title>
+    <title>{{ $title ?? 'RZK - Toko VPN' }}</title>
     
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -55,8 +55,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">Jualan</span>
-                    <span class="text-sm font-medium text-slate-400 dark:text-slate-500">| {{ Auth::check() ? 'Admin' : 'Katalog' }}</span>
+                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">RZK</span>
+                    <span class="text-sm font-medium text-slate-400 dark:text-slate-500">| {{ Auth::check() ? 'Store' : 'Katalog' }}</span>
                 </a>
                 
                 <!-- Mobile Menu Button -->
@@ -203,7 +203,7 @@
                     <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
-                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ $title ?? 'Jualan' }}</h1>
+                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ $title ?? 'RZK' }}</h1>
                 </div>
 
                 <div class="flex items-center space-x-4">
@@ -247,7 +247,7 @@
 
             <!-- FOOTER -->
             <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 px-10 text-center text-sm text-slate-400 dark:text-slate-500 transition-all duration-200">
-                &copy; {{ date('Y') }} Jualan Platform. Built for premium performance & security.
+                &copy; {{ date('Y') }} RZK Platform. Built for premium performance & security.
             </footer>
         </div>
     </div>
