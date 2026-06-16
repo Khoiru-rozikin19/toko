@@ -256,12 +256,7 @@
                 <textarea id="create_success_instruction" name="success_instruction" rows="3" placeholder="Contoh: Silakan tunggu 1-5 menit untuk pengisian otomatis. Hubungi admin..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
 
-            @if(auth()->user()->role === 'admin')
-            <div>
-                <label for="create_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
-                <textarea id="create_template" name="config_template" rows="5" placeholder="Salin isi file konfigurasi VPN di sini..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
-            </div>
-            @endif
+
 
             <div class="flex justify-end space-x-2 pt-4">
                 <button type="button" onclick="toggleCreateModal(false)" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
@@ -402,12 +397,7 @@
                 <textarea id="edit_success_instruction" name="success_instruction" rows="3" placeholder="Instruksi sukses untuk pelanggan..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
 
-            @if(auth()->user()->role === 'admin')
-            <div>
-                <label for="edit_template" class="block text-xs font-bold text-slate-500 uppercase mb-2">Teks Konfigurasi VPN (.ovpn / WG)</label>
-                <textarea id="edit_template" name="config_template" rows="5" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
-            </div>
-            @endif
+
 
             <div class="flex justify-end space-x-2 pt-4">
                 <button type="button" onclick="toggleEditModal(false)" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
