@@ -5,7 +5,7 @@
     
     <!-- Welcome Banner -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
             Selamat Datang di Portal Seller, {{ Auth::user()->name ?? 'Admin Utama' }}!
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -86,15 +86,15 @@
                 <div class="grid grid-cols-3 gap-2 mt-4 text-center">
                     <div class="bg-blue-50 dark:bg-blue-950/20 py-2 rounded-xl border border-blue-100/50 dark:border-blue-950/50">
                         <span class="text-sm font-extrabold text-blue-600 dark:text-blue-400 block">{{ $readyStockCount }}</span>
-                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Ready</span>
+                        <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Ready</span>
                     </div>
                     <div class="bg-amber-50 dark:bg-amber-950/20 py-2 rounded-xl border border-amber-100/50 dark:border-amber-950/50">
                         <span class="text-sm font-extrabold text-amber-600 dark:text-amber-400 block">0</span>
-                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Karantina</span>
+                        <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Karantina</span>
                     </div>
                     <div class="bg-slate-50 dark:bg-slate-900 py-2 rounded-xl border border-slate-150 dark:border-slate-800/80">
-                        <span class="text-sm font-extrabold text-slate-650 dark:text-slate-400 block">{{ $totalSalesCount }}</span>
-                        <span class="text-[9px] text-slate-450 dark:text-slate-500 uppercase font-bold">Terjual</span>
+                        <span class="text-sm font-extrabold text-slate-600 dark:text-slate-400 block">{{ $totalSalesCount }}</span>
+                        <span class="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold">Terjual</span>
                     </div>
                 </div>
             </div>
@@ -146,15 +146,15 @@
             <div class="mt-6 flex justify-around text-xs border-t border-slate-100 dark:border-slate-800 pt-4">
                 <div class="flex items-center space-x-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span>
-                    <span class="text-slate-650 dark:text-slate-400">Sukses ({{ $donutData[0] }})</span>
+                    <span class="text-slate-600 dark:text-slate-400">Sukses ({{ $donutData[0] }})</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-blue-500 block"></span>
-                    <span class="text-slate-650 dark:text-slate-400">Pending ({{ $donutData[1] }})</span>
+                    <span class="text-slate-600 dark:text-slate-400">Pending ({{ $donutData[1] }})</span>
                 </div>
                 <div class="flex items-center space-x-1.5">
                     <span class="w-2.5 h-2.5 rounded-full bg-rose-500 block"></span>
-                    <span class="text-slate-650 dark:text-slate-400">Expired ({{ $donutData[2] }})</span>
+                    <span class="text-slate-600 dark:text-slate-400">Expired ({{ $donutData[2] }})</span>
                 </div>
             </div>
         </div>

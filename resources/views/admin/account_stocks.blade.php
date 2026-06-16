@@ -5,14 +5,14 @@
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">Manajemen Stok Akun</h2>
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Manajemen Stok Akun</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola data akun/konfigurasi unik untuk produk digital non-supplier</p>
     </div>
 
     <!-- Product Selection Dropdown -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
-        <label for="productSelect" class="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase mb-2">Pilih Produk:</label>
-        <select id="productSelect" onchange="changeProduct(this.value)" class="w-full max-w-md px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold text-slate-800 dark:text-slate-100 transition-all duration-200">
+        <label for="productSelect" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Pilih Produk:</label>
+        <select id="productSelect" onchange="changeProduct(this.value)" class="w-full max-w-md px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-semibold text-slate-800 dark:text-slate-100 transition-all duration-200">
             <option value="">-- Silakan Pilih Produk --</option>
             @foreach($products as $prod)
                 <option value="{{ $prod->id }}" {{ $productId == $prod->id ? 'selected' : '' }}>
@@ -33,15 +33,15 @@
         <!-- Stats Summary -->
         <div class="grid grid-cols-3 gap-4 sm:gap-6">
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
-                <span class="text-[10px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase block">Total Diinput</span>
+                <span class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase block">Total Diinput</span>
                 <span class="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 block">{{ $totalCount }}</span>
             </div>
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
-                <span class="text-[10px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase block">Stok Ready</span>
+                <span class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase block">Stok Ready</span>
                 <span class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{{ $readyCount }}</span>
             </div>
             <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
-                <span class="text-[10px] sm:text-xs text-slate-450 dark:text-slate-500 font-bold uppercase block">Terjual</span>
+                <span class="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold uppercase block">Terjual</span>
                 <span class="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">{{ $soldCount }}</span>
             </div>
         </div>
@@ -60,8 +60,8 @@
                     <input type="hidden" name="product_id" value="{{ $productId }}">
 
                     <div>
-                        <label for="accounts_input" class="block text-xs font-bold text-slate-500 dark:text-slate-450 uppercase mb-2">Teks Akun / Konfigurasi:</label>
-                        <textarea id="accounts_input" name="accounts_input" rows="10" required placeholder="vmess://eyJhZGQiOiJzdXBwb3J5MSJ9...&#10;&#10;vmess://eyJhZGQiOiJzdXBwb3J5MiJ9..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-xs font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
+                        <label for="accounts_input" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Teks Akun / Konfigurasi:</label>
+                        <textarea id="accounts_input" name="accounts_input" rows="10" required placeholder="vmess://eyJhZGQiOiJzdXBwb3J5MSJ9...&#10;&#10;vmess://eyJhZGQiOiJzdXBwb3J5MiJ9..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-xs font-mono text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
                     </div>
 
                     <button type="submit" class="w-full flex items-center justify-center space-x-2 px-5 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
@@ -80,7 +80,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                            <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                                 <th class="py-4 px-6">No</th>
                                 <th class="py-4 px-6">Data Akun/Config</th>
                                 <th class="py-4 px-6">Status</th>
@@ -121,7 +121,7 @@
                                         @if($stock->status === 'ready')
                                             <form action="{{ route('admin.account_stocks.delete', $stock->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus stok akun ini?')" class="inline">
                                                 @csrf
-                                                <button type="submit" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-650 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-450 rounded-xl transition-all duration-200" title="Hapus Stok">
+                                                <button type="submit" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-xl transition-all duration-200" title="Hapus Stok">
                                                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                 </button>
                                             </form>
@@ -155,7 +155,7 @@
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-10 rounded-3xl text-center text-slate-400">
             <svg class="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
             <h3 class="text-lg font-bold text-slate-600 dark:text-slate-400">Silakan Pilih Produk</h3>
-            <p class="text-sm text-slate-450 dark:text-slate-550 mt-1">Pilih salah satu produk di atas untuk mulai mengelola stok akun/config.</p>
+            <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Pilih salah satu produk di atas untuk mulai mengelola stok akun/config.</p>
         </div>
     @endif
 

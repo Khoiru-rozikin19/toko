@@ -166,12 +166,12 @@
                                         </button>
                                     </form>
                                 @elseif(Auth::user()->seller_request === 'pending')
-                                    <div class="py-2 px-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-450 border border-amber-250/20 rounded-xl text-xs font-semibold text-center">
+                                    <div class="py-2 px-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200/20 rounded-xl text-xs font-semibold text-center">
                                         Pengajuan Pending (Ditinjau)
                                     </div>
                                 @elseif(Auth::user()->seller_request === 'rejected')
                                     <div class="space-y-2">
-                                        <div class="py-2 px-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-450 border border-rose-250/20 rounded-xl text-xs font-semibold text-center">
+                                        <div class="py-2 px-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200/20 rounded-xl text-xs font-semibold text-center">
                                             Pengajuan Ditolak
                                         </div>
                                         <form action="{{ route('buyer.request-seller') }}" method="POST">

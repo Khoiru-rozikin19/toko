@@ -66,7 +66,7 @@
                 <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
                     <span class="text-lg font-extrabold text-blue-600 dark:text-blue-400">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
                     <div class="flex space-x-2">
-                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $product->price }}', '{{ $product->duration_days }}', this.getAttribute('data-description'))" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-650 dark:text-slate-350 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all duration-200">
+                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $product->price }}', '{{ $product->duration_days }}', this.getAttribute('data-description'))" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
                             Detail
                         </button>
                         
@@ -113,13 +113,13 @@
                 <div>
                     <label for="email_or_whatsapp" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Email / WhatsApp Pembeli</label>
                     <input type="text" id="email_or_whatsapp" name="email_or_whatsapp" required value="{{ Auth::check() ? (Auth::user()->email ?: Auth::user()->phone) : '' }}" placeholder="Contoh: user@gmail.com atau 08123456789" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <p class="text-[11px] text-slate-450 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
+                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">File konfigurasi VPN Anda akan siap diunduh di halaman ini setelah pembayaran sukses.</p>
                 </div>
 
                 <div id="targetPhoneContainer" class="hidden">
                     <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>
                     <input type="text" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <p class="text-[11px] text-slate-450 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
+                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
                 </div>
 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -452,7 +452,7 @@
             container.innerHTML = `
                 <div class="text-left space-y-2 p-1">
                     <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Petunjuk Pembayaran Sukses:</span>
-                    <div class="text-sm text-slate-700 dark:text-slate-350 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                    <div class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
                 </div>
             `;
             return;

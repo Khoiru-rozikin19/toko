@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-850 dark:text-slate-100 tracking-tight">Manajemen Produk</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Manajemen Produk</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola stok unit produk digital VPN Anda</p>
         </div>
         <button onclick="toggleCreateModal(true)" class="mt-4 sm:mt-0 flex items-center space-x-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
@@ -32,7 +32,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID</th>
                         <th class="py-4.5 px-6">Nama Produk</th>
                         @if(auth()->user()->role === 'admin')
@@ -57,13 +57,13 @@
                                     </span>
                                 @endif
                                 @if($product->orderkuota_product_code)
-                                    <span class="block text-xs text-slate-450 dark:text-slate-500 mt-0.5">
+                                    <span class="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                                         Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
                                     </span>
                                 @endif
                             </td>
                             @if(auth()->user()->role === 'admin')
-                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
                                     {{ $product->seller ? $product->seller->name : 'Admin Utama' }}
                                 </td>
                             @endif
@@ -92,14 +92,14 @@
                             <td class="py-4.5 px-6 text-center">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
-                                    <button onclick="openEditModal({{ json_encode($product) }})" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/20 text-slate-650 hover:text-blue-650 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl transition-all duration-200" title="Edit Produk">
+                                    <button onclick="openEditModal({{ json_encode($product) }})" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/20 text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl transition-all duration-200" title="Edit Produk">
                                         <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                     </button>
 
                                     <!-- Delete Form -->
                                     <form action="{{ route('admin.products.delete', $product->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini? Semua data pesanan terkait akan terhapus.')" class="inline">
                                         @csrf
-                                        <button type="submit" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-650 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-xl transition-all duration-200" title="Hapus Produk">
+                                        <button type="submit" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-slate-600 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-xl transition-all duration-200" title="Hapus Produk">
                                             <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                         </button>
                                     </form>
@@ -126,7 +126,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        <h3 class="text-2xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight mb-6">Tambah Produk VPN Baru</h3>
+        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Tambah Produk VPN Baru</h3>
 
         <form action="{{ route('admin.products.store') }}" method="POST" class="space-y-4">
             @csrf
@@ -224,7 +224,7 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        <h3 class="text-2xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight mb-6">Ubah Produk VPN</h3>
+        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Ubah Produk VPN</h3>
 
         <form id="editForm" action="" method="POST" class="space-y-4">
             @csrf

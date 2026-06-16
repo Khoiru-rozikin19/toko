@@ -14,7 +14,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID Order</th>
                         <th class="py-4.5 px-6">Produk</th>
                         <th class="py-4.5 px-6">Total Bayar</th>
@@ -23,7 +23,7 @@
                         <th class="py-4.5 px-6 text-center">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300">
                     @forelse($orders as $order)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
                             <td class="py-4.5 px-6 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
@@ -54,7 +54,7 @@
                                         Ditolak
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                         Expired
                                     </span>
                                 @endif
@@ -148,7 +148,7 @@
             <!-- Total Amount Info -->
             <div class="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex flex-col items-center">
                 <span class="text-xs text-slate-400 dark:text-slate-500">Total Tagihan (Wajib Sesuai):</span>
-                <span id="modalTotalAmount" class="text-xl font-black text-slate-850 dark:text-slate-100 mt-1">Rp 0</span>
+                <span id="modalTotalAmount" class="text-xl font-black text-slate-800 dark:text-slate-100 mt-1">Rp 0</span>
             </div>
 
             <!-- Expiry Countdown -->

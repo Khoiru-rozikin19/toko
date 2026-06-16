@@ -6,7 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight">Daftar Transaksi</h2>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Daftar Transaksi</h2>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Riwayat pesanan pelanggan dan log mutasi masuk</p>
         </div>
         
@@ -35,7 +35,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">Order ID</th>
                         <th class="py-4.5 px-6">Produk</th>
                         @if(auth()->user()->role === 'admin')
@@ -59,7 +59,7 @@
                                 {{ $order->product->name ?? 'Produk Dihapus' }}
                             </td>
                             @if(auth()->user()->role === 'admin')
-                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
                                     {{ $order->product && $order->product->seller ? $order->product->seller->name : 'Admin Utama' }}
                                 </td>
                             @endif
@@ -122,7 +122,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID Log</th>
                         @if(auth()->user()->role === 'admin')
                             <th class="py-4.5 px-6">Seller</th>
@@ -136,9 +136,9 @@
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
                     @forelse($paymentLogs as $log)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
-                            <td class="py-4.5 px-6 font-mono text-xs text-slate-450">#{{ $log->id }}</td>
+                            <td class="py-4.5 px-6 font-mono text-xs text-slate-400">#{{ $log->id }}</td>
                             @if(auth()->user()->role === 'admin')
-                                <td class="py-4.5 px-6 text-slate-650 dark:text-slate-450 text-xs font-semibold">
+                                <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
                                     {{ $log->order && $log->order->product && $log->order->product->seller ? $log->order->product->seller->name : 'N/A' }}
                                 </td>
                             @endif
