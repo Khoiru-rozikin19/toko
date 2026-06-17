@@ -96,5 +96,12 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/vpn-panel/{id}/update', [AdminController::class, 'updateVpnServer'])->name('vpn_panel.update');
         Route::post('/vpn-panel/{id}/delete', [AdminController::class, 'deleteVpnServer'])->name('vpn_panel.delete');
         Route::post('/vpn-panel/test-connection', [AdminController::class, 'testVpnServerConnection'])->name('vpn_panel.test');
+
+        // Kelola Komisi Seller
+        Route::get('/commissions', [AdminController::class, 'commissions'])->name('commissions');
+        Route::post('/commissions', [AdminController::class, 'storeCommission'])->name('commissions.store');
+        Route::post('/commissions/{id}/update', [AdminController::class, 'updateCommission'])->name('commissions.update');
+        Route::post('/commissions/{id}/delete', [AdminController::class, 'deleteCommission'])->name('commissions.delete');
+        Route::post('/commissions/{id}/toggle', [AdminController::class, 'toggleCommission'])->name('commissions.toggle');
     });
 });

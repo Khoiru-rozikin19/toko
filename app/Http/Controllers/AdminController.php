@@ -812,4 +812,125 @@ class AdminController extends Controller
 
         return response()->json(['success' => false, 'message' => $result]);
     }
+
+    // =====================================================
+    //  KOMISI SELLER
+    // =====================================================
+
+    /**
+     * Display commission management page.
+     */
+    public function commissions()
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $commissions = \App\Models\SellerCommission::with(['seller', 'product'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $sellers = User::whereIn('role', ['seller', 'admin'])
+            ->where('is_verified', true)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        $products = Product::orderBy('name', 'asc')->get();
+
+        return view('admin.commissions', compact('commissions', 'sellers', 'products'));
+    }
+
+    /**
+     * Store a new commission rule.
+     */
+    public function storeCommission(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $request->validate([
+            'seller_id' => 'required|exists:users,id',
+            'product_id' => 'required|exists:products,id',
+            'commission_amount' => 'required|integer|min:100',
+        ]);
+
+        // Cek apakah rule sudah ada
+        $existing = \App\Models\SellerCommission::where('seller_id', $request->seller_id)
+            ->where('product_id', $request->product_id)
+            ->first();
+
+        if ($existing) {
+            return redirect()->route('admin.commissions')
+                ->with('error', 'Aturan komisi untuk seller dan produk ini sudah ada. Silakan edit yang sudah ada.');
+        }
+
+        \App\Models\SellerCommission::create([
+            'seller_id' => $request->seller_id,
+            'product_id' => $request->product_id,
+            'commission_amount' => $request->commission_amount,
+            'is_active' => true,
+        ]);
+
+        return redirect()->route('admin.commissions')
+            ->with('success', 'Aturan komisi berhasil ditambahkan.');
+    }
+
+    /**
+     * Update commission amount.
+     */
+    public function updateCommission(Request $request, $id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $commission = \App\Models\SellerCommission::findOrFail($id);
+
+        $request->validate([
+            'commission_amount' => 'required|integer|min:100',
+        ]);
+
+        $commission->update([
+            'commission_amount' => $request->commission_amount,
+        ]);
+
+        return redirect()->route('admin.commissions')
+            ->with('success', 'Jumlah komisi berhasil diperbarui.');
+    }
+
+    /**
+     * Delete a commission rule.
+     */
+    public function deleteCommission($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $commission = \App\Models\SellerCommission::findOrFail($id);
+        $commission->delete();
+
+        return redirect()->route('admin.commissions')
+            ->with('success', 'Aturan komisi berhasil dihapus.');
+    }
+
+    /**
+     * Toggle commission active/inactive.
+     */
+    public function toggleCommission($id)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return abort(403);
+        }
+
+        $commission = \App\Models\SellerCommission::findOrFail($id);
+        $commission->update([
+            'is_active' => !$commission->is_active,
+        ]);
+
+        $statusText = $commission->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        return redirect()->route('admin.commissions')
+            ->with('success', "Aturan komisi berhasil {$statusText}.");
+    }
 }

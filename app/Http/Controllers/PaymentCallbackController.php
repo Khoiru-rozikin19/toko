@@ -140,6 +140,9 @@ class PaymentCallbackController extends Controller
         $order->status = 'success';
         $order->save();
 
+        // Process seller commissions
+        \App\Models\SellerCommission::processForOrder($order);
+
         // Kirim pesanan ke Orderkuota secara langsung
         $this->orderkuotaService->kirimPesananKeOrderkuota($order->id);
 

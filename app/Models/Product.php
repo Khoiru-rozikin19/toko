@@ -51,6 +51,11 @@ class Product extends Model
         return $this->hasMany(AccountStock::class);
     }
 
+    public function commissions()
+    {
+        return $this->hasMany(SellerCommission::class);
+    }
+
     /**
      * Get dynamic stock count if account stocks exist,
      * otherwise use static column stock.

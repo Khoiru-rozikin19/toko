@@ -173,6 +173,9 @@ class TelegramWebhookController extends Controller
                 }
             }
 
+            // Process seller commissions
+            \App\Models\SellerCommission::processForOrder($order);
+
             // Run the pulsa transaction
             $this->orderkuotaService->prosesTransaksiPulsa($order->id);
 
