@@ -173,6 +173,9 @@ class CatalogController extends Controller
                     }
                 }
 
+                // Process seller commissions
+                \App\Models\SellerCommission::processForOrder($order);
+
                 return $order;
             });
 

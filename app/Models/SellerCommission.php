@@ -56,6 +56,7 @@ class SellerCommission extends Model
         }
 
         $commissions = static::where('product_id', $order->product_id)
+            ->where('seller_id', $order->user_id)
             ->where('is_active', true)
             ->with('seller')
             ->get();
