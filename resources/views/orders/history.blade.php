@@ -100,7 +100,7 @@
                                         @endphp
                                         
                                         @if($isNodeLink || $isSingleLine)
-                                            <button data-config="{{ $order->vpn_config }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'))" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                            <button data-config="{{ $order->vpn_config }}" data-instruction="{{ $order->product->success_instruction ?? '' }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'), this.getAttribute('data-instruction'))" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                                                 <span>Lihat Akun</span>
                                             </button>
@@ -288,7 +288,7 @@
 </div>
 
 <script>
-    function openAccountModal(orderId, config) {
+    function openAccountModal(orderId, config, successInstruction) {
         document.getElementById('accountModalOrderId').innerText = 'Order ID: ' + orderId;
         const container = document.getElementById('accountModalDetailsContainer');
         
@@ -300,7 +300,7 @@
         }
 
         if (nodeLink) {
-            container.innerHTML = `
+            let html = `
                 <div class="space-y-4">
                     <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block uppercase tracking-wider text-left">DETAIL AKUN VPN:</span>
                     <div class="flex flex-col md:flex-row gap-5 items-stretch justify-between text-left">
@@ -319,8 +319,19 @@
                     </div>
                 </div>
             `;
+
+            if (successInstruction && successInstruction.trim() !== '') {
+                html += `
+                    <div class="mt-4 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-left">
+                        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider mb-2">Petunjuk Tambahan:</span>
+                        <div class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
         } else {
-            container.innerHTML = `
+            let html = `
                 <div class="text-left space-y-3 p-1">
                     <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider">Konfigurasi VPN Anda:</span>
                     <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between gap-3">
@@ -331,6 +342,17 @@
                     </div>
                 </div>
             `;
+
+            if (successInstruction && successInstruction.trim() !== '') {
+                html += `
+                    <div class="mt-4 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-left">
+                        <span class="text-xs text-blue-600 dark:text-blue-400 font-bold block uppercase tracking-wider mb-2">Petunjuk Tambahan:</span>
+                        <div class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap">${escapeHtml(successInstruction)}</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
         }
 
         document.getElementById('accountDetailModal').classList.remove('hidden');

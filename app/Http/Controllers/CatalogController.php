@@ -147,6 +147,7 @@ class CatalogController extends Controller
                 // Run VPS account creation if product is linked to a VPS server
                 if ($product->vps_server_id) {
                     app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                    $order->save();
                 }
 
                 // Kirim pesanan ke Orderkuota jika applicable
