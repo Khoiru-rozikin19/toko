@@ -163,6 +163,26 @@
                     <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
                 </div>
 
+                @auth
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Metode Pembayaran</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border-2 border-blue-600 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition" id="payMethodQrisLabel">
+                            <input type="radio" name="payment_method" value="qris" checked onchange="togglePaymentMethod('qris')" class="absolute top-4 right-4 text-blue-600 focus:ring-blue-500">
+                            <span class="font-bold text-sm text-slate-850 dark:text-slate-200">QRIS</span>
+                            <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Otomatis / Instan</span>
+                        </label>
+                        <label class="relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition" id="payMethodBalanceLabel">
+                            <input type="radio" name="payment_method" value="balance" onchange="togglePaymentMethod('balance')" class="absolute top-4 right-4 text-blue-600 focus:ring-blue-500">
+                            <span class="font-bold text-sm text-slate-850 dark:text-slate-200">Saldo Akun</span>
+                            <span class="text-[10px] text-slate-400 dark:text-slate-500 mt-1" id="checkoutUserBalanceText">Memuat...</span>
+                        </label>
+                    </div>
+                </div>
+                @else
+                <input type="hidden" name="payment_method" value="qris">
+                @endauth
+
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div>
                         <span class="text-xs text-slate-400 dark:text-slate-500 block">Harga Dasar:</span>
@@ -313,6 +333,45 @@
             targetPhoneInput.required = false;
             targetPhoneInput.value = '';
         }
+
+        // Set default payment method selection to QRIS
+        const qrisInput = document.querySelector('input[name="payment_method"][value="qris"]');
+        if (qrisInput) {
+            qrisInput.checked = true;
+            togglePaymentMethod('qris');
+        }
+
+        // Fetch balance if user is authenticated
+        const balanceText = document.getElementById('checkoutUserBalanceText');
+        const balanceInput = document.querySelector('input[name="payment_method"][value="balance"]');
+        const balanceLabel = document.getElementById('payMethodBalanceLabel');
+        if (balanceText) {
+            balanceText.innerText = 'Memuat...';
+            if (balanceInput) {
+                balanceInput.disabled = true;
+                balanceLabel.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+            fetch('/api/balance')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    balanceText.innerText = data.formatted_balance;
+                    if (data.balance >= productPrice) {
+                        if (balanceInput) {
+                            balanceInput.disabled = false;
+                            balanceLabel.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    } else {
+                        balanceText.innerText += ' (Kurang)';
+                    }
+                } else {
+                    balanceText.innerText = 'Gagal memuat';
+                }
+            })
+            .catch(() => {
+                balanceText.innerText = 'Error';
+            });
+        }
         
         // Reset states
         document.getElementById('modalStepInput').classList.remove('hidden');
@@ -321,6 +380,34 @@
         document.getElementById('modalStepExpired').classList.add('hidden');
         
         document.getElementById('purchaseModal').classList.remove('hidden');
+    }
+
+    function togglePaymentMethod(method) {
+        const qrisLabel = document.getElementById('payMethodQrisLabel');
+        const balanceLabel = document.getElementById('payMethodBalanceLabel');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (!qrisLabel || !balanceLabel) return;
+
+        if (method === 'qris') {
+            qrisLabel.className = "relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border-2 border-blue-600 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition";
+            balanceLabel.className = "relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition";
+            if (submitBtn) {
+                submitBtn.innerHTML = `
+                    <span>Lanjut ke Pembayaran</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                `;
+            }
+        } else {
+            balanceLabel.className = "relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border-2 border-blue-600 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition";
+            qrisLabel.className = "relative flex flex-col p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition";
+            if (submitBtn) {
+                submitBtn.innerHTML = `
+                    <span>Bayar Sekarang</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                `;
+            }
+        }
     }
 
     function closeModal() {
@@ -351,8 +438,12 @@
                 return;
             }
         }
+
+        const paymentMethodEl = document.querySelector('input[name="payment_method"]:checked');
+        const paymentMethod = paymentMethodEl ? paymentMethodEl.value : 'qris';
         
         const submitBtn = document.getElementById('submitBtn');
+        const defaultBtnHtml = submitBtn.innerHTML;
         
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Memproses...';
@@ -366,23 +457,30 @@
             body: JSON.stringify({
                 product_id: productId,
                 email_or_whatsapp: emailOrWhatsapp,
-                target_phone: targetPhone
+                target_phone: targetPhone,
+                payment_method: paymentMethod
             })
         })
         .then(response => response.json())
         .then(data => {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>Lanjut ke Pembayaran</span>';
+            submitBtn.innerHTML = defaultBtnHtml;
             
             if (data.success) {
-                renderPaymentInstructions(data.order);
+                if (data.payment_method === 'balance') {
+                    document.getElementById('modalStepInput').classList.add('hidden');
+                    document.getElementById('modalStepSuccess').classList.remove('hidden');
+                    populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id);
+                } else {
+                    renderPaymentInstructions(data.order);
+                }
             } else {
                 alert(data.message || 'Gagal memproses pesanan.');
             }
         })
         .catch(err => {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>Lanjut ke Pembayaran</span>';
+            submitBtn.innerHTML = defaultBtnHtml;
             alert('Terjadi kesalahan koneksi server.');
             console.error(err);
         });

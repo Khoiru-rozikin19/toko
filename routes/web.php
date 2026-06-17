@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\BalanceController;
 
 // API Callback (public - no auth required)
 Route::post('/api/v1/payment/callback-notification', [PaymentCallbackController::class, 'handle'])->name('api.payment.callback');
@@ -39,6 +40,12 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     // User Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    // User Balance Routes
+    Route::get('/balance', [BalanceController::class, 'index'])->name('balance.index');
+    Route::post('/balance/topup', [BalanceController::class, 'topup'])->name('balance.topup');
+    Route::get('/balance/topup/{id}/status', [BalanceController::class, 'checkTopupStatus'])->name('balance.topup.status');
+    Route::get('/api/balance', [BalanceController::class, 'getBalance'])->name('balance.api.get');
     
     // Area Buyer (Khusus Pengajuan Upgrade Peran)
     Route::middleware('role:buyer')->prefix('buyer')->name('buyer.')->group(function () {
@@ -51,6 +58,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
     
     // Dashboard & CRUD Produk & Transaksi
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::post('/transfer-to-balance', [AdminController::class, 'transferToBalance'])->name('transfer_to_balance');
     Route::get('/products', [AdminController::class, 'products'])->name('products');
     Route::post('/products', [AdminController::class, 'storeProduct'])->name('products.store');
     Route::post('/products/{id}/update', [AdminController::class, 'updateProduct'])->name('products.update');

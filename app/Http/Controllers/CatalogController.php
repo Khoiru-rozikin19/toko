@@ -47,6 +47,7 @@ class CatalogController extends Controller
         $rules = [
             'product_id' => 'required|exists:products,id',
             'email_or_whatsapp' => 'required|string|max:255',
+            'payment_method' => 'nullable|in:qris,balance',
         ];
 
         // Validasi Nomor HP Tujuan / ID Pelanggan secara dinamis untuk produk supplier (pulsa/kuota)
@@ -58,6 +59,8 @@ class CatalogController extends Controller
 
         $request->validate($rules);
 
+        $paymentMethod = $request->payment_method ?? 'qris';
+
         if ($product->cekStok() <= 0) {
             return response()->json([
                 'success' => false,
@@ -65,6 +68,106 @@ class CatalogController extends Controller
             ], 422);
         }
 
+        // === BALANCE PAYMENT ===
+        if ($paymentMethod === 'balance') {
+            $user = auth()->user();
+            $balanceRecord = $user->getOrCreateBalance();
+            $price = $product->price;
+
+            if ($balanceRecord->balance < $price) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saldo tidak cukup. Saldo Anda: Rp ' . number_format($balanceRecord->balance, 0, ',', '.') . ', Harga: Rp ' . number_format($price, 0, ',', '.'),
+                ], 422);
+            }
+
+            $orderId = 'ORD-' . strtoupper(Str::random(8));
+
+            $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price, $balanceRecord) {
+                // Deduct balance
+                $balanceBefore = $balanceRecord->balance;
+                $balanceRecord->decrement('balance', $price);
+                $balanceRecord->refresh();
+
+                // Create balance transaction
+                \App\Models\BalanceTransaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'purchase',
+                    'amount' => $price,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceRecord->balance,
+                    'description' => 'Pembelian: ' . $product->name,
+                    'reference_id' => $orderId,
+                    'status' => 'success',
+                ]);
+
+                // Create the order (paid immediately)
+                $order = Order::create([
+                    'id' => $orderId,
+                    'user_id' => $user->id,
+                    'product_id' => $product->id,
+                    'email_or_whatsapp' => $request->email_or_whatsapp,
+                    'target_phone' => $request->target_phone,
+                    'base_amount' => $price,
+                    'unique_code' => 0,
+                    'total_amount' => $price,
+                    'status' => 'success',
+                    'payment_method' => 'balance',
+                    'qris_payload' => null,
+                    'vpn_config' => $product->config_template,
+                    'expired_at' => null,
+                ]);
+
+                // Assign local account stock if product uses dynamic stock
+                if ($product->stocks()->where('status', 'ready')->exists()) {
+                    $stock = \App\Models\AccountStock::where('product_id', $product->id)
+                        ->where('status', 'ready')
+                        ->first();
+
+                    if ($stock) {
+                        $stock->update([
+                            'status' => 'sold',
+                            'order_id' => $order->id,
+                        ]);
+                        $order->vpn_config = $stock->account_data;
+                        $order->save();
+                    }
+                }
+
+                // Run VPS account creation if product is linked to a VPS server
+                if ($product->vps_server_id) {
+                    app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                }
+
+                // Kirim pesanan ke Orderkuota jika applicable
+                app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+
+                // Decrement product stock if not unlimited
+                if ($product->stock > 0) {
+                    if (!$product->stocks()->where('status', 'ready')->exists()) {
+                        $product->decrement('stock');
+                    }
+                }
+
+                return $order;
+            });
+
+            return response()->json([
+                'success' => true,
+                'payment_method' => 'balance',
+                'order' => [
+                    'id' => $order->id,
+                    'product_name' => $product->name,
+                    'email_or_whatsapp' => $order->email_or_whatsapp,
+                    'total_amount' => $order->total_amount,
+                    'status' => 'success',
+                    'vpn_config' => $order->vpn_config,
+                    'success_instruction' => $product->success_instruction,
+                ],
+            ]);
+        }
+
+        // === QRIS PAYMENT (existing flow) ===
         // Get static QRIS
         $staticQris = Setting::get('qris_static_string');
         if (empty($staticQris)) {
@@ -103,6 +206,7 @@ class CatalogController extends Controller
         // Create the order
         $order = Order::create([
             'id' => $orderId,
+            'user_id' => auth()->id(),
             'product_id' => $product->id,
             'email_or_whatsapp' => $request->email_or_whatsapp,
             'target_phone' => $request->target_phone,
@@ -110,6 +214,7 @@ class CatalogController extends Controller
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
             'status' => 'pending_manual',
+            'payment_method' => 'qris',
             'qris_payload' => $qrisPayload,
             'vpn_config' => $product->config_template,
             'expired_at' => Carbon::now()->addMinutes(15),
@@ -120,6 +225,7 @@ class CatalogController extends Controller
 
         return response()->json([
             'success' => true,
+            'payment_method' => 'qris',
             'order' => [
                 'id' => $order->id,
                 'product_name' => $product->name,

@@ -76,6 +76,46 @@ class PaymentCallbackController extends Controller
             ], 200); // Return 200 so the Android app doesn't retry unnecessarily, but specify false
         }
 
+        // === TOPUP BALANCE HANDLING ===
+        if ($order->payment_method === 'topup_balance') {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                $order->status = 'success';
+                $order->save();
+
+                // Add balance to user
+                if ($order->user_id) {
+                    $user = \App\Models\User::find($order->user_id);
+                    if ($user) {
+                        $balanceRecord = $user->getOrCreateBalance();
+                        $balanceBefore = $balanceRecord->balance;
+                        $balanceRecord->increment('balance', $order->base_amount);
+                        $balanceRecord->refresh();
+
+                        // Update balance transaction to success
+                        \App\Models\BalanceTransaction::where('reference_id', $order->id)
+                            ->where('status', 'pending')
+                            ->update([
+                                'status' => 'success',
+                                'balance_before' => $balanceBefore,
+                                'balance_after' => $balanceRecord->balance,
+                            ]);
+                    }
+                }
+            });
+
+            // Link log to the matched order
+            $paymentLog->update([
+                'matched_order_id' => $order->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Top up saldo berhasil! Saldo ' . $order->id . ' senilai Rp ' . number_format($order->base_amount, 0, ',', '.') . ' telah ditambahkan.',
+                'order_id' => $order->id,
+            ]);
+        }
+
+        // === NORMAL PRODUCT ORDER HANDLING ===
         // Assign local account stock if product uses dynamic stock
         if ($order->product && $order->product->stocks()->where('status', 'ready')->exists()) {
             $stock = \App\Models\AccountStock::where('product_id', $order->product_id)

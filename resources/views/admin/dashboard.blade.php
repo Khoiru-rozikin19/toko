@@ -3,6 +3,20 @@
 @section('content')
 <div class="space-y-6 sm:space-y-10">
     
+    <!-- Alert Success/Error -->
+    @if(session('success'))
+        <div class="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-emerald-800 dark:text-emerald-400 text-sm flex items-center space-x-2">
+            <svg class="w-5 h-5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>{{ session('success') }}</span>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-rose-800 dark:text-rose-400 text-sm flex items-center space-x-2">
+            <svg class="w-5 h-5 text-rose-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <span>{{ session('error') }}</span>
+        </div>
+    @endif
+
     <!-- Welcome Banner -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
         <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
@@ -49,8 +63,8 @@
                 </div>
                 <div class="flex items-center justify-between mt-4">
                     <span class="text-xs text-amber-100">Bersih (Setelah modal H2H)</span>
-                    <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
-                        <span>Tarik Saldo</span>
+                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-amber-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
+                        <span>Pindahkan Saldo</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                 </div>
@@ -64,8 +78,8 @@
                 </div>
                 <div class="flex items-center justify-between mt-4">
                     <span class="text-xs text-blue-100">Komisi: 0%</span>
-                    <button class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
-                        <span>Tarik Saldo</span>
+                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
+                        <span>Pindahkan Saldo</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                 </div>
@@ -310,5 +324,74 @@
 
         observer.observe(document.documentElement, { attributes: true });
     });
+</script>
+
+<!-- TRANSFER MODAL -->
+<div id="transferModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 transition-opacity" aria-hidden="true" onclick="closeTransferModal()"></div>
+
+        <!-- Trick to center the modal contents -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <!-- Modal Container -->
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 dark:border-slate-800">
+            <form action="{{ route('admin.transfer_to_balance') }}" method="POST" class="p-6 space-y-6">
+                @csrf
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <h3 class="text-lg font-bold text-slate-850 dark:text-slate-100">Pindahkan Saldo ke Akun</h3>
+                    <button type="button" onclick="closeTransferModal()" class="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-4 bg-blue-50/50 dark:bg-blue-950/10 rounded-2xl border border-blue-100/30 dark:border-blue-900/20 text-sm">
+                        <div class="flex justify-between items-center text-slate-650 dark:text-slate-350">
+                            <span>Maksimal Transfer:</span>
+                            <span class="font-bold text-blue-600 dark:text-blue-400" id="maxTransferText">Rp 0</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="transferAmountInput" class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Nominal Transfer (Min. Rp 1.000)</label>
+                        <div class="relative rounded-2xl shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-slate-400 font-bold text-sm">Rp</span>
+                            </div>
+                            <input type="number" id="transferAmountInput" name="amount" class="block w-full pl-10 pr-4 py-3.5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-950/20 text-slate-800 dark:text-slate-150 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition font-bold" min="1000" placeholder="10000" required>
+                        </div>
+                    </div>
+
+                    <div class="text-[11px] text-slate-550 dark:text-slate-450 leading-relaxed bg-slate-50 dark:bg-slate-950/10 p-3.5 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                        Pindahkan komisi penjualan dari dompet seller Anda langsung ke saldo akun buyer agar bisa digunakan membeli produk lain di toko ini.
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                    <button type="button" onclick="closeTransferModal()" class="px-5 py-3 text-slate-500 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-350 text-xs font-bold rounded-2xl transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-2xl transition shadow-lg shadow-blue-500/10 flex items-center space-x-2">
+                        <span>Transfer Sekarang</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openTransferModal(maxAmount) {
+        document.getElementById('transferModal').classList.remove('hidden');
+        document.getElementById('maxTransferText').innerText = 'Rp ' + maxAmount.toLocaleString('id-ID');
+        document.getElementById('transferAmountInput').max = maxAmount;
+        document.getElementById('transferAmountInput').value = maxAmount;
+    }
+
+    function closeTransferModal() {
+        document.getElementById('transferModal').classList.add('hidden');
+    }
 </script>
 @endsection

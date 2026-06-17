@@ -30,4 +30,44 @@ class User extends Authenticatable
             'is_verified' => 'boolean',
         ];
     }
+
+    /**
+     * Get the user's balance record.
+     */
+    public function balance()
+    {
+        return $this->hasOne(UserBalance::class);
+    }
+
+    /**
+     * Get the user's balance transactions.
+     */
+    public function balanceTransactions()
+    {
+        return $this->hasMany(BalanceTransaction::class);
+    }
+
+    /**
+     * Get the user's current balance amount (creates record if not exists).
+     */
+    public function getBalance(): float
+    {
+        $balance = $this->balance;
+        if (!$balance) {
+            $balance = $this->balance()->create(['balance' => 0]);
+        }
+        return (float) $balance->balance;
+    }
+
+    /**
+     * Get or create the user's balance record.
+     */
+    public function getOrCreateBalance(): UserBalance
+    {
+        $balance = $this->balance;
+        if (!$balance) {
+            $balance = $this->balance()->create(['balance' => 0]);
+        }
+        return $balance;
+    }
 }

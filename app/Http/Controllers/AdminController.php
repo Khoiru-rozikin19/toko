@@ -46,6 +46,14 @@ class AdminController extends Controller
             $walletBalance += ($order->total_amount - $modal);
         }
 
+        // Deduct seller transfers to their user balance
+        $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
+            ->where('type', 'transfer_in')
+            ->where('status', 'success')
+            ->where('description', 'like', '%Transfer dari Dompet Seller%')
+            ->sum('amount');
+        $walletBalance -= $totalTransferred;
+
         // Saldo Orderkuota (Admin only)
         $orderkuotaBalance = 0;
         if ($isAdmin) {
@@ -111,6 +119,65 @@ class AdminController extends Controller
             'balance' => $balance,
             'formatted_balance' => is_numeric($balance) ? 'Rp ' . number_format($balance, 0, ',', '.') : $balance
         ]);
+    }
+
+    /**
+     * Transfer seller wallet balance to user account balance.
+     */
+    public function transferToBalance(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|integer|min:1000',
+        ]);
+
+        $user = auth()->user();
+        $amount = (int) $request->amount;
+
+        // Calculate current seller wallet balance
+        $orderQuery = Order::whereHas('product', function ($pq) use ($user) {
+            $pq->where('user_id', $user->id);
+        });
+
+        $walletBalance = 0;
+        $successfulOrders = $orderQuery->whereIn('status', ['success', 'paid'])->with('product')->get();
+        foreach ($successfulOrders as $order) {
+            $product = $order->product;
+            $modal = $product ? ($product->harga_modal ?? 0) : 0;
+            $walletBalance += ($order->total_amount - $modal);
+        }
+
+        // Deduct already transferred amounts
+        $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
+            ->where('type', 'transfer_in')
+            ->where('status', 'success')
+            ->where('description', 'like', '%Transfer dari Dompet Seller%')
+            ->sum('amount');
+
+        $availableBalance = $walletBalance - $totalTransferred;
+
+        if ($amount > $availableBalance) {
+            return back()->with('error', 'Saldo dompet seller tidak mencukupi untuk transfer nominal tersebut. Maksimal transfer: Rp ' . number_format($availableBalance, 0, ',', '.'));
+        }
+
+        // Perform transfer inside transaction
+        DB::transaction(function () use ($user, $amount) {
+            $balanceRecord = $user->getOrCreateBalance();
+            $balanceBefore = $balanceRecord->balance;
+            $balanceRecord->increment('balance', $amount);
+            $balanceRecord->refresh();
+
+            \App\Models\BalanceTransaction::create([
+                'user_id' => $user->id,
+                'type' => 'transfer_in',
+                'amount' => $amount,
+                'balance_before' => $balanceBefore,
+                'balance_after' => $balanceRecord->balance,
+                'description' => 'Transfer dari Dompet Seller',
+                'status' => 'success',
+            ]);
+        });
+
+        return back()->with('success', 'Berhasil memindahkan saldo Rp ' . number_format($amount, 0, ',', '.') . ' ke saldo akun Anda.');
     }
 
     /**

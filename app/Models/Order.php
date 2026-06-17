@@ -14,6 +14,7 @@ class Order extends Model
 
     protected $fillable = [
         'id',
+        'user_id',
         'product_id',
         'email_or_whatsapp',
         'target_phone',
@@ -21,6 +22,7 @@ class Order extends Model
         'unique_code',
         'total_amount',
         'status',
+        'payment_method',
         'qris_payload',
         'vpn_config',
         'sn',
@@ -34,6 +36,11 @@ class Order extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function isExpired(): bool
