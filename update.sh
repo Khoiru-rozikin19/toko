@@ -44,17 +44,24 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
     fi
 fi
 
-# Pastikan di branch main
-git fetch origin
-git checkout main 2>/dev/null || git checkout -b main origin/main
+# Deteksi branch saat ini (default ke main)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+CURRENT_BRANCH=${CURRENT_BRANCH:-main}
+echo -e "${KUNING}Branch aktif saat ini: $CURRENT_BRANCH${NC}"
 
-if git pull origin main; then
+# Pastikan git dikonfigurasi untuk pull non-rebase secara default
+git config pull.rebase false 2>/dev/null || true
+
+git fetch origin
+git checkout "$CURRENT_BRANCH" 2>/dev/null || git checkout -b "$CURRENT_BRANCH" "origin/$CURRENT_BRANCH"
+
+if git pull origin "$CURRENT_BRANCH"; then
     echo -e "${HIJAU}[SUKSES] Git pull berhasil.${NC}"
 else
     echo -e "${MERAH}[ERROR] Gagal melakukan git pull.${NC}"
-    read -p "Apakah Anda ingin memaksa reset repositori ke origin/main? (y/n): " JAWAB_RESET
+    read -p "Apakah Anda ingin memaksa reset repositori ke origin/$CURRENT_BRANCH? (y/n): " JAWAB_RESET
     if [[ "$JAWAB_RESET" =~ ^[Yy]$ ]]; then
-        git reset --hard origin/main
+        git reset --hard "origin/$CURRENT_BRANCH"
         HAS_CHANGES=false
     else
         echo -e "${MERAH}[ABORT] Update dibatalkan.${NC}"
@@ -167,9 +174,11 @@ else
 fi
 
 # 4. Bersihkan & Optimalkan Cache Laravel
-echo -e "\n${KUNING}Langkah 4: Melakukan caching konfigurasi dan rute Laravel...${NC}"
+echo -e "\n${KUNING}Langkah 4: Melakukan caching konfigurasi, rute, dan view Laravel...${NC}"
 php artisan optimize:clear
-php artisan optimize || true
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
 # 5. Build Aset Frontend Baru dengan Fallback
 echo -e "\n${KUNING}Langkah 5: Memasang paket npm & melakukan build aset Vite...${NC}"
@@ -202,7 +211,8 @@ if [ -f "package.json" ]; then
             done
         fi
 
-        # Eksekusi build
+        # Eksekusi build (pastikan vite executable)
+        chmod +x node_modules/.bin/vite 2>/dev/null || true
         if npm run build; then
             echo -e "${HIJAU}[SUKSES] npm run build berhasil.${NC}"
         else
@@ -243,19 +253,37 @@ if [ -f "package.json" ]; then
     fi
 fi
 
-# 6. Atur Ulang Permissions Folder
-echo -e "\n${KUNING}Langkah 6: Mengatur hak akses folder storage & cache...${NC}"
+# 6. Atur Ulang Permissions Folder secara aman (tidak merusak node_modules & vendor binari)
+echo -e "\n${KUNING}Langkah 6: Mengatur hak akses folder & file secara aman...${NC}"
 chown -R www-data:www-data "$APP_DIR" 2>/dev/null || true
-find "$APP_DIR" -type d -exec chmod 755 {} \; 2>/dev/null || true
-find "$APP_DIR" -type f -exec chmod 644 {} \; 2>/dev/null || true
+
+# Ubah permission folder & file umum (lewati node_modules, vendor, dan .git agar script dan package biner tidak rusak)
+find "$APP_DIR" -path "$APP_DIR/node_modules" -prune -o -path "$APP_DIR/vendor" -prune -o -path "$APP_DIR/.git" -prune -o -type d -exec chmod 755 {} \; 2>/dev/null || true
+find "$APP_DIR" -path "$APP_DIR/node_modules" -prune -o -path "$APP_DIR/vendor" -prune -o -path "$APP_DIR/.git" -prune -o -type f -exec chmod 644 {} \; 2>/dev/null || true
+
+# Pastikan script shell dan file artisan tetap executable
+chmod +x "$APP_DIR"/artisan 2>/dev/null || true
+chmod +x "$APP_DIR"/*.sh 2>/dev/null || true
+
+# Kembalikan akses execute untuk binary npm lokal
+if [ -d "$APP_DIR/node_modules/.bin" ]; then
+    chmod -R +x "$APP_DIR/node_modules/.bin" 2>/dev/null || true
+fi
+
+# Pastikan storage dan bootstrap/cache writable
 if [ -d "$APP_DIR/storage" ] && [ -d "$APP_DIR/bootstrap/cache" ]; then
     chmod -R 775 "$APP_DIR/storage"
     chmod -R 775 "$APP_DIR/bootstrap/cache"
 fi
 
-# 7. Restart PM2 Worker agar menggunakan kode terbaru
-echo -e "\n${KUNING}Langkah 7: Merestart queue worker di PM2...${NC}"
+# 7. Restart Queue Worker agar menggunakan kode terbaru
+echo -e "\n${KUNING}Langkah 7: Merestart queue worker...${NC}"
+# Jalankan command restart bawaan Laravel
+php artisan queue:restart
+
+# Restart PM2 worker jika PM2 digunakan
 if command -v pm2 &> /dev/null; then
+    echo -e "${KUNING}Merestart queue worker di PM2...${NC}"
     pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$APP_DIR"
     pm2 save
 fi

@@ -189,12 +189,41 @@ update_website() {
     else
         # Fallback manual jika update.sh tidak ditemukan
         print_warning "Script update.sh tidak ditemukan. Menjalankan fallback update manual..."
+        
+        # Deteksi branch saat ini (default ke main)
+        local branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+        branch=${branch:-main}
+        
         git fetch origin
-        git reset --hard origin/main
+        git reset --hard "origin/$branch"
+        
         composer install --no-dev --optimize-autoloader --ignore-platform-reqs
         php artisan migrate --force
+        
+        # Build Aset Frontend
+        if [ -f "package.json" ]; then
+            npm install --no-audit --no-fund || npm install --ignore-scripts --no-audit --no-fund
+            chmod +x node_modules/.bin/vite 2>/dev/null || true
+            npm run build || npx vite build || true
+        fi
+        
+        # Optimize Cache
         php artisan optimize:clear
-        php artisan optimize
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+        
+        # Restart Queue Workers
+        php artisan queue:restart
+        if command -v pm2 &> /dev/null; then
+            pm2 restart vpn-queue-worker || true
+        fi
+        
+        # Safe permissions
+        chown -R www-data:www-data . 2>/dev/null || true
+        find . -path "./node_modules" -prune -o -path "./vendor" -prune -o -path "./.git" -prune -o -type d -exec chmod 755 {} \; 2>/dev/null || true
+        find . -path "./node_modules" -prune -o -path "./vendor" -prune -o -path "./.git" -prune -o -type f -exec chmod 644 {} \; 2>/dev/null || true
+        chmod +x artisan *.sh 2>/dev/null || true
     fi
 
     # Tampilkan commit terbaru secara estetis
