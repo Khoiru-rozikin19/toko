@@ -29,7 +29,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Current Balance Card -->
-        <div class="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/10 flex flex-col justify-between relative overflow-hidden h-52 lg:col-span-2">
+        <div class="bg-linear-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-900 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/15 flex flex-col justify-between relative overflow-hidden h-52 lg:col-span-2 border border-blue-500/10 dark:border-blue-400/20">
             <!-- Background Decoration -->
             <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
             <div class="absolute -left-10 -bottom-10 w-36 h-36 bg-blue-500/30 rounded-full blur-2xl"></div>

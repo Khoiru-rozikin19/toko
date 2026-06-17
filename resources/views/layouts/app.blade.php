@@ -55,7 +55,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">RZK</span>
+                    <span class="text-xl font-bold bg-linear-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">RZK</span>
                     <span class="text-sm font-medium text-slate-400 dark:text-slate-500">| {{ Auth::check() ? 'Store' : 'Katalog' }}</span>
                 </a>
                 
