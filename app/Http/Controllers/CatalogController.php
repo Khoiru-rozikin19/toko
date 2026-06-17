@@ -30,6 +30,19 @@ class CatalogController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        // Filter berdasarkan visibility dan role user
+        $user = auth()->user();
+        if (!$user || $user->role === 'buyer') {
+            // Buyer / guest: hanya produk 'all'
+            $query->where(function ($q) {
+                $q->where('visibility', 'all')->orWhereNull('visibility');
+            });
+        } elseif ($user->role === 'seller') {
+            // Seller: produk 'all' dan 'admin_seller'
+            $query->whereIn('visibility', ['all', 'admin_seller']);
+        }
+        // Admin: lihat semua produk (tanpa filter visibility)
+
         $products = $query->get();
         $categories = \App\Models\Category::orderBy('name', 'asc')->get();
         $qris_configured = !empty(Setting::get('qris_static_string'));

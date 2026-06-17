@@ -218,6 +218,7 @@ class AdminController extends Controller
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
             'user_id' => 'nullable|exists:users,id',
+            'visibility' => 'nullable|in:all,admin_seller,admin_only',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -278,6 +279,7 @@ class AdminController extends Controller
             'orderkuota_product_code' => 'nullable|string|max:50',
             'success_instruction' => 'nullable|string',
             'user_id' => 'nullable|exists:users,id',
+            'visibility' => 'nullable|in:all,admin_seller,admin_only',
         ]);
 
         DB::transaction(function () use ($product, $request) {

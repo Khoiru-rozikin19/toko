@@ -42,6 +42,7 @@
                         <th class="py-4.5 px-6">Harga</th>
                         <th class="py-4.5 px-6">Masa Aktif</th>
                         <th class="py-4.5 px-6">Stok</th>
+                        <th class="py-4.5 px-6">Visibilitas</th>
                         <th class="py-4.5 px-6">Konfigurasi</th>
                         <th class="py-4.5 px-6 text-center">Aksi</th>
                     </tr>
@@ -87,6 +88,16 @@
                                         Habis
                                     </span>
                                 @endif
+                            </td>
+                            <td class="py-4.5 px-6">
+                                @php
+                                    $vis = $product->visibility ?? 'all';
+                                    $visLabel = ['all' => 'Semua', 'admin_seller' => 'Admin & Seller', 'admin_only' => 'Admin'];
+                                    $visColor = ['all' => 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400', 'admin_seller' => 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400', 'admin_only' => 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400'];
+                                @endphp
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $visColor[$vis] ?? $visColor['all'] }}">
+                                    {{ $visLabel[$vis] ?? 'Semua' }}
+                                </span>
                             </td>
                             <td class="py-4.5 px-6">
                                 @if($product->vpsServer)
@@ -258,6 +269,15 @@
                 <textarea id="create_success_instruction" name="success_instruction" rows="3" placeholder="Contoh: Silakan tunggu 1-5 menit untuk pengisian otomatis. Hubungi admin..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
 
+            <div>
+                <label for="create_visibility" class="block text-xs font-bold text-slate-500 uppercase mb-2">Visibilitas Produk</label>
+                <select id="create_visibility" name="visibility" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <option value="all" selected>👥 Semua User</option>
+                    <option value="admin_seller">🏪 Admin & Seller</option>
+                    <option value="admin_only">🔒 Admin Only</option>
+                </select>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Tentukan siapa saja yang bisa melihat produk ini di katalog.</p>
+            </div>
 
 
             <div class="flex justify-end space-x-2 pt-4">
@@ -401,6 +421,15 @@
                 <textarea id="edit_success_instruction" name="success_instruction" rows="3" placeholder="Instruksi sukses untuk pelanggan..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200"></textarea>
             </div>
 
+            <div>
+                <label for="edit_visibility" class="block text-xs font-bold text-slate-500 uppercase mb-2">Visibilitas Produk</label>
+                <select id="edit_visibility" name="visibility" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <option value="all">👥 Semua User</option>
+                    <option value="admin_seller">🏪 Admin & Seller</option>
+                    <option value="admin_only">🔒 Admin Only</option>
+                </select>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Tentukan siapa saja yang bisa melihat produk ini di katalog.</p>
+            </div>
 
 
             <div class="flex justify-end space-x-2 pt-4">
@@ -446,6 +475,7 @@
         }
         document.getElementById('edit_description').value = product.description || '';
         document.getElementById('edit_success_instruction').value = product.success_instruction || '';
+        document.getElementById('edit_visibility').value = product.visibility || 'all';
         if (document.getElementById('edit_template')) {
             document.getElementById('edit_template').value = product.config_template || '';
         }

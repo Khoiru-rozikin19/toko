@@ -23,6 +23,7 @@ class Product extends Model
         'stock',
         'orderkuota_product_code',
         'success_instruction',
+        'visibility',
     ];
 
     public function seller()
