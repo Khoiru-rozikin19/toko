@@ -10,9 +10,16 @@ beforeEach(function () {
         'qris_static_string', 
         '00020101021126610014COM.GO-JEK.WWW01189360091430224274230210G0224274230303UMI51440014ID.CO.QRIS.WWW0215ID10243581829610303UMI5204573253033605802ID5919Rzk store, SNR PNNJ6003OKU61053215962070703A016304881F'
     );
+    
+    // Set Telegram Bot credentials in environment simulation
+    config(['services.telegram.bot_token' => '123456:ABC-DEF']);
+    putenv('TELEGRAM_BOT_TOKEN=123456:ABC-DEF');
+    putenv('TELEGRAM_ADMIN_ID=987654321');
 });
 
 test('authenticated user can request topup', function () {
+    \Illuminate\Support\Facades\Queue::fake();
+
     $user = User::factory()->create([
         'role' => 'buyer',
         'is_verified' => true,
@@ -36,6 +43,9 @@ test('authenticated user can request topup', function () {
                 'server_time',
             ]
         ]);
+
+    // Verify Telegram notification was dispatched
+    \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\SendTelegramNotificationJob::class);
 });
 
 test('topup validation fails for low amount', function () {

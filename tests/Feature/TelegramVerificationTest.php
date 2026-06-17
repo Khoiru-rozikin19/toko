@@ -266,3 +266,181 @@ test('telegram webhook processes rejection callback from admin', function () {
         return true;
     });
 });
+
+test('telegram webhook processes approval callback from admin for topup orders and adds balance', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::create([
+        'name' => 'Topup Buyer',
+        'email' => 'topup@buyer.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+    ]);
+
+    // Ensure user balance record is initialized
+    $balanceRecord = $user->getOrCreateBalance();
+    $balanceRecord->update(['balance' => 5000]);
+
+    $order = Order::create([
+        'id' => 'TOP-APP-TEST',
+        'user_id' => $user->id,
+        'email_or_whatsapp' => 'topup@buyer.com',
+        'base_amount' => 25000,
+        'unique_code' => 12,
+        'total_amount' => 25012,
+        'status' => 'pending_manual',
+        'payment_method' => 'topup_balance',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Create a pending balance transaction
+    \App\Models\BalanceTransaction::create([
+        'user_id' => $user->id,
+        'type' => 'topup',
+        'amount' => 25000,
+        'balance_before' => 5000,
+        'balance_after' => 5000,
+        'reference_id' => 'TOP-APP-TEST',
+        'status' => 'pending',
+    ]);
+
+    // Send webhook approval request from Admin ID
+    $response = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb-approve-topup',
+            'from' => [
+                'id' => 987654321,
+                'first_name' => 'Admin User',
+            ],
+            'data' => 'approve:TOP-APP-TEST',
+            'message' => [
+                'message_id' => 77,
+                'chat' => [
+                    'id' => 987654321,
+                ],
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('success', true);
+
+    // Verify order transitioned to 'success' (for topup)
+    $order->refresh();
+    expect($order->status)->toBe('success');
+
+    // Verify user balance incremented
+    $userBalance = $user->getOrCreateBalance();
+    expect((float) $userBalance->balance)->toBe(30000.0); // 5000 + 25000
+
+    // Verify balance transaction updated to success
+    $tx = \App\Models\BalanceTransaction::where('reference_id', 'TOP-APP-TEST')->first();
+    expect($tx->status)->toBe('success');
+    expect((float) $tx->balance_before)->toBe(5000.0);
+    expect((float) $tx->balance_after)->toBe(30000.0);
+
+    // Verify Telegram callback was answered and message text updated
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'answerCallbackQuery')) {
+            return $data['callback_query_id'] === 'cb-approve-topup';
+        }
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === 987654321 &&
+                   $data['message_id'] === 77 &&
+                   str_contains($data['text'], 'Top Up Disetujui') &&
+                   str_contains($data['text'], 'SUCCESS');
+        }
+
+        return true;
+    });
+});
+
+test('telegram webhook processes rejection callback from admin for topup orders', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::create([
+        'name' => 'Topup Buyer Reject',
+        'email' => 'topup-rej@buyer.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+    ]);
+
+    $order = Order::create([
+        'id' => 'TOP-REJ-TEST',
+        'user_id' => $user->id,
+        'email_or_whatsapp' => 'topup-rej@buyer.com',
+        'base_amount' => 15000,
+        'unique_code' => 5,
+        'total_amount' => 15005,
+        'status' => 'pending_manual',
+        'payment_method' => 'topup_balance',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Create a pending balance transaction
+    \App\Models\BalanceTransaction::create([
+        'user_id' => $user->id,
+        'type' => 'topup',
+        'amount' => 15000,
+        'balance_before' => 0,
+        'balance_after' => 0,
+        'reference_id' => 'TOP-REJ-TEST',
+        'status' => 'pending',
+    ]);
+
+    // Send webhook rejection request from Admin ID
+    $response = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb-reject-topup',
+            'from' => [
+                'id' => 987654321,
+                'first_name' => 'Admin User',
+            ],
+            'data' => 'reject:TOP-REJ-TEST',
+            'message' => [
+                'message_id' => 78,
+                'chat' => [
+                    'id' => 987654321,
+                ],
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('success', true);
+
+    // Verify order transitioned to 'rejected'
+    $order->refresh();
+    expect($order->status)->toBe('rejected');
+
+    // Verify balance transaction updated to failed
+    $tx = \App\Models\BalanceTransaction::where('reference_id', 'TOP-REJ-TEST')->first();
+    expect($tx->status)->toBe('failed');
+
+    // Verify Telegram callback was answered and message text updated
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'answerCallbackQuery')) {
+            return $data['callback_query_id'] === 'cb-reject-topup';
+        }
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === 987654321 &&
+                   $data['message_id'] === 78 &&
+                   str_contains($data['text'], 'Transaksi Ditolak') &&
+                   str_contains($data['text'], 'REJECTED');
+        }
+
+        return true;
+    });
+});

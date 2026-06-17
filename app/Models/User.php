@@ -52,11 +52,7 @@ class User extends Authenticatable
      */
     public function getBalance(): float
     {
-        $balance = $this->balance;
-        if (!$balance) {
-            $balance = $this->balance()->create(['balance' => 0]);
-        }
-        return (float) $balance->balance;
+        return (float) $this->getOrCreateBalance()->balance;
     }
 
     /**
@@ -64,10 +60,8 @@ class User extends Authenticatable
      */
     public function getOrCreateBalance(): UserBalance
     {
-        $balance = $this->balance;
-        if (!$balance) {
-            $balance = $this->balance()->create(['balance' => 0]);
-        }
+        $balance = $this->balance()->firstOrCreate([], ['balance' => 0]);
+        $this->setRelation('balance', $balance);
         return $balance;
     }
 }

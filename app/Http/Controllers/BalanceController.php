@@ -136,6 +136,9 @@ class BalanceController extends Controller
             return $order;
         });
 
+        // Kirim notifikasi ke Telegram Admin secara asynchronous via background queue
+        \App\Jobs\SendTelegramNotificationJob::dispatch($order->id, $order->total_amount, $order->email_or_whatsapp);
+
         return response()->json([
             'success' => true,
             'order' => [

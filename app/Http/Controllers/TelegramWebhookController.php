@@ -85,6 +85,53 @@ class TelegramWebhookController extends Controller
         $formattedAmount = number_format($order->total_amount, 0, ',', '.');
         $customerName = $order->email_or_whatsapp;
         if ($action === 'approve') {
+            if ($order->payment_method === 'topup_balance') {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                    $order->status = 'success';
+                    $order->save();
+
+                    // Add balance to user
+                    if ($order->user_id) {
+                        $user = \App\Models\User::find($order->user_id);
+                        if ($user) {
+                            $balanceRecord = $user->getOrCreateBalance();
+                            $balanceBefore = $balanceRecord->balance;
+                            $balanceRecord->increment('balance', $order->base_amount);
+                            $balanceRecord->refresh();
+
+                            // Update balance transaction to success
+                            \App\Models\BalanceTransaction::where('reference_id', $order->id)
+                                ->where('status', 'pending')
+                                ->update([
+                                    'status' => 'success',
+                                    'balance_before' => $balanceBefore,
+                                    'balance_after' => $balanceRecord->balance,
+                                ]);
+                        }
+                    }
+                });
+
+                // Acknowledge Telegram callback query
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Top up {$orderId} disetujui!");
+                }
+
+                // Edit message to reflect approval
+                if ($chatId && $messageId) {
+                    $updatedText = "✅ *Top Up Disetujui*\n\n"
+                                 . "📦 *ID Order:* `{$orderId}`\n"
+                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                 . "Status top up telah diubah menjadi *SUCCESS* dan saldo telah ditambahkan ke akun user.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Top up {$orderId} approved and balance added.",
+                ]);
+            }
+
             // Assign local account stock if product uses dynamic stock
             if ($order->product && $order->product->stocks()->where('status', 'ready')->exists()) {
                 $stock = \App\Models\AccountStock::where('product_id', $order->product_id)
@@ -154,6 +201,12 @@ class TelegramWebhookController extends Controller
             // Update order status to rejected
             $order->status = 'rejected';
             $order->save();
+
+            if ($order->payment_method === 'topup_balance') {
+                \App\Models\BalanceTransaction::where('reference_id', $order->id)
+                    ->where('status', 'pending')
+                    ->update(['status' => 'failed']);
+            }
 
             // Optional notification to the user
             Log::info("Notification sent to user {$customerName}: Transaction {$orderId} has been rejected by Admin.");
