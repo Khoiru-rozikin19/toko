@@ -3,6 +3,7 @@
 #  duid.sh - Kelola Saldo User
 #  Script untuk melihat dan mengedit saldo semua user
 #  Penggunaan: bash duid.sh
+#  Mendukung: SQLite & MySQL (auto-detect dari .env)
 # ============================================================
 
 # Warna
@@ -17,22 +18,79 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m' # No Color
 
-# Path database SQLite (sesuaikan jika perlu)
+# Path project
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_PATH="$SCRIPT_DIR/database/database.sqlite"
+ENV_FILE="$SCRIPT_DIR/.env"
 
-# Cek apakah database ada
-if [ ! -f "$DB_PATH" ]; then
-    echo -e "${RED}✗ Database tidak ditemukan di: $DB_PATH${NC}"
-    echo -e "${DIM}  Pastikan script ini berada di root folder project Laravel.${NC}"
+# ============================================================
+#  Deteksi Database dari .env
+# ============================================================
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}✗ File .env tidak ditemukan di: $ENV_FILE${NC}"
     exit 1
 fi
 
-# Cek apakah sqlite3 terinstall
-if ! command -v sqlite3 &> /dev/null; then
-    echo -e "${RED}✗ sqlite3 tidak ditemukan. Install dengan: sudo apt install sqlite3${NC}"
-    exit 1
-fi
+# Baca konfigurasi database dari .env
+get_env() {
+    local key="$1"
+    grep -E "^${key}=" "$ENV_FILE" | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'" | tr -d $'\r'
+}
+
+DB_CONNECTION=$(get_env "DB_CONNECTION")
+DB_HOST=$(get_env "DB_HOST")
+DB_PORT=$(get_env "DB_PORT")
+DB_DATABASE=$(get_env "DB_DATABASE")
+DB_USERNAME=$(get_env "DB_USERNAME")
+DB_PASSWORD=$(get_env "DB_PASSWORD")
+
+# Default values
+[ -z "$DB_CONNECTION" ] && DB_CONNECTION="sqlite"
+[ -z "$DB_HOST" ] && DB_HOST="127.0.0.1"
+[ -z "$DB_PORT" ] && DB_PORT="3306"
+
+# ============================================================
+#  Fungsi Query Database (abstraksi SQLite / MySQL)
+# ============================================================
+
+db_query() {
+    local sql="$1"
+
+    if [ "$DB_CONNECTION" = "sqlite" ]; then
+        local db_path="$SCRIPT_DIR/database/database.sqlite"
+        if [ ! -f "$db_path" ]; then
+            echo -e "${RED}✗ Database SQLite tidak ditemukan di: $db_path${NC}" >&2
+            return 1
+        fi
+        sqlite3 -separator '|' "$db_path" "$sql" 2>/dev/null
+
+    elif [ "$DB_CONNECTION" = "mysql" ] || [ "$DB_CONNECTION" = "mariadb" ]; then
+        local mysql_cmd="mysql"
+        if ! command -v mysql &> /dev/null; then
+            echo -e "${RED}✗ mysql client tidak ditemukan.${NC}" >&2
+            return 1
+        fi
+
+        local mysql_opts="-h $DB_HOST -P $DB_PORT -u $DB_USERNAME --batch --skip-column-names -N"
+        if [ -n "$DB_PASSWORD" ]; then
+            mysql_opts="$mysql_opts -p$DB_PASSWORD"
+        fi
+
+        mysql $mysql_opts "$DB_DATABASE" -e "$sql" 2>/dev/null | tr '\t' '|'
+    else
+        echo -e "${RED}✗ DB_CONNECTION '$DB_CONNECTION' tidak didukung. Hanya sqlite dan mysql/mariadb.${NC}" >&2
+        return 1
+    fi
+}
+
+# Tes koneksi
+test_connection() {
+    local result=$(db_query "SELECT COUNT(*) FROM users;" 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$result" ]; then
+        return 1
+    fi
+    return 0
+}
 
 # ============================================================
 #  Fungsi Utilitas
@@ -51,17 +109,39 @@ header() {
     echo ""
     garis_tebal
     echo -e "${CYAN}  💰  ${BOLD}DUID${NC}${CYAN} - Manajemen Saldo User${NC}"
-    echo -e "${DIM}  Kelola saldo semua user dengan mudah${NC}"
+    echo -e "${DIM}  Database: ${DB_CONNECTION} $([ "$DB_CONNECTION" != "sqlite" ] && echo "@ ${DB_HOST}:${DB_PORT}/${DB_DATABASE}")${NC}"
     garis_tebal
     echo ""
 }
 
 format_rupiah() {
     local amount="$1"
-    # Bulatkan ke integer, lalu format dengan pemisah ribuan
     local integer_part=$(echo "$amount" | awk '{printf "%d", $1}')
     echo "Rp $(echo "$integer_part" | sed ':a;s/\B[0-9]\{3\}\>/.&/;ta')"
 }
+
+# ============================================================
+#  Cek Koneksi Awal
+# ============================================================
+
+echo -e "${DIM}Menghubungkan ke database ($DB_CONNECTION)...${NC}"
+
+if ! test_connection; then
+    echo -e "${RED}✗ Gagal terhubung ke database.${NC}"
+    echo -e "${DIM}  DB_CONNECTION : $DB_CONNECTION${NC}"
+    if [ "$DB_CONNECTION" != "sqlite" ]; then
+        echo -e "${DIM}  DB_HOST       : $DB_HOST${NC}"
+        echo -e "${DIM}  DB_PORT       : $DB_PORT${NC}"
+        echo -e "${DIM}  DB_DATABASE   : $DB_DATABASE${NC}"
+        echo -e "${DIM}  DB_USERNAME   : $DB_USERNAME${NC}"
+    else
+        echo -e "${DIM}  DB_PATH       : $SCRIPT_DIR/database/database.sqlite${NC}"
+    fi
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Terhubung!${NC}"
+sleep 0.5
 
 # ============================================================
 #  Fungsi: Lihat Semua Saldo
@@ -73,12 +153,11 @@ lihat_saldo() {
     echo ""
     garis
 
-    # Query untuk mendapatkan semua user beserta saldonya
-    local data=$(sqlite3 "$DB_PATH" -separator '|' \
+    local data=$(db_query \
         "SELECT u.id, u.name, u.email, u.role, COALESCE(ub.balance, 0)
          FROM users u
          LEFT JOIN user_balances ub ON u.id = ub.user_id
-         ORDER BY u.id ASC;" 2>/dev/null)
+         ORDER BY u.id ASC;")
 
     if [ -z "$data" ]; then
         echo -e "  ${YELLOW}⚠ Tidak ada data user ditemukan.${NC}"
@@ -86,7 +165,6 @@ lihat_saldo() {
         return
     fi
 
-    # Header tabel
     printf "  ${BOLD}${WHITE}%-4s │ %-20s │ %-28s │ %-8s │ %18s${NC}\n" "ID" "Nama" "Email" "Role" "Saldo"
     garis
 
@@ -97,7 +175,6 @@ lihat_saldo() {
         total_users=$((total_users + 1))
         total_saldo=$(echo "$total_saldo + $balance" | bc 2>/dev/null || echo "$total_saldo")
 
-        # Warna berdasarkan role
         local role_color="${WHITE}"
         if [ "$role" = "admin" ]; then
             role_color="${RED}"
@@ -107,7 +184,6 @@ lihat_saldo() {
             role_color="${GREEN}"
         fi
 
-        # Warna saldo
         local saldo_color="${GREEN}"
         local saldo_int=$(echo "$balance" | awk '{printf "%d", $1}')
         if [ "$saldo_int" -eq 0 ]; then
@@ -117,8 +193,6 @@ lihat_saldo() {
         fi
 
         local saldo_formatted=$(format_rupiah "$balance")
-
-        # Potong nama dan email jika terlalu panjang
         local name_short=$(echo "$name" | cut -c1-20)
         local email_short=$(echo "$email" | cut -c1-28)
 
@@ -142,12 +216,11 @@ edit_saldo() {
     echo -e "${BOLD}${WHITE}  ✏️  EDIT SALDO USER${NC}"
     echo ""
 
-    # Tampilkan daftar singkat
-    local data=$(sqlite3 "$DB_PATH" -separator '|' \
+    local data=$(db_query \
         "SELECT u.id, u.name, COALESCE(ub.balance, 0)
          FROM users u
          LEFT JOIN user_balances ub ON u.id = ub.user_id
-         ORDER BY u.id ASC;" 2>/dev/null)
+         ORDER BY u.id ASC;")
 
     garis
     printf "  ${BOLD}%-4s │ %-25s │ %18s${NC}\n" "ID" "Nama" "Saldo"
@@ -161,7 +234,6 @@ edit_saldo() {
     garis
     echo ""
 
-    # Input ID user
     echo -ne "  ${YELLOW}Masukkan ID user yang ingin diedit (0 = kembali): ${NC}"
     read -r user_id
 
@@ -169,12 +241,11 @@ edit_saldo() {
         return
     fi
 
-    # Validasi ID user
-    local user_info=$(sqlite3 "$DB_PATH" -separator '|' \
+    local user_info=$(db_query \
         "SELECT u.id, u.name, u.email, COALESCE(ub.balance, 0)
          FROM users u
          LEFT JOIN user_balances ub ON u.id = ub.user_id
-         WHERE u.id = $user_id;" 2>/dev/null)
+         WHERE u.id = $user_id;")
 
     if [ -z "$user_info" ]; then
         echo -e "\n  ${RED}✗ User dengan ID $user_id tidak ditemukan.${NC}"
@@ -195,7 +266,6 @@ edit_saldo() {
     garis
     echo ""
 
-    # Pilih aksi
     echo -e "  ${BOLD}Pilih aksi:${NC}"
     echo -e "  ${WHITE}1)${NC} Set saldo ke nilai tertentu"
     echo -e "  ${WHITE}2)${NC} Tambah saldo"
@@ -271,30 +341,29 @@ edit_saldo() {
     fi
 
     # Cek apakah record user_balances sudah ada
-    local existing=$(sqlite3 "$DB_PATH" \
-        "SELECT COUNT(*) FROM user_balances WHERE user_id = $user_id;" 2>/dev/null)
+    local existing=$(db_query "SELECT COUNT(*) FROM user_balances WHERE user_id = $user_id;")
+
+    # Timestamp sesuai DB
+    local now_func="datetime('now')"
+    if [ "$DB_CONNECTION" = "mysql" ] || [ "$DB_CONNECTION" = "mariadb" ]; then
+        now_func="NOW()"
+    fi
 
     if [ "$existing" -gt 0 ]; then
-        # Update existing record
-        sqlite3 "$DB_PATH" \
-            "UPDATE user_balances SET balance = $saldo_baru, updated_at = datetime('now') WHERE user_id = $user_id;" 2>/dev/null
+        db_query "UPDATE user_balances SET balance = $saldo_baru, updated_at = $now_func WHERE user_id = $user_id;"
     else
-        # Insert new record
-        sqlite3 "$DB_PATH" \
-            "INSERT INTO user_balances (user_id, balance, created_at, updated_at) VALUES ($user_id, $saldo_baru, datetime('now'), datetime('now'));" 2>/dev/null
+        db_query "INSERT INTO user_balances (user_id, balance, created_at, updated_at) VALUES ($user_id, $saldo_baru, $now_func, $now_func);"
     fi
 
     if [ $? -eq 0 ]; then
         echo -e "\n  ${GREEN}✓ Saldo berhasil diubah!${NC}"
 
         # Catat ke balance_transactions
-        sqlite3 "$DB_PATH" \
+        db_query \
             "INSERT INTO balance_transactions (user_id, type, amount, balance_before, balance_after, description, created_at, updated_at)
-             VALUES ($user_id, 'admin_adjustment', ABS($saldo_baru - $ubalance), $ubalance, $saldo_baru, 'Diubah via duid.sh', datetime('now'), datetime('now'));" 2>/dev/null
+             VALUES ($user_id, 'admin_adjustment', ABS($saldo_baru - $ubalance), $ubalance, $saldo_baru, 'Diubah via duid.sh', $now_func, $now_func);"
 
-        # Tampilkan saldo terbaru
-        local saldo_terbaru=$(sqlite3 "$DB_PATH" \
-            "SELECT balance FROM user_balances WHERE user_id = $user_id;" 2>/dev/null)
+        local saldo_terbaru=$(db_query "SELECT balance FROM user_balances WHERE user_id = $user_id;")
         echo -e "  ${WHITE}Saldo terbaru: ${GREEN}$(format_rupiah "$saldo_terbaru")${NC}"
     else
         echo -e "\n  ${RED}✗ Gagal mengubah saldo. Periksa database.${NC}"
@@ -323,12 +392,12 @@ cari_user() {
     echo ""
     garis
 
-    local data=$(sqlite3 "$DB_PATH" -separator '|' \
+    local data=$(db_query \
         "SELECT u.id, u.name, u.email, u.role, COALESCE(ub.balance, 0)
          FROM users u
          LEFT JOIN user_balances ub ON u.id = ub.user_id
          WHERE u.name LIKE '%$keyword%' OR u.email LIKE '%$keyword%'
-         ORDER BY u.id ASC;" 2>/dev/null)
+         ORDER BY u.id ASC;")
 
     if [ -z "$data" ]; then
         echo -e "  ${YELLOW}⚠ Tidak ada user yang cocok dengan '$keyword'.${NC}"
@@ -381,7 +450,7 @@ while true; do
            ;;
         2) edit_saldo ;;
         3) cari_user ;;
-        0) 
+        0)
            echo ""
            echo -e "  ${GREEN}👋 Sampai jumpa!${NC}"
            echo ""
