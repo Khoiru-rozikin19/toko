@@ -54,9 +54,19 @@ class BalanceController extends Controller
      */
     public function topup(Request $request)
     {
-        $request->validate([
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'amount' => 'required|integer|min:10000|max:10000000',
         ]);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                ], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         $user = auth()->user();
         $amount = (int) $request->amount;

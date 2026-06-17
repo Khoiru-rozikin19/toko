@@ -57,7 +57,17 @@ class CatalogController extends Controller
             $rules['target_phone'] = 'nullable|string|max:255';
         }
 
-        $request->validate($rules);
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                ], 422);
+            }
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         $paymentMethod = $request->payment_method ?? 'qris';
 
