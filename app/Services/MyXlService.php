@@ -42,17 +42,11 @@ class MyXlService
      */
     public function getAxFingerprint(): string
     {
-        $fpPath = storage_path('app/ax.fp');
-        if (file_exists($fpPath)) {
-            $content = trim(file_get_contents($fpPath));
-            if (!empty($content)) {
-                return $content;
-            }
-        }
-
-        // Generate a new one matching sunset client's logic
-        $manufacturer = 'samsung' . rand(1000, 9999);
-        $model = 'SM-N93' . rand(1000, 9999);
+        // Use a stable, static device profile matching sunset client's logic.
+        // This ensures the fingerprint is 100% consistent between requestOtp and verifyOtp requests,
+        // and eliminates file permission issues with storage/app/ax.fp on the VPS.
+        $manufacturer = 'samsung';
+        $model = 'SM-N935F';
         $lang = 'en';
         $resolution = '720x1540';
         $tzShort = 'GMT07:00';
@@ -68,16 +62,7 @@ class MyXlService
         $iv = str_repeat("\x00", 16);
         $method = (strlen($axFpKey) === 16) ? 'AES-128-CBC' : 'AES-256-CBC';
         $encrypted = openssl_encrypt($plain, $method, $axFpKey, OPENSSL_RAW_DATA, $iv);
-        $newFp = base64_encode($encrypted);
-
-        // Ensure directories exist
-        $dir = dirname($fpPath);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
-        }
-
-        file_put_contents($fpPath, $newFp);
-        return $newFp;
+        return base64_encode($encrypted);
     }
 
     // =========================================================================
