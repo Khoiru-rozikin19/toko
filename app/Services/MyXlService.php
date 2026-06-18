@@ -37,6 +37,49 @@ class MyXlService
         return Setting::get('myxl_simulation_mode', '0') === '1';
     }
 
+    /**
+     * Get or generate the encrypted Ax-Fingerprint.
+     */
+    public function getAxFingerprint(): string
+    {
+        $fpPath = storage_path('app/ax.fp');
+        if (file_exists($fpPath)) {
+            $content = trim(file_get_contents($fpPath));
+            if (!empty($content)) {
+                return $content;
+            }
+        }
+
+        // Generate a new one matching sunset client's logic
+        $manufacturer = 'samsung' . rand(1000, 9999);
+        $model = 'SM-N93' . rand(1000, 9999);
+        $lang = 'en';
+        $resolution = '720x1540';
+        $tzShort = 'GMT07:00';
+        $ip = '192.169.69.69';
+        $fontScale = 1.0;
+        $androidRelease = '13';
+        $msisdn = '6281398370564';
+
+        $plain = "{$manufacturer}|{$model}|{$lang}|{$resolution}|{$tzShort}|{$ip}|{$fontScale}|Android {$androidRelease}|{$msisdn}";
+        $axFpKey = $this->cfg('ax_fp_key', '');
+
+        // AES-256-CBC encryption with zero IV and standard PKCS7 padding
+        $iv = str_repeat("\x00", 16);
+        $method = (strlen($axFpKey) === 16) ? 'AES-128-CBC' : 'AES-256-CBC';
+        $encrypted = openssl_encrypt($plain, $method, $axFpKey, OPENSSL_RAW_DATA, $iv);
+        $newFp = base64_encode($encrypted);
+
+        // Ensure directories exist
+        $dir = dirname($fpPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        file_put_contents($fpPath, $newFp);
+        return $newFp;
+    }
+
     // =========================================================================
     //  CIAM ForgeRock Authentication Flow
     // =========================================================================
@@ -61,7 +104,7 @@ class MyXlService
 
         $basicAuth = $this->cfg('basic_auth', '');
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
-        $axFp = $this->cfg('ax_fp_key', '');
+        $axFp = $this->getAxFingerprint();
 
         $now = now()->setTimezone('Asia/Jakarta');
         $axRequestAt = $now->format('Y-m-d\TH:i:s.vP'); // e.g. "2023-10-20T12:34:56.780+07:00"
@@ -143,7 +186,7 @@ class MyXlService
 
         $basicAuth = $this->cfg('basic_auth', '');
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
-        $axFp = $this->cfg('ax_fp_key', '');
+        $axFp = $this->getAxFingerprint();
         $axApiSigKey = $this->cfg('ax_api_sig_key', '');
         $apiKey = $this->cfg('api_key', '');
 
@@ -229,7 +272,7 @@ class MyXlService
 
         $basicAuth = $this->cfg('basic_auth', '');
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
-        $axFp = $this->cfg('ax_fp_key', '');
+        $axFp = $this->getAxFingerprint();
 
         $now = now()->setTimezone('Asia/Jakarta');
         $axRequestAt = $now->format('Y-m-d\TH:i:s.vO');
