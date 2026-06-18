@@ -442,10 +442,24 @@ class MyXlService
             ];
         }
 
+        // Try with is_enterprise = false first
         $res = $this->sendApiRequest('api/v8/profile', [
             'access_token' => $tokens['access_token'],
             'app_version' => '8.9.0',
             'is_enterprise' => false,
+            'lang' => 'en'
+        ], $tokens);
+
+        if (isset($res['data'])) {
+            return $res['data'];
+        }
+
+        // If it fails (e.g. REQUEST_BODY_MALFORMED / code 111), try with is_enterprise = true
+        Log::info("MyXL getProfile with is_enterprise = false failed. Retrying with is_enterprise = true...");
+        $res = $this->sendApiRequest('api/v8/profile', [
+            'access_token' => $tokens['access_token'],
+            'app_version' => '8.9.0',
+            'is_enterprise' => true,
             'lang' => 'en'
         ], $tokens);
 
