@@ -65,6 +65,17 @@ class MyXlService
         return base64_encode($encrypted);
     }
 
+    /**
+     * Format timestamp with 2-digit milliseconds and colon in timezone (Java format).
+     */
+    protected function getJavaTimestamp($dt = null): string
+    {
+        $dt = $dt ?: now();
+        $dt = $dt->setTimezone('Asia/Jakarta');
+        $ms2 = sprintf('%02d', intval(intval($dt->format('u')) / 10000));
+        return $dt->format('Y-m-d\TH:i:s.') . $ms2 . $dt->format('P');
+    }
+
     // =========================================================================
     //  CIAM ForgeRock Authentication Flow
     // =========================================================================
@@ -91,9 +102,7 @@ class MyXlService
         $ua = $this->cfg('ua', 'myXL / 8.9.0(1202); com.android.vending');
         $axFp = $this->getAxFingerprint();
 
-        $now = now()->setTimezone('Asia/Jakarta');
-        $ms2 = sprintf('%02d', intval(intval($now->format('u')) / 10000));
-        $axRequestAt = $now->format('Y-m-d\TH:i:s.') . $ms2 . $now->format('P');
+        $axRequestAt = $this->getJavaTimestamp();
         $axRequestId = (string) Str::uuid();
         $axDeviceId = md5($axFp);
 
@@ -324,8 +333,7 @@ class MyXlService
         $xdata = $this->crypto->encryptXData($plainBody, $xtime, $xdataKey);
         $xSig = $this->crypto->makeXSignature($tokens['id_token'], $method, $path, $sigTimeSec, $xApiBaseSecret);
 
-        $now = now()->setTimezone('UTC');
-        $axRequestAt = $now->setTimezone('Asia/Jakarta')->format('Y-m-d\TH:i:s.vO');
+        $axRequestAt = $this->getJavaTimestamp();
 
         $headers = [
             'host' => str_replace('https://', '', $baseApiUrl),
@@ -749,8 +757,7 @@ class MyXlService
             $xApiBaseSecret
         );
 
-        $now = now()->setTimezone('UTC');
-        $axRequestAt = $now->setTimezone('Asia/Jakarta')->format('Y-m-d\TH:i:s.vO');
+        $axRequestAt = $this->getJavaTimestamp();
 
         $headers = [
             'host' => str_replace('https://', '', $baseApiUrl),
@@ -878,8 +885,7 @@ class MyXlService
             $xApiBaseSecret
         );
 
-        $now = now()->setTimezone('UTC');
-        $axRequestAt = $now->setTimezone('Asia/Jakarta')->format('Y-m-d\TH:i:s.vO');
+        $axRequestAt = $this->getJavaTimestamp();
 
         $headers = [
             'host' => str_replace('https://', '', $baseApiUrl),
