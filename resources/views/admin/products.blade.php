@@ -44,9 +44,9 @@
         @if(auth()->user()->role === 'admin')
         <!-- Add Category Button -->
         <div class="relative flex-shrink-0" id="addCategoryContainer">
-            <button onclick="toggleAddCategoryInline()" id="addCatBtn" class="flex items-center space-x-1 px-3 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-600 dark:hover:text-blue-400">
+            <button onclick="toggleAddCategoryInline(event)" id="addCatBtn" class="flex items-center space-x-1 px-3 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-600 dark:hover:text-blue-400">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
-                <span>Kategori</span>
+                <span>+ Kategori</span>
             </button>
             <!-- Inline Add Category Form (hidden by default) -->
             <div id="addCategoryInline" class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-30 w-64">
@@ -57,20 +57,33 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Delete Category Button -->
+        <div class="relative flex-shrink-0" id="deleteCategoryContainer">
+            <button onclick="toggleDeleteCategoryInline(event)" id="deleteCatBtn" class="flex items-center space-x-1 px-3 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-rose-400 hover:text-rose-500 dark:hover:border-rose-600 dark:hover:text-rose-400">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 12H6"></path></svg>
+                <span>- Kategori</span>
+            </button>
+            <!-- Inline Delete Category List (hidden by default) -->
+            <div id="deleteCategoryInline" class="hidden absolute top-full right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-30 w-64 font-sans">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Hapus Kategori</label>
                 @if($categories->count() > 0)
-                <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Hapus Kategori</label>
-                    <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                        @foreach($categories as $category)
-                            <span class="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700 cat-delete-badge" data-category-id="{{ $category->id }}">
+                <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                    @foreach($categories as $category)
+                        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate pr-2" title="{{ $category->name }}">
                                 {{ $category->name }}
-                                <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1 text-slate-400 hover:text-rose-500 transition-colors">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                </button>
                             </span>
-                        @endforeach
-                    </div>
+                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="p-1 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 dark:text-slate-500 rounded-lg transition-all" title="Hapus Kategori">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    @endforeach
                 </div>
+                @else
+                <p class="text-xs text-slate-400 dark:text-slate-500">Belum ada kategori.</p>
                 @endif
             </div>
         </div>
@@ -572,17 +585,51 @@
     }
 
     // Inline Add Category Popup
-    function toggleAddCategoryInline() {
-        const popup = document.getElementById('addCategoryInline');
-        popup.classList.toggle('hidden');
+    function toggleAddCategoryInline(e) {
+        if (e) e.stopPropagation();
+        const addPopup = document.getElementById('addCategoryInline');
+        const deletePopup = document.getElementById('deleteCategoryInline');
+        
+        if (addPopup) {
+            addPopup.classList.toggle('hidden');
+            // Auto-focus input when opened
+            if (!addPopup.classList.contains('hidden')) {
+                setTimeout(() => {
+                    document.getElementById('inlineCategoryName')?.focus();
+                }, 50);
+            }
+        }
+        if (deletePopup) {
+            deletePopup.classList.add('hidden');
+        }
     }
 
-    // Close popup when clicking outside
+    // Inline Delete Category Popup
+    function toggleDeleteCategoryInline(e) {
+        if (e) e.stopPropagation();
+        const addPopup = document.getElementById('addCategoryInline');
+        const deletePopup = document.getElementById('deleteCategoryInline');
+        
+        if (deletePopup) {
+            deletePopup.classList.toggle('hidden');
+        }
+        if (addPopup) {
+            addPopup.classList.add('hidden');
+        }
+    }
+
+    // Close popups when clicking outside
     document.addEventListener('click', function(e) {
-        const container = document.getElementById('addCategoryContainer');
-        const popup = document.getElementById('addCategoryInline');
-        if (container && popup && !container.contains(e.target)) {
-            popup.classList.add('hidden');
+        const addContainer = document.getElementById('addCategoryContainer');
+        const addPopup = document.getElementById('addCategoryInline');
+        if (addContainer && addPopup && !addContainer.contains(e.target)) {
+            addPopup.classList.add('hidden');
+        }
+
+        const deleteContainer = document.getElementById('deleteCategoryContainer');
+        const deletePopup = document.getElementById('deleteCategoryInline');
+        if (deleteContainer && deletePopup && !deleteContainer.contains(e.target)) {
+            deletePopup.classList.add('hidden');
         }
     });
 
