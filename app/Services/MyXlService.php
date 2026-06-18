@@ -236,6 +236,11 @@ class MyXlService
                                 'subscription_type' => $profileRes['profile']['subscription_type'],
                             ]
                         ];
+                    } else {
+                        return [
+                            'success' => false,
+                            'message' => 'Verifikasi OTP gagal (Gagal mengambil profil): ' . json_encode($profileRes)
+                        ];
                     }
                 }
             }
