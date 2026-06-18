@@ -8,7 +8,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BuyerController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BalanceController;
-use App\Http\Controllers\XlToolController;
 
 // API Callback (public - no auth required)
 Route::post('/api/v1/payment/callback-notification', [PaymentCallbackController::class, 'handle'])->name('api.payment.callback');
@@ -106,15 +105,5 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/commissions/{id}/delete', [AdminController::class, 'deleteCommission'])->name('commissions.delete');
         Route::post('/commissions/{id}/toggle', [AdminController::class, 'toggleCommission'])->name('commissions.toggle');
 
-        // Admin Tools - Cek & Reset Kuota XL
-        Route::prefix('tools/xl')->name('tools.xl.')->group(function () {
-            Route::get('/', [XlToolController::class, 'index'])->name('index');
-            Route::post('/request-otp', [XlToolController::class, 'requestOtp'])->name('otp.request');
-            Route::post('/verify-otp', [XlToolController::class, 'verifyOtp'])->name('otp.verify');
-            Route::get('/{id}/quota', [XlToolController::class, 'checkQuota'])->name('quota');
-            Route::post('/unsubscribe', [XlToolController::class, 'unsubscribePackage'])->name('unsubscribe');
-            Route::delete('/{id}', [XlToolController::class, 'deleteSession'])->name('delete');
-            Route::post('/settings', [XlToolController::class, 'updateSettings'])->name('settings.update');
-        });
     });
 });
