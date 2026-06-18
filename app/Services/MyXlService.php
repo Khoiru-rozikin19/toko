@@ -196,6 +196,7 @@ class MyXlService
         $axDeviceId = md5($axFp);
 
         try {
+            Log::info("MyXL verifyOtp requesting to: {$url} for phone: {$msisdn}");
             $response = Http::withoutVerifying()
                 ->asForm()
                 ->withHeaders([
@@ -218,8 +219,11 @@ class MyXlService
                     'scope' => 'openid'
                 ]);
 
+            Log::info("MyXL verifyOtp response status: " . $response->status());
+
             if ($response->successful()) {
                 $body = $response->json();
+                Log::info("MyXL verifyOtp response body: " . json_encode($body));
                 if (isset($body['id_token'])) {
                     // Fetch profile to get subscriber ID
                     $tokens = [
@@ -228,6 +232,7 @@ class MyXlService
                         'refresh_token' => $body['refresh_token'],
                     ];
                     $profileRes = $this->getProfile($tokens);
+                    Log::info("MyXL getProfile result: " . json_encode($profileRes));
                     if ($profileRes && isset($profileRes['profile'])) {
                         return [
                             'success' => true,
@@ -246,9 +251,11 @@ class MyXlService
                 }
             }
 
+            $rawBody = $response->body();
+            Log::error("MyXL verifyOtp failed. Status: " . $response->status() . " Body: " . $rawBody);
             return [
                 'success' => false,
-                'message' => 'Verifikasi OTP gagal: ' . ($response->json('error_description') ?? $response->json('error') ?? $response->body())
+                'message' => 'Verifikasi OTP gagal: ' . ($response->json('error_description') ?? $response->json('error') ?? $rawBody)
             ];
         } catch (\Exception $e) {
             Log::error('MyXL Verify OTP Error: ' . $e->getMessage());
@@ -362,17 +369,32 @@ class MyXlService
         ];
 
         try {
+            Log::info("MyXL sendApiRequest calling {$path} via URL: {$url}");
+            Log::info("MyXL sendApiRequest headers: " . json_encode($headers));
+            Log::info("MyXL sendApiRequest payload (unencrypted): " . $plainBody);
+
             $response = Http::withoutVerifying()
                 ->withHeaders($headers)
                 ->withBody(json_encode($body), 'application/json')
                 ->send($method, $url);
 
+            Log::info("MyXL sendApiRequest to {$path} response status: " . $response->status());
+
             if ($response->successful()) {
                 $resBody = $response->json();
+                Log::info("MyXL sendApiRequest to {$path} response body: " . json_encode($resBody));
                 if (isset($resBody['xdata'])) {
                     $decrypted = $this->crypto->decryptXData($resBody['xdata'], (int) $resBody['xtime'], $xdataKey);
-                    return json_decode($decrypted, true) ?? [];
+                    Log::info("MyXL sendApiRequest to {$path} decrypted xdata: " . $decrypted);
+                    $decoded = json_decode($decrypted, true);
+                    if ($decoded === null) {
+                        Log::error("MyXL decrypted JSON parse failed. Raw decrypted: " . var_export($decrypted, true));
+                        $this->lastError = "Decrypted JSON parse failed";
+                        return [];
+                    }
+                    return $decoded;
                 }
+                Log::warning("MyXL sendApiRequest to {$path} response body does not contain xdata.");
                 return $resBody;
             }
 
