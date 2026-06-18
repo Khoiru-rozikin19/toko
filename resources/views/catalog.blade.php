@@ -53,71 +53,70 @@
     </div>
 
     <!-- Product Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         @forelse($products as $product)
-            <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 shadow-sm">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-sm">
                 <div>
                     <!-- Badge Stock -->
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-2">
                         @if($product->stock > 0)
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 space-x-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 space-x-1">
+                                <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
                                 <span>{{ $product->stock }} stok</span>
                             </span>
                         @else
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 space-x-1.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 space-x-1">
+                                <span class="w-1 h-1 rounded-full bg-rose-500"></span>
                                 <span>Habis</span>
                             </span>
                         @endif
                     </div>
 
-                    <!-- Package Icon Container (A blue container matching screenshots) -->
-                    <div class="w-full h-36 bg-blue-50 dark:bg-blue-950/20 rounded-2xl flex items-center justify-center mb-5 border border-blue-100/50 dark:border-blue-950/50">
-                        <!-- Box illustration -->
-                        <svg class="w-14 h-14 text-blue-500/80" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <!-- Package Icon Container -->
+                    <div class="w-full h-20 sm:h-24 bg-blue-50 dark:bg-blue-950/20 rounded-xl flex items-center justify-center mb-3 border border-blue-100/50 dark:border-blue-950/50">
+                        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-blue-500/80" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                         </svg>
                     </div>
 
                     <!-- Title & Details -->
-                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 leading-tight mb-2">{{ $product->name }}</h3>
-                    <div class="text-xs text-slate-500 dark:text-slate-400 mb-4 line-clamp-3">
+                    <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug mb-1 line-clamp-2">{{ $product->name }}</h3>
+                    <div class="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mb-2 line-clamp-2 leading-relaxed">
                         @if($product->description)
                             {!! $product->description !!}
                         @else
-                            Masa aktif: <strong>{{ $product->duration_days }} hari</strong>. Konfigurasi siap pakai langsung unduh setelah sukses verifikasi pembayaran.
+                            Masa aktif: <strong>{{ $product->duration_days }} hari</strong>
                         @endif
                     </div>
 
-                    <div class="flex items-center space-x-2 text-xs text-slate-400 dark:text-slate-500 mb-6 mt-4">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        <span>Seller: {{ $product->seller ? $product->seller->name : 'Admin Utama' }}</span>
+                    <div class="flex items-center space-x-1 text-[10px] text-slate-400 dark:text-slate-500 mb-3">
+                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        <span class="truncate">Seller: {{ $product->seller ? $product->seller->name : 'Admin Utama' }}</span>
                     </div>
                 </div>
 
                 <!-- Footer Card Info & Action -->
-                <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <span class="text-lg font-extrabold text-blue-600 dark:text-blue-400">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
-                    <div class="flex space-x-2">
-                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $product->price }}', '{{ $product->duration_days }}', this.getAttribute('data-description'))" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
+                <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                    <span class="text-sm sm:text-base font-extrabold text-blue-600 dark:text-blue-400">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                    <div class="flex space-x-1.5">
+                        <button data-description="{{ $product->description }}" onclick="openDetailModal('{{ addslashes($product->name) }}', '{{ $product->price }}', '{{ $product->duration_days }}', this.getAttribute('data-description'))" class="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200">
                             Detail
                         </button>
                         
                         @if($product->stock > 0 && $qris_configured)
                             @auth
-                                <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                     <span>Beli</span>
                                 </button>
                             @else
-                                <a href="{{ route('login') }}" class="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-xl text-xs font-bold transition-all duration-200 shadow-md shadow-blue-500/10">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <a href="{{ route('login') }}" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                     <span>Beli</span>
                                 </a>
                             @endauth
                         @else
-                            <button disabled class="flex items-center space-x-1.5 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-xl text-xs font-bold cursor-not-allowed">
+                            <button disabled class="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[10px] font-bold cursor-not-allowed">
                                 <span>Beli</span>
                             </button>
                         @endif
