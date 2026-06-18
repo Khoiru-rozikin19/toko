@@ -107,7 +107,8 @@ class MyXlService
         $axFp = $this->getAxFingerprint();
 
         $now = now()->setTimezone('Asia/Jakarta');
-        $axRequestAt = $now->format('Y-m-d\TH:i:s.vP'); // e.g. "2023-10-20T12:34:56.780+07:00"
+        $ms2 = sprintf('%02d', intval(intval($now->format('u')) / 10000));
+        $axRequestAt = $now->format('Y-m-d\TH:i:s.') . $ms2 . $now->format('P');
         $axRequestId = (string) Str::uuid();
         $axDeviceId = md5($axFp);
 
@@ -123,6 +124,7 @@ class MyXlService
                     'Ax-Request-Id' => $axRequestId,
                     'Ax-Substype' => 'PREPAID',
                     'Content-Type' => 'application/json',
+                    'Host' => str_replace('https://', '', $baseCiam),
                     'User-Agent' => $ua,
                 ])
                 ->get($url, [
@@ -282,6 +284,7 @@ class MyXlService
             $response = Http::withoutVerifying()
                 ->asForm()
                 ->withHeaders([
+                    'host' => str_replace('https://', '', $baseCiam),
                     'ax-request-at' => $axRequestAt,
                     'ax-device-id' => $axDeviceId,
                     'ax-request-id' => (string) Str::uuid(),
