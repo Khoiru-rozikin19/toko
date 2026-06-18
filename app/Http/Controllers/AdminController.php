@@ -202,7 +202,7 @@ class AdminController extends Controller
     public function products()
     {
         $user = auth()->user();
-        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $vpsServers = \App\Models\VpsServer::orderBy('name', 'asc')->get();
         if ($user->role === 'admin') {
             $products = Product::with(['seller', 'category', 'vpsServer', 'stocks'])->orderBy('created_at', 'desc')->get();
@@ -697,7 +697,7 @@ class AdminController extends Controller
             'name' => $request->name,
         ]);
 
-        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
 
         return response()->json([
             'success' => true,
@@ -717,12 +717,33 @@ class AdminController extends Controller
         $category = \App\Models\Category::findOrFail($id);
         $category->delete();
 
-        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
 
         return response()->json([
             'success' => true,
             'categories' => $categories,
         ]);
+    }
+
+    /**
+     * Reorder categories via AJAX.
+     */
+    public function reorderCategories(Request $request)
+    {
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:categories,id',
+        ]);
+
+        foreach ($request->ids as $index => $id) {
+            \App\Models\Category::where('id', $id)->update(['sort_order' => $index]);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     /**

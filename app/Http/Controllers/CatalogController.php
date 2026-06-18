@@ -44,7 +44,7 @@ class CatalogController extends Controller
         // Admin: lihat semua produk (tanpa filter visibility)
 
         $products = $query->get();
-        $categories = \App\Models\Category::orderBy('name', 'asc')->get();
+        $categories = \App\Models\Category::orderBy('sort_order', 'asc')->orderBy('name', 'asc')->get();
         $qris_configured = !empty(Setting::get('qris_static_string'));
 
         return view('catalog', compact('products', 'categories', 'qris_configured'));

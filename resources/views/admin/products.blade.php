@@ -434,19 +434,38 @@
                 </div>
             </div>
 
-            <!-- Daftar Kategori dengan Hapus -->
+            <!-- Daftar Kategori dengan Hapus & Pengurutan -->
             <div class="space-y-3">
-                <label class="block text-xs font-bold text-slate-500 uppercase">Daftar Kategori</label>
+                <div class="flex justify-between items-center">
+                    <label class="block text-xs font-bold text-slate-500 uppercase">Daftar Kategori</label>
+                    <span class="text-[10px] text-slate-400 dark:text-slate-50 font-medium select-none hidden sm:inline">Geser item atau gunakan panah untuk mengurutkan</span>
+                </div>
                 @if($categories->count() > 0)
-                <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div id="categoriesSortableList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
                     @foreach($categories as $category)
-                        <div class="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80">
-                            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate pr-2">
-                                {{ $category->name }}
-                            </span>
-                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="p-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 dark:text-slate-500 rounded-xl transition-all duration-200" title="Hapus Kategori">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
+                        <div class="flex items-center justify-between px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 category-item transition-all duration-200 cursor-default" data-id="{{ $category->id }}">
+                            <div class="flex items-center min-w-0 flex-1">
+                                <!-- Drag Handle -->
+                                <svg class="w-4 h-4 text-slate-400 dark:text-slate-600 mr-2.5 flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-slate-600 dark:hover:text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9h.01M8 15h.01M12 9h.01M12 15h.01M16 9h.01M16 15h.01"></path></svg>
+                                <span class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate pr-2 select-none">
+                                    {{ $category->name }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-1 flex-shrink-0">
+                                <!-- Move Up -->
+                                <button type="button" onclick="moveCategoryUp({{ $category->id }}, this)" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 rounded-lg transition-all" title="Pindahkan ke atas">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path></svg>
+                                </button>
+                                <!-- Move Down -->
+                                <button type="button" onclick="moveCategoryDown({{ $category->id }}, this)" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 rounded-lg transition-all" title="Pindahkan ke bawah">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg>
+                                </button>
+                                <!-- Hapus -->
+                                <button type="button" onclick="deleteCategory({{ $category->id }})" class="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-slate-400 hover:text-rose-500 dark:text-slate-500 rounded-xl transition-all duration-200" title="Hapus Kategori">
+                                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -591,18 +610,123 @@
         }
     }
 
+    let hasReordered = false;
+
     function toggleManageCategoriesModal(show) {
         const modal = document.getElementById('manageCategoriesModal');
         if (modal) {
             if (show) {
                 modal.classList.remove('hidden');
+                initDragAndDrop();
                 setTimeout(() => {
                     document.getElementById('modalCategoryName')?.focus();
                 }, 50);
             } else {
                 modal.classList.add('hidden');
+                if (hasReordered) {
+                    window.location.reload();
+                }
             }
         }
+    }
+
+    function initDragAndDrop() {
+        const list = document.getElementById('categoriesSortableList');
+        if (!list) return;
+
+        let dragEl = null;
+
+        list.querySelectorAll('.category-item').forEach(item => {
+            item.setAttribute('draggable', 'true');
+
+            item.addEventListener('dragstart', function(e) {
+                dragEl = this;
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('opacity-40', 'border-blue-500');
+            });
+
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            item.addEventListener('dragenter', function(e) {
+                this.classList.add('bg-slate-100', 'dark:bg-slate-800');
+            });
+
+            item.addEventListener('dragleave', function(e) {
+                this.classList.remove('bg-slate-100', 'dark:bg-slate-800');
+            });
+
+            item.addEventListener('drop', function(e) {
+                e.stopPropagation();
+                if (dragEl && dragEl !== this) {
+                    const nodes = Array.from(list.children);
+                    const sourceIdx = nodes.indexOf(dragEl);
+                    const targetIdx = nodes.indexOf(this);
+
+                    if (sourceIdx < targetIdx) {
+                        list.insertBefore(dragEl, this.nextSibling);
+                    } else {
+                        list.insertBefore(dragEl, this);
+                    }
+                    saveCategoryOrder();
+                }
+            });
+
+            item.addEventListener('dragend', function() {
+                this.classList.remove('opacity-40', 'border-blue-500');
+                list.querySelectorAll('.category-item').forEach(el => {
+                    el.classList.remove('bg-slate-100', 'dark:bg-slate-800');
+                });
+            });
+        });
+    }
+
+    function moveCategoryUp(id, btn) {
+        const item = btn.closest('.category-item');
+        const prev = item.previousElementSibling;
+        if (prev && prev.classList.contains('category-item')) {
+            item.parentNode.insertBefore(item, prev);
+            saveCategoryOrder();
+        }
+    }
+
+    function moveCategoryDown(id, btn) {
+        const item = btn.closest('.category-item');
+        const next = item.nextElementSibling;
+        if (next && next.classList.contains('category-item')) {
+            item.parentNode.insertBefore(next, item);
+            saveCategoryOrder();
+        }
+    }
+
+    function saveCategoryOrder() {
+        const list = document.getElementById('categoriesSortableList');
+        if (!list) return;
+
+        const ids = Array.from(list.querySelectorAll('.category-item')).map(item => item.dataset.id);
+        
+        fetch("{{ route('admin.categories.reorder') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ ids: ids })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                hasReordered = true;
+            } else {
+                alert('Gagal memperbarui urutan kategori.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi saat mengurutkan.');
+        });
     }
 
     function escapeHtml(text) {

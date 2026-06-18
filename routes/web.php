@@ -89,6 +89,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         // Kelola Kategori Produk
         Route::post('/categories', [AdminController::class, 'storeCategory'])->name('categories.store');
         Route::delete('/categories/{id}', [AdminController::class, 'deleteCategory'])->name('categories.delete');
+        Route::post('/categories/reorder', [AdminController::class, 'reorderCategories'])->name('categories.reorder');
 
         // Kelola VPN Panel
         Route::get('/vpn-panel', [AdminController::class, 'vpnPanel'])->name('vpn_panel');
