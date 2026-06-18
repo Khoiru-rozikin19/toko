@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 class MyXlService
 {
     protected $crypto;
+    protected $lastError = null;
 
     public function __construct(MyXlCryptoService $crypto)
     {
@@ -239,7 +240,7 @@ class MyXlService
                     } else {
                         return [
                             'success' => false,
-                            'message' => 'Verifikasi OTP gagal (Gagal mengambil profil): ' . json_encode($profileRes)
+                            'message' => 'Verifikasi OTP gagal (Gagal mengambil profil): ' . ($this->lastError ?? 'Unknown API Error')
                         ];
                     }
                 }
@@ -375,13 +376,19 @@ class MyXlService
                 return $resBody;
             }
 
+            $errMsg = 'API error: ' . $response->status() . ' - ' . $response->body();
+            Log::error("MyXL sendApiRequest Failed to {$path}: " . $errMsg);
+            $this->lastError = $errMsg;
+
             return [
                 'status' => 'FAILED',
-                'message' => 'API error: ' . $response->status() . ' - ' . $response->body()
+                'message' => $errMsg
             ];
         } catch (\Exception $e) {
-            Log::error('MyXL API Call Exception: ' . $e->getMessage());
-            return ['status' => 'FAILED', 'message' => 'Exception: ' . $e->getMessage()];
+            $errMsg = 'Exception: ' . $e->getMessage();
+            Log::error("MyXL API Call Exception to {$path}: " . $errMsg);
+            $this->lastError = $errMsg;
+            return ['status' => 'FAILED', 'message' => $errMsg];
         }
     }
 
