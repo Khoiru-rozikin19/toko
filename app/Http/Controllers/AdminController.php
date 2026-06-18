@@ -39,12 +39,20 @@ class AdminController extends Controller
         
         // Saldo Dompet Saya (Profit/Wallet Balance)
         $walletBalance = 0;
+        
+        // Profit dari penjualan produk sendiri
         $successfulOrders = $orderQuery()->whereIn('status', ['success', 'paid'])->with('product')->get();
         foreach ($successfulOrders as $order) {
             $product = $order->product;
             $modal = $product ? ($product->harga_modal ?? 0) : 0;
             $walletBalance += ($order->total_amount - $modal);
         }
+
+        // Tambah komisi/cashback yang didapatkan dari pembelian produk
+        $totalCommissions = Order::where('user_id', $user->id)
+            ->whereIn('status', ['success', 'paid'])
+            ->sum('commission_earned');
+        $walletBalance += $totalCommissions;
 
         // Deduct seller transfers to their user balance
         $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
@@ -139,12 +147,20 @@ class AdminController extends Controller
         });
 
         $walletBalance = 0;
+        
+        // Profit dari penjualan produk sendiri
         $successfulOrders = $orderQuery->whereIn('status', ['success', 'paid'])->with('product')->get();
         foreach ($successfulOrders as $order) {
             $product = $order->product;
             $modal = $product ? ($product->harga_modal ?? 0) : 0;
             $walletBalance += ($order->total_amount - $modal);
         }
+
+        // Tambah komisi/cashback yang didapatkan dari pembelian produk
+        $totalCommissions = Order::where('user_id', $user->id)
+            ->whereIn('status', ['success', 'paid'])
+            ->sum('commission_earned');
+        $walletBalance += $totalCommissions;
 
         // Deduct already transferred amounts
         $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)

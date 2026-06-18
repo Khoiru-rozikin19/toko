@@ -26,11 +26,13 @@ class Order extends Model
         'qris_payload',
         'vpn_config',
         'sn',
+        'commission_earned',
         'expired_at',
     ];
 
     protected $casts = [
         'expired_at' => 'datetime',
+        'commission_earned' => 'decimal:2',
     ];
 
     public function product()

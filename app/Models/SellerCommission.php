@@ -67,22 +67,9 @@ class SellerCommission extends Model
                 continue;
             }
 
-            // Credit commission to seller's user_balances
-            $balanceRecord = $seller->getOrCreateBalance();
-            $balanceBefore = $balanceRecord->balance;
-            $balanceRecord->increment('balance', $commission->commission_amount);
-            $balanceRecord->refresh();
-
-            // Record the balance transaction
-            BalanceTransaction::create([
-                'user_id' => $seller->id,
-                'type' => 'commission',
-                'amount' => $commission->commission_amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceRecord->balance,
-                'description' => 'Komisi produk ' . ($order->product ? $order->product->name : 'Unknown') . ' (Order #' . $order->id . ')',
-                'reference_id' => $order->id,
-                'status' => 'success',
+            // Update commission earned in this order
+            $order->update([
+                'commission_earned' => $commission->commission_amount
             ]);
         }
     }
