@@ -15,16 +15,66 @@
         </button>
     </div>
 
-    <!-- Stats summary cards -->
+    <!-- Stats summary cards (dynamically updated by JS) -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
             <span class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase block">Total Produk</span>
-            <span class="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 block">{{ $products->count() }}</span>
+            <span id="statTotalProducts" class="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1 block">{{ $products->count() }}</span>
         </div>
         <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
             <span class="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase block">Total Stok</span>
-            <span class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">{{ $products->sum('stock') }}</span>
+            <span id="statTotalStock" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">{{ $products->sum('stock') }}</span>
         </div>
+    </div>
+
+    <!-- Category Tabs (horizontal, like catalog) -->
+    <div class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+        <button onclick="filterByCategory('all')" id="catTab_all" class="cat-tab px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap bg-blue-600 text-white shadow-md shadow-blue-500/10">
+            Semua
+        </button>
+        @foreach($categories as $category)
+            <button onclick="filterByCategory('{{ $category->id }}')" id="catTab_{{ $category->id }}" class="cat-tab px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700">
+                {{ $category->name }}
+            </button>
+        @endforeach
+        <button onclick="filterByCategory('uncategorized')" id="catTab_uncategorized" class="cat-tab px-4 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700">
+            Tanpa Kategori
+        </button>
+
+        @if(auth()->user()->role === 'admin')
+        <!-- Add Category Button -->
+        <div class="relative flex-shrink-0" id="addCategoryContainer">
+            <button onclick="toggleAddCategoryInline()" id="addCatBtn" class="flex items-center space-x-1 px-3 py-2 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 dark:hover:border-blue-600 dark:hover:text-blue-400">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
+                <span>Kategori</span>
+            </button>
+            <!-- Inline Add Category Form (hidden by default) -->
+            <div id="addCategoryInline" class="hidden absolute top-full left-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-4 z-30 w-64">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori Baru</label>
+                <div class="flex gap-2">
+                    <input type="text" id="inlineCategoryName" placeholder="Nama Kategori..." class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <button type="button" onclick="createCategoryInline()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
+                    </button>
+                </div>
+                @if($categories->count() > 0)
+                <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Hapus Kategori</label>
+                    <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        @foreach($categories as $category)
+                            <span class="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-700 cat-delete-badge" data-category-id="{{ $category->id }}">
+                                {{ $category->name }}
+                                <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1 text-slate-400 hover:text-rose-500 transition-colors">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </span>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Products Table Card -->
@@ -35,7 +85,6 @@
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <th class="py-4.5 px-6">ID</th>
                         <th class="py-4.5 px-6">Nama Produk</th>
-                        <th class="py-4.5 px-6">Kategori</th>
                         @if(auth()->user()->role === 'admin')
                             <th class="py-4.5 px-6">Seller</th>
                         @endif
@@ -47,9 +96,9 @@
                         <th class="py-4.5 px-6 text-center">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
+                <tbody id="productsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
                     @forelse($products as $product)
-                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150 product-row" data-category-id="{{ $product->category_id ?? 'uncategorized' }}" data-stock="{{ $product->stock }}">
                             <td class="py-4.5 px-6 font-mono text-xs text-slate-400">#{{ $product->id }}</td>
                             <td class="py-4.5 px-6">
                                 <span class="font-bold text-slate-800 dark:text-slate-200">{{ $product->name }}</span>
@@ -63,9 +112,6 @@
                                         Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
                                     </span>
                                 @endif
-                            </td>
-                            <td class="py-4.5 px-6 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                                {{ $product->category ? $product->category->name : '-' }}
                             </td>
                             @if(auth()->user()->role === 'admin')
                                 <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
@@ -128,8 +174,8 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="7" class="py-10 text-center text-slate-400">
+                        <tr id="emptyRow">
+                            <td colspan="9" class="py-10 text-center text-slate-400">
                                 Tidak ada produk terdaftar. Tekan tombol "Tambah Produk" di atas untuk mendaftarkan paket VPN baru.
                             </td>
                         </tr>
@@ -147,23 +193,22 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Tambah Produk VPN Baru</h3>
+        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Tambah Produk Baru</h3>
 
         <form action="{{ route('admin.products.store') }}" method="POST" class="space-y-4">
             @csrf
+            <!-- Hidden field: auto-set to active category -->
+            <input type="hidden" id="create_category_id" name="category_id" value="">
+
             <div>
-                <label for="create_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Paket VPN</label>
+                <label for="create_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Produk</label>
                 <input type="text" id="create_name" name="name" required placeholder="Contoh: Premium SG OpenVPN" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
-            <div>
-                <label for="create_category_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Kategori</label>
-                <select id="create_category_id" name="category_id" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <option value="">-- Tanpa Kategori --</option>
-                    @foreach($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                    @endforeach
-                </select>
+            <!-- Show active category info -->
+            <div id="createCategoryInfo" class="flex items-center space-x-2 px-4 py-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl">
+                <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                <span class="text-xs font-semibold text-blue-700 dark:text-blue-400">Kategori: <span id="createCategoryName">Semua</span></span>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -183,28 +228,6 @@
             </div>
 
             @if(auth()->user()->role === 'admin')
-            <div class="bg-slate-50 dark:bg-slate-900/60 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kelola Kategori (Admin Only)</label>
-                <div class="flex flex-wrap gap-2 mb-3 adminCategoryList" id="adminCategoryList_create">
-                    @foreach($categories as $category)
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800" data-category-id="{{ $category->id }}">
-                            <span>{{ $category->name }}</span>
-                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
-                        </span>
-                    @endforeach
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="newCategoryName_create" placeholder="Kategori Baru..." class="flex-1 px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <button type="button" onclick="createCategory('newCategoryName_create')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                        Tambah
-                    </button>
-                </div>
-            </div>
-            @endif
-
-            @if(auth()->user()->role === 'admin')
             <div>
                 <label for="create_user_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Pemilik Produk (Seller)</label>
                 <select id="create_user_id" name="user_id" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
@@ -221,35 +244,33 @@
             <div class="grid grid-cols-3 gap-4">
                 <div>
                     <label for="create_price" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga Jual (Rp)</label>
-                    <input type="number" id="create_price" name="price" required placeholder="Contoh: 15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="create_price" name="price" required placeholder="15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
                 <div>
                     <label for="create_harga_modal" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga Modal (Rp)</label>
-                    <input type="number" id="create_harga_modal" name="harga_modal" placeholder="Contoh: 10000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="create_harga_modal" name="harga_modal" placeholder="10000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
                 <div>
                     <label for="create_duration" class="block text-xs font-bold text-slate-500 uppercase mb-2">Masa Aktif (Hari)</label>
-                    <input type="number" id="create_duration" name="duration_days" required placeholder="Contoh: 30" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="create_duration" name="duration_days" required placeholder="30" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
             </div>
             @else
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label for="create_price" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga (Rp)</label>
-                    <input type="number" id="create_price" name="price" required placeholder="Contoh: 15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="create_price" name="price" required placeholder="15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
                 <div>
                     <label for="create_duration" class="block text-xs font-bold text-slate-500 uppercase mb-2">Masa Aktif (Hari)</label>
-                    <input type="number" id="create_duration" name="duration_days" required placeholder="Contoh: 30" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="create_duration" name="duration_days" required placeholder="30" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
             </div>
             @endif
 
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label for="create_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
-                    <input type="number" id="create_stock" name="stock" placeholder="Contoh: 10" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                </div>
+            <div>
+                <label for="create_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
+                <input type="number" id="create_stock" name="stock" placeholder="10" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
             @if(auth()->user()->role === 'admin')
@@ -279,7 +300,6 @@
                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Tentukan siapa saja yang bisa melihat produk ini di katalog.</p>
             </div>
 
-
             <div class="flex justify-end space-x-2 pt-4">
                 <button type="button" onclick="toggleCreateModal(false)" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
                     Batal
@@ -299,12 +319,12 @@
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
 
-        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Ubah Produk VPN</h3>
+        <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Ubah Produk</h3>
 
         <form id="editForm" action="" method="POST" class="space-y-4">
             @csrf
             <div>
-                <label for="edit_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Paket VPN</label>
+                <label for="edit_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Produk</label>
                 <input type="text" id="edit_name" name="name" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
@@ -335,28 +355,6 @@
             </div>
 
             @if(auth()->user()->role === 'admin')
-            <div class="bg-slate-50 dark:bg-slate-900/60 p-4 border border-slate-200 dark:border-slate-800 rounded-2xl">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kelola Kategori (Admin Only)</label>
-                <div class="flex flex-wrap gap-2 mb-3 adminCategoryList" id="adminCategoryList_edit">
-                    @foreach($categories as $category)
-                        <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800" data-category-id="{{ $category->id }}">
-                            <span>{{ $category->name }}</span>
-                            <button type="button" onclick="deleteCategory({{ $category->id }})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
-                        </span>
-                    @endforeach
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="newCategoryName_edit" placeholder="Kategori Baru..." class="flex-1 px-3 py-2 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:outline-none rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                    <button type="button" onclick="createCategory('newCategoryName_edit')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                        Tambah
-                    </button>
-                </div>
-            </div>
-            @endif
-
-            @if(auth()->user()->role === 'admin')
             <div>
                 <label for="edit_user_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Pemilik Produk (Seller)</label>
                 <select id="edit_user_id" name="user_id" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
@@ -377,7 +375,7 @@
                 </div>
                 <div>
                     <label for="edit_harga_modal" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga Modal (Rp)</label>
-                    <input type="number" id="edit_harga_modal" name="harga_modal" placeholder="Contoh: 10000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <input type="number" id="edit_harga_modal" name="harga_modal" placeholder="10000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
                 <div>
                     <label for="edit_duration" class="block text-xs font-bold text-slate-500 uppercase mb-2">Masa Aktif (Hari)</label>
@@ -397,11 +395,9 @@
             </div>
             @endif
 
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label for="edit_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
-                    <input type="number" id="edit_stock" name="stock" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                </div>
+            <div>
+                <label for="edit_stock" class="block text-xs font-bold text-slate-500 uppercase mb-2">Jumlah Stok (Numerik Statis)</label>
+                <input type="number" id="edit_stock" name="stock" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
             @if(auth()->user()->role === 'admin')
@@ -431,7 +427,6 @@
                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Tentukan siapa saja yang bisa melihat produk ini di katalog.</p>
             </div>
 
-
             <div class="flex justify-end space-x-2 pt-4">
                 <button type="button" onclick="toggleEditModal(false)" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
                     Batal
@@ -445,9 +440,78 @@
 </div>
 
 <script>
+    // Track active category for filtering and creating products
+    let activeCategory = 'all';
+
+    // Category name map (built from server data)
+    const categoryNames = {
+        'all': 'Semua',
+        'uncategorized': 'Tanpa Kategori',
+        @foreach($categories as $category)
+            '{{ $category->id }}': '{{ addslashes($category->name) }}',
+        @endforeach
+    };
+
+    function filterByCategory(categoryId) {
+        activeCategory = categoryId;
+
+        // Update tab styles
+        document.querySelectorAll('.cat-tab').forEach(tab => {
+            tab.classList.remove('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+            tab.classList.add('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-350', 'hover:bg-slate-200', 'dark:hover:bg-slate-700');
+        });
+        const activeTab = document.getElementById(`catTab_${categoryId}`);
+        if (activeTab) {
+            activeTab.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-350', 'hover:bg-slate-200', 'dark:hover:bg-slate-700');
+            activeTab.classList.add('bg-blue-600', 'text-white', 'shadow-md', 'shadow-blue-500/10');
+        }
+
+        // Filter table rows
+        const rows = document.querySelectorAll('.product-row');
+        let visibleCount = 0;
+        let visibleStock = 0;
+
+        rows.forEach(row => {
+            const rowCatId = row.dataset.categoryId;
+            const rowStock = parseInt(row.dataset.stock) || 0;
+            let show = false;
+
+            if (categoryId === 'all') {
+                show = true;
+            } else if (categoryId === 'uncategorized') {
+                show = (rowCatId === 'uncategorized' || rowCatId === '' || rowCatId === 'null');
+            } else {
+                show = (rowCatId === categoryId);
+            }
+
+            row.style.display = show ? '' : 'none';
+            if (show) {
+                visibleCount++;
+                visibleStock += rowStock;
+            }
+        });
+
+        // Update stats
+        document.getElementById('statTotalProducts').textContent = visibleCount;
+        document.getElementById('statTotalStock').textContent = visibleStock;
+
+        // Handle empty state
+        const emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) {
+            emptyRow.style.display = visibleCount === 0 ? '' : 'none';
+        }
+    }
+
+    // Modals
     function toggleCreateModal(show) {
         const modal = document.getElementById('createProductModal');
         if (show) {
+            // Set category from active tab
+            const catId = (activeCategory === 'all' || activeCategory === 'uncategorized') ? '' : activeCategory;
+            document.getElementById('create_category_id').value = catId;
+            const catName = categoryNames[activeCategory] || 'Semua';
+            document.getElementById('createCategoryName').textContent = catName;
+
             modal.classList.remove('hidden');
         } else {
             modal.classList.add('hidden');
@@ -459,10 +523,6 @@
         document.getElementById('edit_price').value = product.price;
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
-        
-        // const readyStocks = product.stocks ? product.stocks.filter(s => s.status === 'ready').map(s => s.account_data).join('\n\n') : '';
-        // document.getElementById('edit_accounts_input').value = readyStocks;
-
         document.getElementById('edit_category_id').value = product.category_id || '';
         document.getElementById('edit_vps_server_id').value = product.vps_server_id || '';
         document.getElementById('edit_vps_command_template').value = product.vps_command_template || '';
@@ -476,16 +536,11 @@
         document.getElementById('edit_description').value = product.description || '';
         document.getElementById('edit_success_instruction').value = product.success_instruction || '';
         document.getElementById('edit_visibility').value = product.visibility || 'all';
-        if (document.getElementById('edit_template')) {
-            document.getElementById('edit_template').value = product.config_template || '';
-        }
         if (document.getElementById('edit_user_id')) {
             document.getElementById('edit_user_id').value = product.user_id;
         }
         
-        // Dynamic action routing URL
         document.getElementById('editForm').action = `/admin/products/${product.id}/update`;
-        
         toggleEditModal(true);
     }
 
@@ -516,55 +571,27 @@
         }
     }
 
-    // AJAX Category management functions
-    function updateCategoryDropdowns(categories) {
-        const dropdowns = [
-            document.getElementById('create_category_id'),
-            document.getElementById('edit_category_id')
-        ];
-        
-        dropdowns.forEach(dropdown => {
-            if (!dropdown) return;
-            const selectedVal = dropdown.value;
-            dropdown.innerHTML = '<option value="">-- Tanpa Kategori --</option>';
-            categories.forEach(cat => {
-                const option = document.createElement('option');
-                option.value = cat.id;
-                option.innerText = cat.name;
-                if (cat.id == selectedVal) {
-                    option.selected = true;
-                }
-                dropdown.appendChild(option);
-            });
-        });
-
-        // Update list views
-        const listIds = ['adminCategoryList_create', 'adminCategoryList_edit'];
-        listIds.forEach(id => {
-            const list = document.getElementById(id);
-            if (!list) return;
-            list.innerHTML = '';
-            categories.forEach(cat => {
-                const span = document.createElement('span');
-                span.className = 'inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-white dark:bg-slate-850 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-800';
-                span.dataset.categoryId = cat.id;
-                span.innerHTML = `
-                    <span>${escapeHtml(cat.name)}</span>
-                    <button type="button" onclick="deleteCategory(${cat.id})" class="ml-1.5 text-slate-400 hover:text-rose-500 transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                `;
-                list.appendChild(span);
-            });
-        });
+    // Inline Add Category Popup
+    function toggleAddCategoryInline() {
+        const popup = document.getElementById('addCategoryInline');
+        popup.classList.toggle('hidden');
     }
+
+    // Close popup when clicking outside
+    document.addEventListener('click', function(e) {
+        const container = document.getElementById('addCategoryContainer');
+        const popup = document.getElementById('addCategoryInline');
+        if (container && popup && !container.contains(e.target)) {
+            popup.classList.add('hidden');
+        }
+    });
 
     function escapeHtml(text) {
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    function createCategory(inputElementId) {
-        const input = document.getElementById(inputElementId);
+    function createCategoryInline() {
+        const input = document.getElementById('inlineCategoryName');
         const name = input.value.trim();
         if (!name) return;
         
@@ -579,8 +606,9 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                updateCategoryDropdowns(data.categories);
                 input.value = '';
+                // Reload to reflect new category tab
+                window.location.reload();
             } else {
                 alert(data.message || 'Gagal menambahkan kategori.');
             }
@@ -592,7 +620,7 @@
     }
 
     function deleteCategory(id) {
-        if (!confirm('Apakah Anda yakin ingin menghapus kategori ini? Kategori produk yang terpilih akan berubah menjadi Tanpa Kategori.')) {
+        if (!confirm('Apakah Anda yakin ingin menghapus kategori ini? Produk di kategori ini akan menjadi Tanpa Kategori.')) {
             return;
         }
         
@@ -605,7 +633,7 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                updateCategoryDropdowns(data.categories);
+                window.location.reload();
             } else {
                 alert(data.message || 'Gagal menghapus kategori.');
             }
@@ -615,5 +643,13 @@
             alert('Terjadi kesalahan koneksi.');
         });
     }
+
+    // Submit inline category with Enter key
+    document.getElementById('inlineCategoryName')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            createCategoryInline();
+        }
+    });
 </script>
 @endsection
