@@ -225,12 +225,20 @@ class MyXlService
                 $body = $response->json();
                 Log::info("MyXL verifyOtp response body: " . json_encode($body));
                 if (isset($body['id_token'])) {
-                    // Fetch profile to get subscriber ID
-                    $tokens = [
-                        'access_token' => $body['access_token'],
-                        'id_token' => $body['id_token'],
-                        'refresh_token' => $body['refresh_token'],
-                    ];
+                    // Match the Python CLI client's behavior: immediately refresh token to get fully provisioned session tokens
+                    Log::info("MyXL verifyOtp refreshing token immediately before getProfile...");
+                    $refreshed = $this->refreshToken($body['refresh_token']);
+                    if ($refreshed) {
+                        $tokens = $refreshed;
+                        Log::info("MyXL verifyOtp token refreshed successfully: " . json_encode($tokens));
+                    } else {
+                        Log::warning("MyXL verifyOtp token refresh failed, falling back to original tokens.");
+                        $tokens = [
+                            'access_token' => $body['access_token'],
+                            'id_token' => $body['id_token'],
+                            'refresh_token' => $body['refresh_token'],
+                        ];
+                    }
                     $profileRes = $this->getProfile($tokens);
                     Log::info("MyXL getProfile result: " . json_encode($profileRes));
                     if ($profileRes && isset($profileRes['profile'])) {
