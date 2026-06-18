@@ -165,6 +165,16 @@
                             </div>
                         </div>
 
+                        <div class="mt-6">
+                            <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider font-bold">Tools</span>
+                            <div class="mt-2 space-y-1">
+                                <a href="{{ route('admin.tools.xl.index') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('admin.tools.xl.*') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
+                                    <!-- Tool/Wrench/Hammer Icon -->
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3"></path></svg>
+                                    <span>Cek & Reset Kuota XL</span>
+                                </a>
+                            </div>
+                        </div>
                     @endif
 
                     @if(Auth::user()->role === 'buyer')
