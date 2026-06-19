@@ -170,11 +170,10 @@ test('admin can configure VPS automation on products but seller cannot', functio
     expect($adminProduct->vps_server_id)->toBe($server->id);
     expect($adminProduct->vps_command_template)->toBe('user-add {username} {duration}');
 
-    // 2. Seller adds product with VPS automation -> VPS fields are ignored (nullified)
+    // 2. Seller adds product with VPS automation (without duration_days) -> VPS fields are ignored (nullified), duration_days defaults to 30
     $this->actingAs($seller)->post(route('admin.products.store'), [
         'name' => 'Seller Product with VPS attempt',
         'price' => 12000,
-        'duration_days' => 30,
         'vps_server_id' => $server->id,
         'vps_command_template' => 'hack {username} {duration}',
     ])->assertRedirect(route('admin.products'));
@@ -183,6 +182,7 @@ test('admin can configure VPS automation on products but seller cannot', functio
     expect($sellerProduct)->not->toBeNull();
     expect($sellerProduct->vps_server_id)->toBeNull();
     expect($sellerProduct->vps_command_template)->toBeNull();
+    expect($sellerProduct->duration_days)->toBe(30); // Defaulted to 30
 
     // 3. Admin updates seller product with VPS automation -> Success
     $this->actingAs($admin)->post(route('admin.products.update', $sellerProduct->id), [

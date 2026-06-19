@@ -236,7 +236,7 @@ class AdminController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|integer|min:0',
             'harga_modal' => 'nullable|integer|min:0',
-            'duration_days' => 'required|integer|min:1',
+            'duration_days' => auth()->user()->role === 'admin' ? 'required|integer|min:1' : 'nullable|integer|min:1',
             'config_template' => 'nullable|string',
             'stock' => 'nullable|integer|min:0',
             'accounts_input' => 'nullable|string',
@@ -256,6 +256,7 @@ class AdminController extends Controller
             if (auth()->user()->role !== 'admin') {
                 $data['vps_server_id'] = null;
                 $data['vps_command_template'] = null;
+                $data['duration_days'] = $data['duration_days'] ?? 30; // Default for seller if hidden
             }
 
             // Parse accounts input if present

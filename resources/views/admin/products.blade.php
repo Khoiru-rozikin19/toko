@@ -231,15 +231,9 @@
                 </div>
             </div>
             @else
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label for="create_price" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga (Rp)</label>
-                    <input type="number" id="create_price" name="price" required placeholder="15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                </div>
-                <div>
-                    <label for="create_duration" class="block text-xs font-bold text-slate-500 uppercase mb-2">Masa Aktif (Hari)</label>
-                    <input type="number" id="create_duration" name="duration_days" required placeholder="30" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
-                </div>
+            <div>
+                <label for="create_price" class="block text-xs font-bold text-slate-500 uppercase mb-2">Harga (Rp)</label>
+                <input type="number" id="create_price" name="price" required placeholder="15000" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
             @endif
 
@@ -775,9 +769,10 @@
             return;
         }
         
-        fetch(`/admin/categories/${id}`, {
+        fetch("{{ route('admin.categories.delete', ':id') }}".replace(':id', id), {
             method: 'DELETE',
             headers: {
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         })
