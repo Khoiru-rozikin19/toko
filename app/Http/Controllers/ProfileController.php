@@ -32,7 +32,7 @@ class ProfileController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'required|string|max:20',
-            'telegram_chat_id' => 'nullable|string|max:100',
+            'telegram_chat_id' => 'nullable|regex:/^-?[0-9]+$/|max:100',
             'current_password' => 'required_with:new_password',
             'new_password' => 'nullable|string|min:6|confirmed',
         ]);

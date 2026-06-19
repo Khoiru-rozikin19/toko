@@ -117,6 +117,19 @@ class TelegramService
      */
     public function sendMessage($chatId, $text, $keyboard = null)
     {
+        if (empty($chatId)) {
+            Log::warning("TelegramService: Chat ID is empty.");
+            return false;
+        }
+
+        if (!is_numeric($chatId)) {
+            if (str_starts_with($chatId, '@')) {
+                Log::warning("TelegramService: Chat ID '{$chatId}' is a Telegram username. Note that sending direct messages to user/seller usernames is NOT supported by the Telegram Bot API; it requires a numeric Chat ID.");
+            } else {
+                Log::warning("TelegramService: Chat ID '{$chatId}' is not numeric. Telegram requires numeric Chat IDs for private chats.");
+            }
+        }
+
         $payload = [
             'chat_id' => $chatId,
             'text' => $text,
