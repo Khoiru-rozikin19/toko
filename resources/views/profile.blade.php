@@ -30,8 +30,8 @@
                 <input type="text" id="name" name="name" value="{{ old('name', $user->name) }}" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm text-slate-800 dark:text-slate-100 transition-all duration-200">
             </div>
 
-            <!-- Email & Phone in responsive grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Email & Phone & Telegram in responsive grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Email -->
                 <div class="space-y-2">
                     <label for="email" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alamat Email</label>
@@ -42,6 +42,12 @@
                 <div class="space-y-2">
                     <label for="phone" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nomor Telepon</label>
                     <input type="text" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
+
+                <!-- Telegram Chat ID -->
+                <div class="space-y-2">
+                    <label for="telegram_chat_id" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Telegram Chat ID (Untuk Seller)</label>
+                    <input type="text" id="telegram_chat_id" name="telegram_chat_id" value="{{ old('telegram_chat_id', $user->telegram_chat_id) }}" placeholder="Contoh: 123456789 (Opsional)" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
             </div>
 

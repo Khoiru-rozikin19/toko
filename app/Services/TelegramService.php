@@ -63,6 +63,51 @@ class TelegramService
     }
 
     /**
+     * Send order verification notification to Telegram Seller.
+     *
+     * @param string $orderId
+     * @param int $amount
+     * @param string $customerName
+     * @param string $sellerChatId
+     * @return bool
+     */
+    public function sendSellerOrderNotification($orderId, $amount, $customerName, $sellerChatId)
+    {
+        if (empty($this->token) || empty($sellerChatId)) {
+            Log::warning('TelegramService: Token atau Seller Chat ID belum diset');
+            return false;
+        }
+
+        $formattedAmount = number_format($amount, 0, ',', '.');
+        $text = "🔔 *Pesanan Baru untuk Seller*\n\n"
+              . "📦 *ID Order:* `{$orderId}`\n"
+              . "💰 *Nominal:* Rp {$formattedAmount}\n"
+              . "👤 *Pelanggan:* {$customerName}\n\n"
+              . "Silakan terima atau tolak pesanan ini:";
+
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '✅ Terima', 'callback_data' => "seller_accept:{$orderId}"],
+                    ['text' => '❌ Tolak', 'callback_data' => "seller_reject:{$orderId}"]
+                ]
+            ]
+        ];
+
+        $response = $this->sendMessage($sellerChatId, $text, $keyboard);
+        if ($response && isset($response['ok']) && $response['ok']) {
+            $messageId = $response['result']['message_id'] ?? null;
+            if ($messageId) {
+                \App\Models\Order::where('id', $orderId)->update([
+                    'telegram_message_id' => $messageId
+                ]);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Send raw markdown message to Telegram.
      *
      * @param string $chatId

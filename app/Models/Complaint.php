@@ -5,19 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UserBalance extends Model
+class Complaint extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'order_id',
         'user_id',
-        'balance',
-        'held_balance',
+        'reason',
+        'status',
     ];
 
-    protected $casts = [
-        'balance' => 'decimal:2',
-    ];
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 
     public function user()
     {

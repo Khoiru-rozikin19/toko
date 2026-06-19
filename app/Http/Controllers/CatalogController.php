@@ -153,6 +153,8 @@ class CatalogController extends Controller
                         'expired_at' => null,
                     ]);
 
+                    $order->processEscrowAndNotification();
+
                     // Assign local account stock if product uses dynamic stock
                     if ($product->stocks()->where('status', 'ready')->exists()) {
                         $stock = \App\Models\AccountStock::where('product_id', $product->id)
@@ -371,11 +373,55 @@ class CatalogController extends Controller
         // Clean unique variations
         $variations = array_unique(array_filter($variations));
 
-        $orders = Order::with('product')
+        $orders = Order::with(['product', 'complaints'])
             ->whereIn('email_or_whatsapp', $variations)
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
         return view('orders.history', compact('orders'));
+    }
+
+    /**
+     * Store a buyer's complaint for an order.
+     */
+    public function storeComplaint(Request $request, $id)
+    {
+        $request->validate([
+            'reason' => 'required|string|min:5|max:1000',
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== auth()->id() && $order->email_or_whatsapp !== auth()->user()->email && $order->email_or_whatsapp !== auth()->user()->phone) {
+            return redirect()->back()->with('error', 'Akses ditolak. Anda tidak berhak mengajukan komplain untuk order ini.');
+        }
+
+        if (!in_array($order->status, ['success', 'paid', 'proses'])) {
+            return redirect()->back()->with('error', 'Hanya pesanan sukses atau sedang diproses yang dapat dikomplain.');
+        }
+
+        $existing = \App\Models\Complaint::where('order_id', $order->id)
+            ->whereIn('status', ['pending', 'resolved'])
+            ->exists();
+
+        if ($existing) {
+            return redirect()->back()->with('error', 'Komplain untuk pesanan ini sudah diajukan sebelumnya.');
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $request) {
+            \App\Models\Complaint::create([
+                'order_id' => $order->id,
+                'user_id' => auth()->id(),
+                'reason' => $request->reason,
+                'status' => 'pending',
+            ]);
+
+            if ($order->escrow_status === 'held') {
+                $order->escrow_status = 'disputed';
+                $order->save();
+            }
+        });
+
+        return redirect()->back()->with('success', 'Komplain Anda berhasil diajukan dan sedang ditinjau.');
     }
 }

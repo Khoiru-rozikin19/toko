@@ -42,22 +42,6 @@ class TelegramWebhookController extends Controller
         $messageId = $message['message_id'] ?? null;
         $chatId = $message['chat']['id'] ?? null;
 
-        $adminId = env('TELEGRAM_ADMIN_ID');
-
-        // Security check: must originate from the admin
-        if ((string)$senderId !== (string)$adminId) {
-            Log::warning("Telegram Webhook Unauthorized: Sender ID {$senderId} does not match Admin ID {$adminId}");
-            
-            if ($callbackQueryId) {
-                $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Admin.");
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized sender.',
-            ], 403);
-        }
-
         // Parse callback data format (action:order_id)
         if (strpos($data, ':') === false) {
             return response()->json([
@@ -68,16 +52,61 @@ class TelegramWebhookController extends Controller
 
         list($action, $orderId) = explode(':', $data, 2);
 
+        $order = Order::with('product.seller')->find($orderId);
+        if (!$order) {
+            Log::warning("Telegram Webhook Warning: Order ID {$orderId} not found.");
+            if ($callbackQueryId) {
+                $this->telegramService->answerCallbackQuery($callbackQueryId, "Order tidak ditemukan.");
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.',
+            ], 404);
+        }
+
+        $adminId = env('TELEGRAM_ADMIN_ID');
+
+        // Security check
+        if (in_array($action, ['approve', 'reject'])) {
+            // Admin action
+            if ((string)$senderId !== (string)$adminId) {
+                Log::warning("Telegram Webhook Unauthorized Admin Action: Sender ID {$senderId} does not match Admin ID {$adminId}");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Admin.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized admin action.',
+                ], 403);
+            }
+        } elseif (in_array($action, ['seller_accept', 'seller_reject'])) {
+            // Seller action
+            $sellerChatId = $order->product ? ($order->product->seller->telegram_chat_id ?? null) : null;
+            if (empty($sellerChatId) || (string)$senderId !== (string)$sellerChatId) {
+                Log::warning("Telegram Webhook Unauthorized Seller Action: Sender ID {$senderId} does not match Seller Chat ID {$sellerChatId}");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Seller untuk order ini.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized seller action.',
+                ], 403);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid action.',
+            ], 400);
+        }
+
         $result = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $action, $callbackQueryId, $chatId, $messageId) {
             // Find order with write lock
-            $order = Order::with('product')->where('id', $orderId)->lockForUpdate()->first();
+            $order = Order::with('product.seller')->where('id', $orderId)->lockForUpdate()->first();
             if (!$order) {
-                Log::warning("Telegram Webhook Warning: Order ID {$orderId} not found.");
-                
+                Log::warning("Telegram Webhook Warning: Order ID {$orderId} not found inside transaction.");
                 if ($callbackQueryId) {
                     $this->telegramService->answerCallbackQuery($callbackQueryId, "Order tidak ditemukan.");
                 }
-
                 return [
                     'success' => false,
                     'message' => 'Order not found.',
@@ -85,16 +114,29 @@ class TelegramWebhookController extends Controller
                 ];
             }
 
-            // Verify order is still pending to prevent duplicate processing
-            if ($order->status !== 'pending' && $order->status !== 'pending_manual') {
-                if ($callbackQueryId) {
-                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Order sudah diproses sebelumnya (Status: {$order->status}).");
+            // Verify order status depending on the action to prevent duplicate processing
+            if (in_array($action, ['approve', 'reject'])) {
+                if ($order->status !== 'pending' && $order->status !== 'pending_manual') {
+                    if ($callbackQueryId) {
+                        $this->telegramService->answerCallbackQuery($callbackQueryId, "Order sudah diproses sebelumnya (Status: {$order->status}).");
+                    }
+                    return [
+                        'success' => false,
+                        'message' => 'Order already processed.',
+                        'status_code' => 200
+                    ];
                 }
-                return [
-                    'success' => false,
-                    'message' => 'Order already processed.',
-                    'status_code' => 200
-                ];
+            } elseif (in_array($action, ['seller_accept', 'seller_reject'])) {
+                if ($order->status !== 'success' && $order->status !== 'paid') {
+                    if ($callbackQueryId) {
+                        $this->telegramService->answerCallbackQuery($callbackQueryId, "Order tidak dalam status untuk diproses seller (Status: {$order->status}).");
+                    }
+                    return [
+                        'success' => false,
+                        'message' => 'Order already processed by seller.',
+                        'status_code' => 200
+                    ];
+                }
             }
 
             $formattedAmount = number_format($order->total_amount, 0, ',', '.');
@@ -257,6 +299,94 @@ class TelegramWebhookController extends Controller
                 return [
                     'success' => true,
                     'message' => "Order {$orderId} rejected.",
+                    'status_code' => 200
+                ];
+            }
+
+            if ($action === 'seller_accept') {
+                $order->status = 'proses';
+                $order->save();
+
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pesanan diterima dan sedang diproses!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "✅ *Pesanan Diterima Seller*\n\n"
+                                 . "📦 *ID Order:* `{$orderId}`\n"
+                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                 . "Status pesanan telah diubah menjadi *PROSES* oleh Seller.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                return [
+                    'success' => true,
+                    'message' => "Order {$orderId} accepted by seller.",
+                    'status_code' => 200
+                ];
+            }
+
+            if ($action === 'seller_reject') {
+                // Update order status to gagal
+                $order->status = 'gagal';
+                $order->save();
+
+                // Deduct from seller's held_balance
+                $sellerId = $order->product ? $order->product->user_id : null;
+                if ($sellerId) {
+                    $sellerBalance = \App\Models\UserBalance::where('user_id', $sellerId)->lockForUpdate()->first();
+                    if ($sellerBalance) {
+                        $newHeld = max(0, $sellerBalance->held_balance - $order->escrow_amount);
+                        $sellerBalance->update(['held_balance' => $newHeld]);
+                    }
+                }
+                $order->escrow_status = 'none';
+                $order->save();
+
+                // Refund buyer if payment method was balance
+                if ($order->payment_method === 'balance' && $order->user_id) {
+                    $buyer = \App\Models\User::find($order->user_id);
+                    if ($buyer) {
+                        $buyerBalance = \App\Models\UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                        if (!$buyerBalance) {
+                            $buyerBalance = $buyer->getOrCreateBalance();
+                            $buyerBalance = \App\Models\UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                        }
+                        $balanceBefore = $buyerBalance->balance;
+                        $buyerBalance->increment('balance', $order->total_amount);
+                        $buyerBalance->refresh();
+
+                        // Record balance transaction
+                        \App\Models\BalanceTransaction::create([
+                            'user_id' => $buyer->id,
+                            'type' => 'topup',
+                            'amount' => $order->total_amount,
+                            'balance_before' => $balanceBefore,
+                            'balance_after' => $buyerBalance->balance,
+                            'description' => 'Refund penolakan seller: ' . ($order->product->name ?? 'Produk'),
+                            'reference_id' => $order->id,
+                            'status' => 'success',
+                        ]);
+                    }
+                }
+
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pesanan ditolak oleh seller!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "❌ *Pesanan Ditolak Seller*\n\n"
+                                 . "📦 *ID Order:* `{$orderId}`\n"
+                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                 . "Status pesanan telah diubah menjadi *GAGAL* oleh Seller.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                return [
+                    'success' => true,
+                    'message' => "Order {$orderId} rejected by seller.",
                     'status_code' => 200
                 ];
             }

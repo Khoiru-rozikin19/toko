@@ -67,6 +67,14 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
                                         Sukses
                                     </span>
+                                @elseif($order->status === 'proses')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400">
+                                        Proses
+                                    </span>
+                                @elseif($order->status === 'gagal')
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
+                                        Gagal
+                                    </span>
                                 @elseif(in_array($order->status, ['pending', 'pending_manual']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
                                         Pending
@@ -85,38 +93,58 @@
                                 {{ $order->created_at->format('d/m/Y H:i') }}
                             </td>
                             <td class="py-4.5 px-6 text-center">
-                                @if(in_array($order->status, ['success', 'paid']))
-                                    @if(!empty($order->vpn_config))
-                                        @php
-                                            $vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
-                                            $isNodeLink = false;
-                                            foreach ($vpnProtocols as $proto) {
-                                                if (stripos($order->vpn_config, $proto) !== false) {
-                                                    $isNodeLink = true;
-                                                    break;
+                                @if(in_array($order->status, ['success', 'paid', 'proses']))
+                                    @php
+                                        $complaint = $order->complaints->first();
+                                    @endphp
+                                    <div class="flex items-center justify-center space-x-2">
+                                        @if(!empty($order->vpn_config))
+                                            @php
+                                                $vpnProtocols = ['vmess://', 'vless://', 'trojan://', 'ss://', 'shadowsocks://'];
+                                                $isNodeLink = false;
+                                                foreach ($vpnProtocols as $proto) {
+                                                    if (stripos($order->vpn_config, $proto) !== false) {
+                                                        $isNodeLink = true;
+                                                        break;
+                                                    }
                                                 }
-                                            }
-                                            $isSingleLine = !str_contains($order->vpn_config, "\n") && !str_contains($order->vpn_config, "\r");
-                                        @endphp
-                                        
-                                        @if($isNodeLink || $isSingleLine)
-                                            <button data-config="{{ $order->vpn_config }}" data-instruction="{{ $order->product->success_instruction ?? '' }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'), this.getAttribute('data-instruction'))" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                                <span>Lihat Akun</span>
+                                                $isSingleLine = !str_contains($order->vpn_config, "\n") && !str_contains($order->vpn_config, "\r");
+                                            @endphp
+                                            
+                                            @if($isNodeLink || $isSingleLine)
+                                                <button data-config="{{ $order->vpn_config }}" data-instruction="{{ $order->product->success_instruction ?? '' }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'), this.getAttribute('data-instruction'))" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                    <span>Lihat Akun</span>
+                                                </button>
+                                            @else
+                                                <a href="{{ route('order.download', $order->id) }}" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+                                                    <span>Unduh Config</span>
+                                                </a>
+                                            @endif
+                                        @else
+                                            @if($order->sn)
+                                                <span class="text-xs text-slate-500 font-mono select-all bg-slate-50 dark:bg-slate-850 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800" title="Serial Number / Keterangan pengisian">SN: {{ $order->sn }}</span>
+                                            @else
+                                                <span class="text-xs text-slate-400">Selesai</span>
+                                            @endif
+                                        @endif
+
+                                        @if($complaint)
+                                            @if($complaint->status === 'pending')
+                                                <span class="inline-flex items-center px-2.5 py-1 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-bold border border-amber-200/20" title="Komplain sedang ditinjau">Komplain Pending</span>
+                                            @elseif($complaint->status === 'resolved')
+                                                <span class="inline-flex items-center px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold border border-emerald-200/20" title="Komplain selesai (Refund)">Refunded</span>
+                                            @elseif($complaint->status === 'rejected')
+                                                <span class="inline-flex items-center px-2.5 py-1 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-200/20" title="Komplain ditolak oleh seller">Komplain Ditolak</span>
+                                            @endif
+                                        @else
+                                            <button onclick="openComplaintModal('{{ $order->id }}')" class="inline-flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                                <span>Komplain</span>
                                             </button>
-                                        @else
-                                            <a href="{{ route('order.download', $order->id) }}" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-xl text-xs font-bold transition-all duration-200">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
-                                                <span>Unduh Config</span>
-                                            </a>
                                         @endif
-                                    @else
-                                        @if($order->sn)
-                                            <span class="text-xs text-slate-500 font-mono select-all bg-slate-50 dark:bg-slate-850 px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-slate-800" title="Serial Number / Keterangan pengisian">SN: {{ $order->sn }}</span>
-                                        @else
-                                            <span class="text-xs text-slate-400">Selesai (H2H)</span>
-                                        @endif
-                                    @endif
+                                    </div>
                                 @elseif(in_array($order->status, ['pending', 'pending_manual']))
                                     <button onclick="openPaymentModal('{{ $order->id }}', '{{ $order->total_amount }}', '{{ $order->qris_payload }}', '{{ $order->expired_at ? $order->expired_at->toIso8601String() : '' }}')" class="inline-flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all duration-200">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"></path></svg>
@@ -389,6 +417,55 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+</script>
+
+<!-- COMPLAINT MODAL -->
+<div id="complaintModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden transition-all duration-300">
+    <div class="bg-white dark:bg-slate-950 rounded-3xl w-full max-w-md border border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-2xl relative">
+        <!-- Close Button -->
+        <button onclick="closeComplaintModal()" class="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-250 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 transition-all duration-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <form id="complaintForm" action="" method="POST" class="space-y-6">
+            @csrf
+            <div>
+                <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Ajukan Komplain</h3>
+                <p id="complaintModalOrderId" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Order ID: ORD-XXXXXX</p>
+            </div>
+
+            <div class="space-y-2">
+                <label for="complaintReason" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alasan Komplain</label>
+                <textarea id="complaintReason" name="reason" rows="4" required placeholder="Jelaskan alasan komplain Anda secara detail (misal: akun tidak bisa digunakan, config error, dll)..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm text-slate-800 dark:text-slate-100 transition-all duration-200 custom-scrollbar resize-none"></textarea>
+            </div>
+
+            <div class="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3.5 rounded-xl border border-amber-200/30">
+                Pemberitahuan: Komplain Anda akan langsung diteruskan ke Seller untuk ditindaklanjuti.
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end space-x-3">
+                <button type="button" onclick="closeComplaintModal()" class="px-5 py-3 text-slate-500 hover:text-slate-650 dark:text-slate-450 dark:hover:text-slate-350 text-xs font-bold rounded-2xl transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-2xl transition shadow-lg shadow-rose-500/10 flex items-center space-x-2">
+                    <span>Kirim Komplain</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openComplaintModal(orderId) {
+        document.getElementById('complaintModalOrderId').innerText = 'Order ID: ' + orderId;
+        document.getElementById('complaintForm').action = `/orders/${orderId}/complain`;
+        document.getElementById('complaintModal').classList.remove('hidden');
+    }
+
+    function closeComplaintModal() {
+        document.getElementById('complaintModal').classList.add('hidden');
+        document.getElementById('complaintReason').value = '';
     }
 </script>
 @endsection

@@ -168,6 +168,7 @@ class PaymentCallbackController extends Controller
                 // Complete the order
                 $order->status = 'success';
                 $order->save();
+                $order->processEscrowAndNotification();
 
                 // Process seller commissions
                 \App\Models\SellerCommission::processForOrder($order);

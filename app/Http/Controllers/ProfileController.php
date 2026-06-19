@@ -32,6 +32,7 @@ class ProfileController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'phone' => 'required|string|max:20',
+            'telegram_chat_id' => 'nullable|string|max:100',
             'current_password' => 'required_with:new_password',
             'new_password' => 'nullable|string|min:6|confirmed',
         ]);
@@ -46,6 +47,7 @@ class ProfileController extends Controller
             $user->name = $request->name;
             $user->email = $request->email;
             $user->phone = $request->phone;
+            $user->telegram_chat_id = $request->telegram_chat_id;
             
             if ($request->filled('new_password')) {
                 $user->password = Hash::make($request->new_password);

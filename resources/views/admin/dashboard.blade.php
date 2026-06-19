@@ -28,7 +28,7 @@
     </div>
 
     <!-- Top Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ auth()->user()->role === 'admin' ? '4' : '3' }} gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ auth()->user()->role === 'admin' ? '5' : '4' }} gap-6">
         
         @if(auth()->user()->role === 'admin')
             <!-- Card 1: Saldo orderkuota (Deep Blue) -->
@@ -69,6 +69,17 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Card 3: Saldo tertahan Admin (Slate Gray) -->
+            <div class="bg-slate-700 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-slate-700/10 min-h-44">
+                <div>
+                    <span class="text-xs font-semibold text-slate-200 uppercase tracking-wider block">Saldo tertahan</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($heldBalance, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-slate-200">Masa garansi 90 menit</span>
+                </div>
+            </div>
         @else
             <!-- Card 1: Saldo dompet saya for Seller (Deep Blue) -->
             <div class="bg-blue-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-blue-600/10 min-h-44">
@@ -78,10 +89,21 @@
                 </div>
                 <div class="flex items-center justify-between mt-4">
                     <span class="text-xs text-blue-100">Komisi: 0%</span>
-                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-blue-50 transition-all duration-200">
+                    <button onclick="openTransferModal({{ $walletBalance }})" class="flex items-center space-x-1.5 px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-bold shadow-md hover:bg-amber-50 transition-all duration-200">
                         <span>Pindahkan Saldo</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
+                </div>
+            </div>
+
+            <!-- Card 2: Saldo tertahan Seller (Indigo) -->
+            <div class="bg-indigo-600 text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-indigo-600/10 min-h-44">
+                <div>
+                    <span class="text-xs font-semibold text-indigo-200 uppercase tracking-wider block">Saldo tertahan</span>
+                    <span class="text-2xl font-black mt-2 block tracking-tight">Rp {{ number_format($heldBalance, 0, ',', '.') }}</span>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-xs text-indigo-100">Masa garansi 90 menit</span>
                 </div>
             </div>
         @endif

@@ -36,13 +36,17 @@ class AdminController extends Controller
         };
 
         // 1. Wallets & Earnings (Stats matching screenshot 2)
-        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid'])->sum('total_amount');
+        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->sum('total_amount');
         
-        // Saldo Dompet Saya (Profit/Wallet Balance)
+        // Saldo Dompet Saya (Profit/Wallet Balance) - Released or Non-escrow only
         $walletBalance = 0;
         
-        // Profit dari penjualan produk sendiri
-        $successfulOrders = $orderQuery()->whereIn('status', ['success', 'paid'])->with('product')->get();
+        // Profit dari penjualan produk sendiri yang sudah dirilis atau non-escrow
+        $successfulOrders = $orderQuery()
+            ->whereIn('status', ['success', 'paid', 'proses'])
+            ->whereIn('escrow_status', ['released', 'none'])
+            ->with('product')
+            ->get();
         foreach ($successfulOrders as $order) {
             $product = $order->product;
             $modal = $product ? ($product->harga_modal ?? 0) : 0;
@@ -51,7 +55,7 @@ class AdminController extends Controller
 
         // Tambah komisi/cashback yang didapatkan dari pembelian produk
         $totalCommissions = Order::where('user_id', $user->id)
-            ->whereIn('status', ['success', 'paid'])
+            ->whereIn('status', ['success', 'paid', 'proses'])
             ->sum('commission_earned');
         $walletBalance += $totalCommissions;
 
@@ -63,13 +67,18 @@ class AdminController extends Controller
             ->sum('amount');
         $walletBalance -= $totalTransferred;
 
+        // Saldo Tertahan (Held or Disputed)
+        $heldBalance = $orderQuery()
+            ->whereIn('escrow_status', ['held', 'disputed'])
+            ->sum('escrow_amount');
+
         // Saldo Orderkuota (Admin only)
         $orderkuotaBalance = 0;
         if ($isAdmin) {
             $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->getSaldoOrderkuota();
         }
 
-        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
+        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->count();
         $totalOrdersCount = $orderQuery()->count();
 
         $readyStockCount = 0;
@@ -84,14 +93,14 @@ class AdminController extends Controller
             $date = Carbon::now()->subDays($i);
             $chartLabels[] = $date->isoFormat('D MMM');
             
-            $revenue = $orderQuery()->whereIn('status', ['success', 'paid'])
+            $revenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])
                 ->whereDate('created_at', $date->format('Y-m-d'))
                 ->sum('total_amount');
             $chartData[] = $revenue;
         }
 
         // 3. Rasio Status Order (Donut Chart)
-        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid'])->count();
+        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->count();
         $statusPending = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])->count();
         $statusExpired = $orderQuery()->where('status', 'expired')->count();
 
@@ -101,6 +110,7 @@ class AdminController extends Controller
         return view('admin.dashboard', compact(
             'totalRevenue',
             'walletBalance',
+            'heldBalance',
             'orderkuotaBalance',
             'totalSalesCount',
             'totalOrdersCount',
@@ -158,8 +168,12 @@ class AdminController extends Controller
 
                 $walletBalance = 0;
                 
-                // Profit dari penjualan produk sendiri
-                $successfulOrders = $orderQuery->whereIn('status', ['success', 'paid'])->with('product')->get();
+                // Profit dari penjualan produk sendiri yang sudah dirilis atau non-escrow
+                $successfulOrders = $orderQuery
+                    ->whereIn('status', ['success', 'paid', 'proses'])
+                    ->whereIn('escrow_status', ['released', 'none'])
+                    ->with('product')
+                    ->get();
                 foreach ($successfulOrders as $order) {
                     $product = $order->product;
                     $modal = $product ? ($product->harga_modal ?? 0) : 0;
@@ -168,7 +182,7 @@ class AdminController extends Controller
 
                 // Tambah komisi/cashback yang didapatkan dari pembelian produk
                 $totalCommissions = Order::where('user_id', $user->id)
-                    ->whereIn('status', ['success', 'paid'])
+                    ->whereIn('status', ['success', 'paid', 'proses'])
                     ->sum('commission_earned');
                 $walletBalance += $totalCommissions;
 
@@ -1004,5 +1018,146 @@ class AdminController extends Controller
         $statusText = $commission->is_active ? 'diaktifkan' : 'dinonaktifkan';
         return redirect()->route('admin.commissions')
             ->with('success', "Aturan komisi berhasil {$statusText}.");
+    }
+
+    /**
+     * View complaints for seller or admin.
+     */
+    public function complaints()
+    {
+        $user = auth()->user();
+        $isAdmin = $user->role === 'admin';
+
+        $query = \App\Models\Complaint::with(['order.product', 'user']);
+
+        if (!$isAdmin) {
+            // Seller: only view complaints on their own products
+            $query->whereHas('order.product', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $complaints = $query->orderBy('created_at', 'desc')->paginate(15);
+        $title = 'Kelola Komplain';
+
+        return view('admin.complaints', compact('complaints', 'title'));
+    }
+
+    /**
+     * Resolve (Approve) buyer complaint and refund money.
+     */
+    public function resolveComplaint(Request $request, $id)
+    {
+        $complaint = \App\Models\Complaint::findOrFail($id);
+        $order = $complaint->order;
+        $user = auth()->user();
+
+        // Authorization check
+        $isSeller = $order->product && $order->product->user_id === $user->id;
+        if ($user->role !== 'admin' && !$isSeller) {
+            return abort(403, 'Akses Ditolak.');
+        }
+
+        if ($complaint->status !== 'pending') {
+            return redirect()->back()->with('error', 'Komplain sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($complaint, $order) {
+            $complaint->update(['status' => 'resolved']);
+            
+            // Set order status to gagal
+            $order->status = 'gagal';
+            $order->save();
+
+            // Deduct escrow amount from seller's held_balance if it was disputed or held
+            if (in_array($order->escrow_status, ['held', 'disputed'])) {
+                $sellerId = $order->product ? $order->product->user_id : null;
+                if ($sellerId) {
+                    $sellerBalance = \App\Models\UserBalance::where('user_id', $sellerId)->lockForUpdate()->first();
+                    if ($sellerBalance) {
+                        $newHeld = max(0, $sellerBalance->held_balance - $order->escrow_amount);
+                        $sellerBalance->update(['held_balance' => $newHeld]);
+                    }
+                }
+            }
+            $order->escrow_status = 'none';
+            $order->save();
+
+            // Refund the buyer if paid via balance
+            if ($order->payment_method === 'balance' && $order->user_id) {
+                $buyer = \App\Models\User::find($order->user_id);
+                if ($buyer) {
+                    $buyerBalance = \App\Models\UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                    if (!$buyerBalance) {
+                        $buyerBalance = $buyer->getOrCreateBalance();
+                        $buyerBalance = \App\Models\UserBalance::where('user_id', $buyer->id)->lockForUpdate()->first();
+                    }
+                    $balanceBefore = $buyerBalance->balance;
+                    $buyerBalance->increment('balance', $order->total_amount);
+                    $buyerBalance->refresh();
+
+                    // Record transaction log
+                    \App\Models\BalanceTransaction::create([
+                        'user_id' => $buyer->id,
+                        'type' => 'topup',
+                        'amount' => $order->total_amount,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $buyerBalance->balance,
+                        'description' => 'Refund komplain disetujui: ' . ($order->product->name ?? 'Produk'),
+                        'reference_id' => $order->id,
+                        'status' => 'success',
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Komplain berhasil disetujui. Dana telah dikembalikan ke pembeli.');
+    }
+
+    /**
+     * Reject buyer complaint.
+     */
+    public function rejectComplaint(Request $request, $id)
+    {
+        $complaint = \App\Models\Complaint::findOrFail($id);
+        $order = $complaint->order;
+        $user = auth()->user();
+
+        // Authorization check
+        $isSeller = $order->product && $order->product->user_id === $user->id;
+        if ($user->role !== 'admin' && !$isSeller) {
+            return abort(403, 'Akses Ditolak.');
+        }
+
+        if ($complaint->status !== 'pending') {
+            return redirect()->back()->with('error', 'Komplain sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($complaint, $order) {
+            $complaint->update(['status' => 'rejected']);
+
+            // Release escrow balance to seller active balance
+            if (in_array($order->escrow_status, ['held', 'disputed'])) {
+                $sellerId = $order->product ? $order->product->user_id : null;
+                if ($sellerId) {
+                    $sellerBalance = \App\Models\UserBalance::where('user_id', $sellerId)->lockForUpdate()->first();
+                    if ($sellerBalance) {
+                        $newHeld = max(0, $sellerBalance->held_balance - $order->escrow_amount);
+                        $sellerBalance->update(['held_balance' => $newHeld]);
+                    }
+                }
+            }
+            $order->escrow_status = 'released';
+            $order->escrow_released_at = now();
+
+            // Set order status to proses if still success/paid
+            if ($order->status === 'success' || $order->status === 'paid') {
+                $order->status = 'proses';
+            }
+
+            $order->save();
+        });
+
+        return redirect()->back()->with('success', 'Komplain ditolak. Saldo penjualan telah dilepaskan ke dompet Anda.');
     }
 }

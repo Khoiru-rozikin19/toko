@@ -38,6 +38,7 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     Route::get('/orders', [CatalogController::class, 'history'])->name('orders.history');
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
     Route::get('/orders/{id}/download', [CatalogController::class, 'download'])->name('order.download');
+    Route::post('/orders/{id}/complain', [CatalogController::class, 'storeComplaint'])->name('order.complain');
     
     // User Profile Routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -69,6 +70,9 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
     Route::post('/account-stocks', [AdminController::class, 'storeAccountStocks'])->name('account_stocks.store');
     Route::post('/account-stocks/{id}/delete', [AdminController::class, 'deleteAccountStock'])->name('account_stocks.delete');
     Route::get('/transactions', [AdminController::class, 'transactions'])->name('transactions');
+    Route::get('/complaints', [AdminController::class, 'complaints'])->name('complaints');
+    Route::post('/complaints/{id}/resolve', [AdminController::class, 'resolveComplaint'])->name('complaints.resolve');
+    Route::post('/complaints/{id}/reject', [AdminController::class, 'rejectComplaint'])->name('complaints.reject');
 
     // Khusus Admin Utama (Konfigurasi QRIS & Manajemen Pengguna)
     Route::middleware('role:admin')->group(function () {
