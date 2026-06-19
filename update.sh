@@ -19,6 +19,15 @@ echo -e "${BIRU}================================================================
 echo -e "       Memulai Update Aplikasi Laravel VPN Store dari GitHub          "
 echo -e "======================================================================${NC}"
 
+# Parse force update argument
+FORCE_UPDATE=false
+if [[ "$1" == "--force" ]]; then
+    FORCE_UPDATE=true
+fi
+
+# Simpan hash commit sebelum melakukan git pull
+BEFORE_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
+
 # Dapatkan direktori aktif script dijalankan
 APP_DIR=$(pwd)
 
@@ -77,6 +86,17 @@ if [ "$HAS_CHANGES" = true ]; then
     else
         echo -e "${KUNING}[PERINGATAN] Terjadi konflik saat mengembalikan perubahan. Silakan periksa secara manual.${NC}"
     fi
+fi
+
+# Bandingkan commit hash sebelum dan sesudah git pull
+AFTER_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
+if [ "$BEFORE_HASH" = "$AFTER_HASH" ] && [ "$FORCE_UPDATE" = false ]; then
+    echo -e "\n${HIJAU}======================================================================"
+    echo -e "Aplikasi sudah berada di versi terbaru ($AFTER_HASH)."
+    echo -e "Tidak ada perubahan/update baru yang perlu diterapkan."
+    echo -e "Gunakan './update.sh --force' untuk memaksa menjalankan semua langkah."
+    echo -e "======================================================================${NC}"
+    exit 0
 fi
 
 # 2. Pasang Dependensi Composer Baru
