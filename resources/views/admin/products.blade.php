@@ -184,6 +184,7 @@
                 <span class="text-xs font-semibold text-blue-700 dark:text-blue-400">Kategori: <span id="createCategoryName">Semua</span></span>
             </div>
 
+            @if(auth()->user()->role === 'admin')
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="create_vps_server_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Otomatisasi VPS (Opsional)</label>
@@ -199,6 +200,7 @@
                     <input type="text" id="create_vps_command_template" name="vps_command_template" placeholder="Contoh: user-add-xray {username} {duration}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
             </div>
+            @endif
 
             @if(auth()->user()->role === 'admin')
             <div>
@@ -311,6 +313,7 @@
                 </select>
             </div>
 
+            @if(auth()->user()->role === 'admin')
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="edit_vps_server_id" class="block text-xs font-bold text-slate-500 uppercase mb-2">Otomatisasi VPS (Opsional)</label>
@@ -326,6 +329,7 @@
                     <input type="text" id="edit_vps_command_template" name="vps_command_template" placeholder="Contoh: user-add-xray {username} {duration}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
             </div>
+            @endif
 
             @if(auth()->user()->role === 'admin')
             <div>
@@ -563,8 +567,12 @@
         document.getElementById('edit_duration').value = product.duration_days;
         document.getElementById('edit_stock').value = product.stock;
         document.getElementById('edit_category_id').value = product.category_id || '';
-        document.getElementById('edit_vps_server_id').value = product.vps_server_id || '';
-        document.getElementById('edit_vps_command_template').value = product.vps_command_template || '';
+        if (document.getElementById('edit_vps_server_id')) {
+            document.getElementById('edit_vps_server_id').value = product.vps_server_id || '';
+        }
+        if (document.getElementById('edit_vps_command_template')) {
+            document.getElementById('edit_vps_command_template').value = product.vps_command_template || '';
+        }
         toggleVpsCommandInput('edit');
         if (document.getElementById('edit_harga_modal')) {
             document.getElementById('edit_harga_modal').value = product.harga_modal || 0;
@@ -599,12 +607,12 @@
         const input = document.getElementById(`${prefix}_vps_command_template`);
         
         if (select && select.value !== '') {
-            container.classList.remove('hidden');
-            input.required = true;
+            if (container) container.classList.remove('hidden');
+            if (input) input.required = true;
         } else {
-            container.classList.add('hidden');
-            input.required = false;
-            if (prefix === 'create') {
+            if (container) container.classList.add('hidden');
+            if (input) input.required = false;
+            if (prefix === 'create' && input) {
                 input.value = '';
             }
         }

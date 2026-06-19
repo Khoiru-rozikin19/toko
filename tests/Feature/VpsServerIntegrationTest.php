@@ -130,3 +130,87 @@ test('successful payment callback triggers VPS account creator and sets vpn_conf
     expect($order->vpn_config)->toContain('host: 127.0.0.1');
     expect($order->vpn_config)->toContain('user: clientvpstest');
 });
+
+test('admin can configure VPS automation on products but seller cannot', function () {
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@vps.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    $seller = User::create([
+        'name' => 'Seller User',
+        'email' => 'seller@vps.com',
+        'password' => Hash::make('password'),
+        'role' => 'seller',
+        'is_verified' => true,
+    ]);
+
+    $server = VpsServer::create([
+        'name' => 'SG VPS-1',
+        'ip_address' => '128.199.40.50',
+        'ssh_port' => 22,
+        'ssh_username' => 'root',
+        'ssh_password' => 'secretpwd',
+    ]);
+
+    // 1. Admin adds product with VPS automation -> Success
+    $this->actingAs($admin)->post(route('admin.products.store'), [
+        'name' => 'Admin Product with VPS',
+        'price' => 15000,
+        'duration_days' => 30,
+        'vps_server_id' => $server->id,
+        'vps_command_template' => 'user-add {username} {duration}',
+    ])->assertRedirect(route('admin.products'));
+
+    $adminProduct = Product::where('name', 'Admin Product with VPS')->first();
+    expect($adminProduct)->not->toBeNull();
+    expect($adminProduct->vps_server_id)->toBe($server->id);
+    expect($adminProduct->vps_command_template)->toBe('user-add {username} {duration}');
+
+    // 2. Seller adds product with VPS automation -> VPS fields are ignored (nullified)
+    $this->actingAs($seller)->post(route('admin.products.store'), [
+        'name' => 'Seller Product with VPS attempt',
+        'price' => 12000,
+        'duration_days' => 30,
+        'vps_server_id' => $server->id,
+        'vps_command_template' => 'hack {username} {duration}',
+    ])->assertRedirect(route('admin.products'));
+
+    $sellerProduct = Product::where('name', 'Seller Product with VPS attempt')->first();
+    expect($sellerProduct)->not->toBeNull();
+    expect($sellerProduct->vps_server_id)->toBeNull();
+    expect($sellerProduct->vps_command_template)->toBeNull();
+
+    // 3. Admin updates seller product with VPS automation -> Success
+    $this->actingAs($admin)->post(route('admin.products.update', $sellerProduct->id), [
+        'name' => 'Seller Product (Configured by Admin)',
+        'price' => 12000,
+        'duration_days' => 30,
+        'vps_server_id' => $server->id,
+        'vps_command_template' => 'admin-approved {username} {duration}',
+    ])->assertRedirect(route('admin.products'));
+
+    $sellerProduct->refresh();
+    expect($sellerProduct->vps_server_id)->toBe($server->id);
+    expect($sellerProduct->vps_command_template)->toBe('admin-approved {username} {duration}');
+
+    // 4. Seller updates their own product attempting to modify or clear VPS automation -> Changes to VPS are ignored/preserved
+    $this->actingAs($seller)->post(route('admin.products.update', $sellerProduct->id), [
+        'name' => 'Seller Product (Seller Edit attempt)',
+        'price' => 13000,
+        'duration_days' => 30,
+        'vps_server_id' => null, // Trying to clear it
+        'vps_command_template' => 'hack-updated {username}', // Trying to overwrite
+    ])->assertRedirect(route('admin.products'));
+
+    $sellerProduct->refresh();
+    expect($sellerProduct->name)->toBe('Seller Product (Seller Edit attempt)');
+    expect($sellerProduct->price)->toBe(13000);
+    // Preserved:
+    expect($sellerProduct->vps_server_id)->toBe($server->id);
+    expect($sellerProduct->vps_command_template)->toBe('admin-approved {username} {duration}');
+});
+

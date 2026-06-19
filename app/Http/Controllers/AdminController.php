@@ -252,6 +252,12 @@ class AdminController extends Controller
                 $data['user_id'] = auth()->id();
             }
 
+            // Restrict VPS automation settings to admin users only
+            if (auth()->user()->role !== 'admin') {
+                $data['vps_server_id'] = null;
+                $data['vps_command_template'] = null;
+            }
+
             // Parse accounts input if present
             $accounts = [];
             if ($request->filled('accounts_input')) {
@@ -311,6 +317,9 @@ class AdminController extends Controller
             $data = $request->all();
             if (auth()->user()->role !== 'admin') {
                 unset($data['user_id']); // Seller cannot change the owner
+                // Restrict VPS automation settings to admin users only (preserve existing config in DB by unsetting)
+                unset($data['vps_server_id']);
+                unset($data['vps_command_template']);
             }
 
             if ($request->has('accounts_input')) {
