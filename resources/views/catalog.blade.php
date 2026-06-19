@@ -74,8 +74,8 @@
 
                     <!-- Package Icon Container or Product Image -->
                     @if($product->image_path)
-                        <div class="w-full h-20 sm:h-24 mb-3 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800">
-                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                        <div class="w-full h-20 sm:h-24 mb-3 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
+                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="max-w-full max-h-full object-contain">
                         </div>
                     @else
                         <div class="w-full h-20 sm:h-24 bg-blue-50 dark:bg-blue-950/20 rounded-xl flex items-center justify-center mb-3 border border-blue-100/50 dark:border-blue-950/50">

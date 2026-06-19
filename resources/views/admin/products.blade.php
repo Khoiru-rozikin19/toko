@@ -76,8 +76,8 @@
                             <td class="py-4.5 px-6">
                                 <div class="flex items-center space-x-3">
                                     @if($product->image_path)
-                                        <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0">
-                                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
+                                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="max-w-full max-h-full object-contain">
                                         </div>
                                     @endif
                                     <div>
@@ -315,9 +315,9 @@
             <div>
                 <label for="edit_image" class="block text-xs font-bold text-slate-500 uppercase mb-2">Foto Produk (Opsional)</label>
                 <div class="flex items-center space-x-4 mb-2">
-                    <div id="edit_image_preview_container" class="hidden w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0">
-                        <img id="edit_image_preview" src="" alt="Preview" class="w-full h-full object-cover">
-                    </div>
+                    <div id="edit_image_preview_container" class="hidden w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
+                                        <img id="edit_image_preview" src="" alt="Preview" class="max-w-full max-h-full object-contain">
+                                    </div>
                     <input type="file" id="edit_image" name="image" accept="image/*" class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                 </div>
                 <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Biarkan kosong jika tidak ingin mengubah foto. Format: JPG, JPEG, PNG, GIF (Maks. 2MB)</p>
