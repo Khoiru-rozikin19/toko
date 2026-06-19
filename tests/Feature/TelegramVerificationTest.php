@@ -19,6 +19,7 @@ beforeEach(function () {
     Order::truncate();
 
     Setting::set('qris_static_string', '00020101021126610014COM.GO-JEK...');
+    Setting::set('api_secret_key', 'rahasiahappy123');
     
     // Set Telegram Bot credentials in environment simulation
     config(['services.telegram.bot_token' => '123456:ABC-DEF']);
@@ -28,7 +29,7 @@ beforeEach(function () {
 
 test('checkout route transitions order status to pending_manual and dispatches telegram admin notification', function () {
     Http::fake([
-        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+        'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => '12345']], 200),
     ]);
 
     $user = User::create([
@@ -58,6 +59,7 @@ test('checkout route transitions order status to pending_manual and dispatches t
     $order = Order::first();
     expect($order)->not->toBeNull();
     expect($order->status)->toBe('pending_manual');
+    expect($order->telegram_message_id)->toBe('12345');
 
     // Verify Telegram notification was dispatched
     Http::assertSent(function ($request) use ($order) {
@@ -439,6 +441,128 @@ test('telegram webhook processes rejection callback from admin for topup orders'
                    $data['message_id'] === 78 &&
                    str_contains($data['text'], 'Transaksi Ditolak') &&
                    str_contains($data['text'], 'REJECTED');
+        }
+
+        return true;
+    });
+});
+
+test('automated payment callback updates status and edits Telegram message to remove buttons', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $product = Product::create([
+        'name' => 'Premium SG',
+        'price' => 20000,
+        'duration_days' => 30,
+        'config_template' => 'vpn-config-data',
+        'stock' => 10,
+    ]);
+
+    $orderId = 'ORD-AUTO-TG-EDIT';
+    $order = Order::create([
+        'id' => $orderId,
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'buyer@example.com',
+        'base_amount' => 20000,
+        'unique_code' => 42,
+        'total_amount' => 20042,
+        'status' => 'pending',
+        'telegram_message_id' => '998877',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Trigger payment callback (simulating notification reader app)
+    $response = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'GOPAY TRANSFER RECEIVED Rp 20.042 FROM ANNE',
+        'amount' => 20042,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response->assertStatus(200);
+
+    // Verify order status is success
+    $order->refresh();
+    expect($order->status)->toBe('success');
+
+    // Verify Telegram editMessageText was called with correct parameters and no buttons
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === '987654321' &&
+                   $data['message_id'] === '998877' &&
+                   str_contains($data['text'], 'Transaksi Sukses (Otomatis)') &&
+                   str_contains($data['text'], 'SUCCESS') &&
+                   !isset($data['reply_markup']);
+        }
+
+        return true;
+    });
+});
+
+test('automated payment callback for topup updates status and edits Telegram message to remove buttons', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::create([
+        'name' => 'Topup Buyer Auto',
+        'email' => 'topupauto@buyer.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+    ]);
+
+    $orderId = 'TOP-AUTO-TG-EDIT';
+    $order = Order::create([
+        'id' => $orderId,
+        'user_id' => $user->id,
+        'email_or_whatsapp' => 'topupauto@buyer.com',
+        'base_amount' => 25000,
+        'unique_code' => 12,
+        'total_amount' => 25012,
+        'status' => 'pending',
+        'payment_method' => 'topup_balance',
+        'telegram_message_id' => '887766',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    \App\Models\BalanceTransaction::create([
+        'user_id' => $user->id,
+        'type' => 'topup',
+        'amount' => 25000,
+        'balance_before' => 5000,
+        'balance_after' => 5000,
+        'reference_id' => $orderId,
+        'status' => 'pending',
+    ]);
+
+    // Trigger payment callback (simulating notification reader app)
+    $response = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'GOPAY TRANSFER RECEIVED Rp 25.012 FROM ANNE',
+        'amount' => 25012,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response->assertStatus(200);
+
+    // Verify order status is success
+    $order->refresh();
+    expect($order->status)->toBe('success');
+
+    // Verify Telegram editMessageText was called with correct parameters and no buttons
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === '987654321' &&
+                   $data['message_id'] === '887766' &&
+                   str_contains($data['text'], 'Top Up Sukses (Otomatis)') &&
+                   str_contains($data['text'], 'SUCCESS') &&
+                   !isset($data['reply_markup']);
         }
 
         return true;

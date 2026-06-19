@@ -193,6 +193,32 @@ class PaymentCallbackController extends Controller
                 ];
             });
 
+            if ($result['success'] && isset($result['order_id'])) {
+                $order = Order::find($result['order_id']);
+                if ($order && $order->telegram_message_id) {
+                    $telegramService = app(\App\Services\TelegramService::class);
+                    $adminId = env('TELEGRAM_ADMIN_ID');
+                    $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+                    $customerName = $order->email_or_whatsapp;
+
+                    if ($order->payment_method === 'topup_balance') {
+                        $updatedText = "✅ *Top Up Sukses (Otomatis)*\n\n"
+                                     . "📦 *ID Order:* `{$order->id}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "Status top up telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
+                    } else {
+                        $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
+                                     . "📦 *ID Order:* `{$order->id}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "Status transaksi telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                    }
+
+                    $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
+                }
+            }
+
             return response()->json([
                 'success' => $result['success'],
                 'message' => $result['message'],

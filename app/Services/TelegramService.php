@@ -49,7 +49,17 @@ class TelegramService
             ]
         ];
 
-        return $this->sendMessage($this->adminId, $text, $keyboard);
+        $response = $this->sendMessage($this->adminId, $text, $keyboard);
+        if ($response && isset($response['ok']) && $response['ok']) {
+            $messageId = $response['result']['message_id'] ?? null;
+            if ($messageId) {
+                \App\Models\Order::where('id', $orderId)->update([
+                    'telegram_message_id' => $messageId
+                ]);
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -58,7 +68,7 @@ class TelegramService
      * @param string $chatId
      * @param string $text
      * @param array|null $keyboard
-     * @return bool
+     * @return array|bool
      */
     public function sendMessage($chatId, $text, $keyboard = null)
     {
@@ -80,7 +90,7 @@ class TelegramService
                 Log::error("TelegramService sendMessage Failed: " . $response->body());
                 return false;
             }
-            return true;
+            return $response->json();
         } catch (\Exception $e) {
             Log::error("TelegramService sendMessage Exception: " . $e->getMessage());
             return false;

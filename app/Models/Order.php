@@ -27,6 +27,7 @@ class Order extends Model
         'vpn_config',
         'sn',
         'commission_earned',
+        'telegram_message_id',
         'expired_at',
     ];
 
