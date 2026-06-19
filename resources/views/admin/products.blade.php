@@ -770,13 +770,29 @@
         }
         
         fetch("{{ route('admin.categories.delete', ':id') }}".replace(':id', id), {
-            method: 'DELETE',
+            method: 'POST',
             headers: {
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-HTTP-Method-Override': 'DELETE'
+            },
+            body: JSON.stringify({
+                _method: 'DELETE'
+            })
         })
-        .then(res => res.json())
+        .then(async res => {
+            if (!res.ok) {
+                const text = await res.text();
+                let message = 'Gagal menghapus kategori.';
+                try {
+                    const json = JSON.parse(text);
+                    message = json.message || message;
+                } catch(e) {}
+                throw new Error(message + ` (HTTP ${res.status})`);
+            }
+            return res.json();
+        })
         .then(data => {
             if (data.success) {
                 window.location.reload();
@@ -786,7 +802,7 @@
         })
         .catch(err => {
             console.error(err);
-            alert('Terjadi kesalahan koneksi.');
+            alert('Terjadi kesalahan: ' + err.message);
         });
     }
 
