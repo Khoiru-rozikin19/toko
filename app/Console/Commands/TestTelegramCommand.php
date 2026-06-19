@@ -28,21 +28,18 @@ class TestTelegramCommand extends Command
     public function handle()
     {
         $token = env('TELEGRAM_BOT_TOKEN');
+        $sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN');
         $adminId = env('TELEGRAM_ADMIN_ID');
         $apiBase = env('TELEGRAM_API_BASE', 'https://api.telegram.org');
 
         $this->info("=== TELEGRAM CONFIGURATION TEST ===");
-        $this->line("TELEGRAM_BOT_TOKEN: " . ($token ? substr($token, 0, 5) . '...' . substr($token, -5) : '[NOT SET]'));
+        $this->line("TELEGRAM_BOT_TOKEN (Admin Bot): " . ($token ? substr($token, 0, 5) . '...' . substr($token, -5) : '[NOT SET]'));
+        $this->line("TELEGRAM_SELLER_BOT_TOKEN (Seller Bot): " . ($sellerToken ? substr($sellerToken, 0, 5) . '...' . substr($sellerToken, -5) : '[NOT SET]'));
         $this->line("TELEGRAM_ADMIN_ID: " . ($adminId ?: '[NOT SET]'));
         $this->line("TELEGRAM_API_BASE: " . $apiBase);
         $this->line("");
 
         $chatId = $this->argument('chat_id') ?: $adminId;
-
-        if (empty($token)) {
-            $this->error("Error: TELEGRAM_BOT_TOKEN is empty in .env.");
-            return 1;
-        }
 
         if (empty($chatId)) {
             $this->error("Error: Target Chat ID is empty (neither argument nor TELEGRAM_ADMIN_ID is set).");
@@ -57,23 +54,44 @@ class TestTelegramCommand extends Command
             }
         }
 
-        $this->info("Sending test message to Chat ID: {$chatId}...");
-
         $telegramService = app(TelegramService::class);
-        $text = "🔔 *Test Notifikasi Telegram*\n\n"
-              . "Koneksi bot Anda berhasil dikonfigurasi dengan benar! 🎉";
 
-        $response = $telegramService->sendMessage($chatId, $text);
+        // Test 1: Admin Bot
+        if (!empty($token)) {
+            $this->info("Testing Admin Bot (sending test message to Chat ID: {$chatId})...");
+            $text = "🔔 *Test Bot Verifikasi Pembayaran*\n\nKoneksi Bot Admin berhasil dikonfigurasi dengan benar! 🎉";
+            $response = $telegramService->sendMessage($chatId, $text, null, $token);
 
-        if ($response && isset($response['ok']) && $response['ok']) {
-            $this->info("SUCCESS! Test message sent successfully.");
-            $this->line("Message ID: " . ($response['result']['message_id'] ?? 'N/A'));
-        } else {
-            $this->error("FAILED! Telegram API returned an error.");
-            if ($response === false) {
-                $this->line("Check storage/logs/laravel.log for detailed error logs.");
+            if ($response && isset($response['ok']) && $response['ok']) {
+                $this->info("-> ADMIN BOT: SUCCESS! Message sent.");
             } else {
-                $this->line(json_encode($response));
+                $this->error("-> ADMIN BOT: FAILED!");
+                if ($response === false) {
+                    $this->line("Check storage/logs/laravel.log for detailed error logs.");
+                } else {
+                    $this->line(json_encode($response));
+                }
+            }
+        } else {
+            $this->error("Error: TELEGRAM_BOT_TOKEN is empty in .env.");
+        }
+
+        // Test 2: Seller Bot (if configured and different from Admin Bot)
+        if (!empty($sellerToken) && $sellerToken !== $token) {
+            $this->line("");
+            $this->info("Testing Seller Bot (sending test message to Chat ID: {$chatId})...");
+            $text = "🔔 *Test Bot Notifikasi Seller*\n\nKoneksi Bot Seller berhasil dikonfigurasi dengan benar! 🎉";
+            $response = $telegramService->sendMessage($chatId, $text, null, $sellerToken);
+
+            if ($response && isset($response['ok']) && $response['ok']) {
+                $this->info("-> SELLER BOT: SUCCESS! Message sent.");
+            } else {
+                $this->error("-> SELLER BOT: FAILED!");
+                if ($response === false) {
+                    $this->line("Check storage/logs/laravel.log for detailed error logs.");
+                } else {
+                    $this->line(json_encode($response));
+                }
             }
         }
 
