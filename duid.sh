@@ -428,6 +428,347 @@ cari_user() {
 }
 
 # ============================================================
+#  Fungsi Pendukung Reset Data
+# ============================================================
+
+lihat_daftar_user() {
+    local data=$(db_query \
+        "SELECT u.id, u.name, u.email, u.role, COALESCE(ub.balance, 0)
+         FROM users u
+         LEFT JOIN user_balances ub ON u.id = ub.user_id
+         ORDER BY u.id ASC;")
+
+    garis
+    printf "  ${BOLD}%-4s │ %-20s │ %-28s │ %-8s │ %18s${NC}\n" "ID" "Nama" "Email" "Role" "Saldo"
+    garis
+
+    while IFS='|' read -r id name email role balance; do
+        local saldo_formatted=$(format_rupiah "$balance")
+        local role_color="${WHITE}"
+        if [ "$role" = "admin" ]; then
+            role_color="${RED}"
+        elif [ "$role" = "seller" ]; then
+            role_color="${MAGENTA}"
+        else
+            role_color="${GREEN}"
+        fi
+        printf "  %-4s │ %-20s │ %-28s │ ${role_color}%-8s${NC} │ %18s\n" \
+            "$id" "$(echo "$name" | cut -c1-20)" "$(echo "$email" | cut -c1-28)" "$role" "$saldo_formatted"
+    done <<< "$data"
+    garis
+    echo ""
+}
+
+reset_riwayat_user() {
+    header
+    echo -e "${BOLD}${WHITE}  🗑️  RESET RIWAYAT USER (PESANAN & TRANSAKSI SALDO)${NC}"
+    echo ""
+    echo -e "  Pilih cakupan reset:"
+    echo -e "    ${WHITE}1)${NC} Semua User"
+    echo -e "    ${WHITE}2)${NC} User/Buyer Tertentu"
+    echo -e "    ${WHITE}0)${NC} Batal"
+    echo ""
+    echo -ne "  ${YELLOW}Pilihan: ${NC}"
+    read -r cakupan
+
+    if [ "$cakupan" = "0" ] || [ -z "$cakupan" ]; then
+        return
+    fi
+
+    if [ "$cakupan" = "1" ]; then
+        echo ""
+        garis
+        echo -e "  ${RED}${BOLD}⚠ PERINGATAN KELAS BERAT: Anda akan menghapus SELURUH riwayat pesanan,${NC}"
+        echo -e "  ${RED}${BOLD}komplain, log pembayaran, dan transaksi saldo dari SEMUA user!${NC}"
+        garis
+        echo -ne "  ${YELLOW}Ketik 'RESET-ALL' untuk mengonfirmasi: ${NC}"
+        read -r konfirmasi
+        if [ "$konfirmasi" != "RESET-ALL" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            sleep 1.5
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset riwayat semua user...${NC}"
+        db_query "DELETE FROM complaints;"
+        db_query "DELETE FROM payment_logs;"
+        db_query "DELETE FROM orders;"
+        db_query "DELETE FROM balance_transactions;"
+        
+        echo -e "  ${GREEN}✓ Berhasil mereset riwayat semua user!${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+
+    elif [ "$cakupan" = "2" ]; then
+        lihat_daftar_user
+        echo -ne "  ${YELLOW}Masukkan ID user yang ingin direset riwayatnya (0 = kembali): ${NC}"
+        read -r user_id
+        if [ "$user_id" = "0" ] || [ -z "$user_id" ]; then
+            return
+        fi
+
+        local user_info=$(db_query "SELECT id, name, email, phone FROM users WHERE id = $user_id;")
+        if [ -z "$user_info" ]; then
+            echo -e "\n  ${RED}✗ User dengan ID $user_id tidak ditemukan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        IFS='|' read -r uid uname uemail uphone <<< "$user_info"
+
+        echo ""
+        garis
+        echo -e "  ${YELLOW}${BOLD}⚠ KONFIRMASI RESET RIWAYAT USER:${NC}"
+        echo -e "  ${WHITE}ID    : ${CYAN}$uid${NC}"
+        echo -e "  ${WHITE}Nama  : ${CYAN}$uname${NC}"
+        echo -e "  ${WHITE}Email : ${CYAN}$uemail${NC}"
+        echo -e "  ${WHITE}Phone : ${CYAN}$uphone${NC}"
+        garis
+        echo -ne "  ${YELLOW}Yakin ingin mereset riwayat user ini? (y/n): ${NC}"
+        read -r konfirmasi
+
+        if [ "$konfirmasi" != "y" ] && [ "$konfirmasi" != "Y" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset riwayat user $uname...${NC}"
+        
+        local query_order_ids="SELECT id FROM orders WHERE user_id = $uid"
+        if [ -n "$uemail" ]; then
+            query_order_ids="$query_order_ids OR email_or_whatsapp = '$uemail'"
+        fi
+        if [ -n "$uphone" ]; then
+            query_order_ids="$query_order_ids OR email_or_whatsapp = '$uphone'"
+        fi
+        
+        db_query "DELETE FROM complaints WHERE user_id = $uid OR order_id IN ($query_order_ids);"
+        db_query "DELETE FROM payment_logs WHERE matched_order_id IN ($query_order_ids);"
+        
+        local delete_orders_sql="DELETE FROM orders WHERE user_id = $uid"
+        if [ -n "$uemail" ]; then
+            delete_orders_sql="$delete_orders_sql OR email_or_whatsapp = '$uemail'"
+        fi
+        if [ -n "$uphone" ]; then
+            delete_orders_sql="$delete_orders_sql OR email_or_whatsapp = '$uphone'"
+        fi
+        db_query "$delete_orders_sql;"
+        db_query "DELETE FROM balance_transactions WHERE user_id = $uid;"
+
+        echo -e "  ${GREEN}✓ Berhasil mereset riwayat user $uname!${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+    fi
+}
+
+reset_keuangan_seller() {
+    header
+    echo -e "${BOLD}${WHITE}  💰  RESET KEUANGAN DASHBOARD SELLER${NC}"
+    echo ""
+    echo -e "  Pilih cakupan reset:"
+    echo -e "    ${WHITE}1)${NC} Semua Seller"
+    echo -e "    ${WHITE}2)${NC} Seller/Admin Tertentu"
+    echo -e "    ${WHITE}0)${NC} Batal"
+    echo ""
+    echo -ne "  ${YELLOW}Pilihan: ${NC}"
+    read -r cakupan
+
+    if [ "$cakupan" = "0" ] || [ -z "$cakupan" ]; then
+        return
+    fi
+
+    if [ "$cakupan" = "1" ]; then
+        echo ""
+        garis
+        echo -e "  ${RED}${BOLD}⚠ PERINGATAN: Anda akan menghapus data penjualan seluruh seller,${NC}"
+        echo -e "  ${RED}${BOLD}termasuk komisi yang diperoleh, transfer wallet, dan saldo tertahan!${NC}"
+        echo -e "  ${YELLOW}${BOLD}Info: Saldo realtime Orderkuota tidak akan terganggu.${NC}"
+        garis
+        echo -ne "  ${YELLOW}Ketik 'RESET-KEUANGAN-ALL' untuk mengonfirmasi: ${NC}"
+        read -r konfirmasi
+        if [ "$konfirmasi" != "RESET-KEUANGAN-ALL" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            sleep 1.5
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset keuangan semua seller...${NC}"
+        db_query "DELETE FROM complaints WHERE order_id IN (SELECT o.id FROM orders o JOIN products p ON o.product_id = p.id);"
+        db_query "DELETE FROM payment_logs WHERE matched_order_id IN (SELECT o.id FROM orders o JOIN products p ON o.product_id = p.id);"
+        db_query "DELETE FROM orders WHERE product_id IN (SELECT id FROM products);"
+        db_query "UPDATE orders SET commission_earned = 0;"
+        db_query "DELETE FROM balance_transactions WHERE type = 'transfer_in' AND description LIKE '%Transfer dari Dompet Seller%';"
+        db_query "UPDATE user_balances SET held_balance = 0;"
+
+        echo -e "  ${GREEN}✓ Berhasil mereset keuangan semua seller! (Saldo Orderkuota aman)${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+
+    elif [ "$cakupan" = "2" ]; then
+        lihat_daftar_user
+        echo -ne "  ${YELLOW}Masukkan ID user/seller/admin yang ingin direset keuangannya (0 = kembali): ${NC}"
+        read -r user_id
+        if [ "$user_id" = "0" ] || [ -z "$user_id" ]; then
+            return
+        fi
+
+        local user_info=$(db_query "SELECT id, name, email, role FROM users WHERE id = $user_id;")
+        if [ -z "$user_info" ]; then
+            echo -e "\n  ${RED}✗ User dengan ID $user_id tidak ditemukan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        IFS='|' read -r uid uname uemail urole <<< "$user_info"
+
+        echo ""
+        garis
+        echo -e "  ${YELLOW}${BOLD}⚠ KONFIRMASI RESET KEUANGAN SELLER/ADMIN:${NC}"
+        echo -e "  ${WHITE}ID    : ${CYAN}$uid${NC}"
+        echo -e "  ${WHITE}Nama  : ${CYAN}$uname${NC}"
+        echo -e "  ${WHITE}Role  : ${CYAN}$urole${NC}"
+        echo -e "  ${WHITE}Email : ${CYAN}$uemail${NC}"
+        echo -e "  ${YELLOW}${BOLD}Info  : Saldo realtime Orderkuota tidak akan terganggu.${NC}"
+        garis
+        echo -ne "  ${YELLOW}Yakin ingin mereset keuangan dashboard seller untuk user ini? (y/n): ${NC}"
+        read -r konfirmasi
+
+        if [ "$konfirmasi" != "y" ] && [ "$konfirmasi" != "Y" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset keuangan dashboard seller untuk $uname...${NC}"
+        
+        db_query "DELETE FROM complaints WHERE order_id IN (SELECT id FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid));"
+        db_query "DELETE FROM payment_logs WHERE matched_order_id IN (SELECT id FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid));"
+        db_query "DELETE FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid);"
+        db_query "UPDATE orders SET commission_earned = 0 WHERE user_id = $uid;"
+        db_query "DELETE FROM balance_transactions WHERE user_id = $uid AND type = 'transfer_in' AND description LIKE '%Transfer dari Dompet Seller%';"
+        db_query "UPDATE user_balances SET held_balance = 0 WHERE user_id = $uid;"
+
+        echo -e "  ${GREEN}✓ Berhasil mereset keuangan dashboard seller untuk $uname! (Saldo Orderkuota aman)${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+    fi
+}
+
+reset_pesanan_seller() {
+    header
+    echo -e "${BOLD}${WHITE}  📦  RESET RIWAYAT PESANAN SELLER PORTAL${NC}"
+    echo ""
+    echo -e "  Pilih cakupan reset:"
+    echo -e "    ${WHITE}1)${NC} Semua Seller"
+    echo -e "    ${WHITE}2)${NC} Seller/Admin Tertentu"
+    echo -e "    ${WHITE}0)${NC} Batal"
+    echo ""
+    echo -ne "  ${YELLOW}Pilihan: ${NC}"
+    read -r cakupan
+
+    if [ "$cakupan" = "0" ] || [ -z "$cakupan" ]; then
+        return
+    fi
+
+    if [ "$cakupan" = "1" ]; then
+        echo ""
+        garis
+        echo -e "  ${RED}${BOLD}⚠ PERINGATAN: Anda akan menghapus SELURUH riwayat pesanan (penjualan produk)${NC}"
+        echo -e "  ${RED}${BOLD}yang ada di portal transaksi semua seller/admin!${NC}"
+        garis
+        echo -ne "  ${YELLOW}Ketik 'RESET-PESANAN-ALL' untuk mengonfirmasi: ${NC}"
+        read -r konfirmasi
+        if [ "$konfirmasi" != "RESET-PESANAN-ALL" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            sleep 1.5
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset riwayat pesanan di seller portal...${NC}"
+        db_query "DELETE FROM complaints WHERE order_id IN (SELECT o.id FROM orders o JOIN products p ON o.product_id = p.id);"
+        db_query "DELETE FROM payment_logs WHERE matched_order_id IN (SELECT o.id FROM orders o JOIN products p ON o.product_id = p.id);"
+        db_query "DELETE FROM orders WHERE product_id IN (SELECT id FROM products);"
+
+        echo -e "  ${GREEN}✓ Berhasil mereset riwayat pesanan di semua seller portal!${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+
+    elif [ "$cakupan" = "2" ]; then
+        lihat_daftar_user
+        echo -ne "  ${YELLOW}Masukkan ID user/seller/admin yang ingin direset riwayat pesanan portalnya (0 = kembali): ${NC}"
+        read -r user_id
+        if [ "$user_id" = "0" ] || [ -z "$user_id" ]; then
+            return
+        fi
+
+        local user_info=$(db_query "SELECT id, name, email, role FROM users WHERE id = $user_id;")
+        if [ -z "$user_info" ]; then
+            echo -e "\n  ${RED}✗ User dengan ID $user_id tidak ditemukan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        IFS='|' read -r uid uname uemail urole <<< "$user_info"
+
+        echo ""
+        garis
+        echo -e "  ${YELLOW}${BOLD}⚠ KONFIRMASI RESET PESANAN SELLER PORTAL:${NC}"
+        echo -e "  ${WHITE}ID    : ${CYAN}$uid${NC}"
+        echo -e "  ${WHITE}Nama  : ${CYAN}$uname${NC}"
+        echo -e "  ${WHITE}Role  : ${CYAN}$urole${NC}"
+        echo -e "  ${WHITE}Email : ${CYAN}$uemail${NC}"
+        garis
+        echo -ne "  ${YELLOW}Yakin ingin mereset riwayat pesanan seller portal untuk user ini? (y/n): ${NC}"
+        read -r konfirmasi
+
+        if [ "$konfirmasi" != "y" ] && [ "$konfirmasi" != "Y" ]; then
+            echo -e "\n  ${DIM}Dibatalkan.${NC}"
+            echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+            read -r
+            return
+        fi
+
+        echo -e "\n  ${DIM}Sedang mereset riwayat pesanan seller portal untuk $uname...${NC}"
+        db_query "DELETE FROM complaints WHERE order_id IN (SELECT id FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid));"
+        db_query "DELETE FROM payment_logs WHERE matched_order_id IN (SELECT id FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid));"
+        db_query "DELETE FROM orders WHERE product_id IN (SELECT id FROM products WHERE user_id = $uid);"
+
+        echo -e "  ${GREEN}✓ Berhasil mereset riwayat pesanan seller portal untuk $uname!${NC}"
+        echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+        read -r
+    fi
+}
+
+reset_menu() {
+    while true; do
+        header
+        echo -e "  ${BOLD}🔄 MENU RESET DATA:${NC}"
+        echo ""
+        echo -e "    ${WHITE}1)${NC}  🗑️  Reset Riwayat User (Pesanan & Transaksi Saldo)"
+        echo -e "    ${WHITE}2)${NC}  💰  Reset Keuangan Dashboard Seller"
+        echo -e "    ${WHITE}3)${NC}  📦  Reset Riwayat Pesanan Seller Portal"
+        echo -e "    ${WHITE}0)${NC}  🔙  Kembali ke Menu Utama"
+        echo ""
+        echo -ne "  ${YELLOW}Pilihan: ${NC}"
+        read -r reset_pilihan
+
+        case "$reset_pilihan" in
+            1) reset_riwayat_user ;;
+            2) reset_keuangan_seller ;;
+            3) reset_pesanan_seller ;;
+            0|"") break ;;
+            *) echo -e "\n  ${RED}✗ Pilihan tidak valid.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ============================================================
 #  Menu Utama
 # ============================================================
 
@@ -438,6 +779,7 @@ while true; do
     echo -e "  ${WHITE}  1)${NC}  📋  Lihat saldo semua user"
     echo -e "  ${WHITE}  2)${NC}  ✏️   Edit saldo user"
     echo -e "  ${WHITE}  3)${NC}  🔍  Cari user"
+    echo -e "  ${WHITE}  4)${NC}  🔄  Reset Data (Riwayat, Keuangan, Pesanan Seller)"
     echo -e "  ${WHITE}  0)${NC}  🚪  Keluar"
     echo ""
     echo -ne "  ${YELLOW}Pilihan: ${NC}"
@@ -450,6 +792,7 @@ while true; do
            ;;
         2) edit_saldo ;;
         3) cari_user ;;
+        4) reset_menu ;;
         0)
            echo ""
            echo -e "  ${GREEN}👋 Sampai jumpa!${NC}"
