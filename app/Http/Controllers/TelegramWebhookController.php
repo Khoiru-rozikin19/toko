@@ -235,6 +235,7 @@ class TelegramWebhookController extends Controller
                 // Update order status to paid
                 $order->status = 'paid';
                 $order->save();
+                $order->processEscrowAndNotification();
 
                 // Decrement product stock if not unlimited
                 if ($order->product && $order->product->stock > 0) {
