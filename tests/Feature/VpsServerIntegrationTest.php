@@ -8,6 +8,8 @@ use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -212,5 +214,55 @@ test('admin can configure VPS automation on products but seller cannot', functio
     // Preserved:
     expect($sellerProduct->vps_server_id)->toBe($server->id);
     expect($sellerProduct->vps_command_template)->toBe('admin-approved {username} {duration}');
+});
+
+test('admin or seller can upload product image', function () {
+    Storage::fake('public');
+
+    $admin = User::create([
+        'name' => 'Admin User',
+        'email' => 'admin@vps.com',
+        'password' => Hash::make('password'),
+        'role' => 'admin',
+        'is_verified' => true,
+    ]);
+
+    $file = UploadedFile::fake()->create('product.jpg', 100);
+
+    $response = $this->actingAs($admin)->post(route('admin.products.store'), [
+        'name' => 'Product with Image',
+        'price' => 15000,
+        'duration_days' => 30,
+        'image' => $file,
+    ]);
+
+    $response->assertRedirect(route('admin.products'));
+
+    $product = Product::where('name', 'Product with Image')->first();
+    expect($product)->not->toBeNull();
+    expect($product->image_path)->not->toBeNull();
+
+    // Verify file is stored in public storage
+    Storage::disk('public')->assertExists($product->image_path);
+
+    // Now update product with new image
+    $newFile = UploadedFile::fake()->create('product_new.jpg', 100);
+    $oldPath = $product->image_path;
+
+    $updateResponse = $this->actingAs($admin)->post(route('admin.products.update', $product->id), [
+        'name' => 'Product with Image Updated',
+        'price' => 15000,
+        'duration_days' => 30,
+        'image' => $newFile,
+    ]);
+
+    $updateResponse->assertRedirect(route('admin.products'));
+
+    $product->refresh();
+    expect($product->image_path)->not->toBe($oldPath);
+
+    // Verify old file is deleted and new file is stored
+    Storage::disk('public')->assertMissing($oldPath);
+    Storage::disk('public')->assertExists($product->image_path);
 });
 

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\AccountStock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -230,6 +231,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_id' => 'nullable|exists:categories,id',
             'vps_server_id' => 'nullable|exists:vps_servers,id',
             'vps_command_template' => 'nullable|string|max:1000',
@@ -257,6 +259,11 @@ class AdminController extends Controller
                 $data['vps_server_id'] = null;
                 $data['vps_command_template'] = null;
                 $data['duration_days'] = $data['duration_days'] ?? 30; // Default for seller if hidden
+            }
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                $data['image_path'] = $request->file('image')->store('products', 'public');
             }
 
             // Parse accounts input if present
@@ -298,6 +305,7 @@ class AdminController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'category_id' => 'nullable|exists:categories,id',
             'vps_server_id' => 'nullable|exists:vps_servers,id',
             'vps_command_template' => 'nullable|string|max:1000',
@@ -321,6 +329,14 @@ class AdminController extends Controller
                 // Restrict VPS automation settings to admin users only (preserve existing config in DB by unsetting)
                 unset($data['vps_server_id']);
                 unset($data['vps_command_template']);
+            }
+
+            // Handle image upload
+            if ($request->hasFile('image')) {
+                if ($product->image_path) {
+                    Storage::disk('public')->delete($product->image_path);
+                }
+                $data['image_path'] = $request->file('image')->store('products', 'public');
             }
 
             if ($request->has('accounts_input')) {

@@ -74,17 +74,26 @@
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150 product-row" data-category-id="{{ $product->category_id ?? 'uncategorized' }}" data-stock="{{ $product->stock }}">
                             <td class="py-4.5 px-6 font-mono text-xs text-slate-400">#{{ $product->id }}</td>
                             <td class="py-4.5 px-6">
-                                <span class="font-bold text-slate-800 dark:text-slate-200">{{ $product->name }}</span>
-                                @if($product->description)
-                                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs truncate" title="{{ $product->description }}">
-                                        {{ $product->description }}
-                                    </span>
-                                @endif
-                                @if($product->orderkuota_product_code)
-                                    <span class="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                                        Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
-                                    </span>
-                                @endif
+                                <div class="flex items-center space-x-3">
+                                    @if($product->image_path)
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0">
+                                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <span class="font-bold text-slate-800 dark:text-slate-200">{{ $product->name }}</span>
+                                        @if($product->description)
+                                            <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs truncate" title="{{ $product->description }}">
+                                                {{ $product->description }}
+                                            </span>
+                                        @endif
+                                        @if($product->orderkuota_product_code)
+                                            <span class="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                                Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
                             @if(auth()->user()->role === 'admin')
                                 <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
@@ -168,7 +177,7 @@
 
         <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Tambah Produk Baru</h3>
 
-        <form action="{{ route('admin.products.store') }}" method="POST" class="space-y-4">
+        <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <!-- Hidden field: auto-set to active category -->
             <input type="hidden" id="create_category_id" name="category_id" value="">
@@ -176,6 +185,12 @@
             <div>
                 <label for="create_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Produk</label>
                 <input type="text" id="create_name" name="name" required placeholder="Contoh: Premium SG OpenVPN" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div>
+                <label for="create_image" class="block text-xs font-bold text-slate-500 uppercase mb-2">Foto Produk (Opsional)</label>
+                <input type="file" id="create_image" name="image" accept="image/*" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Format: JPG, JPEG, PNG, GIF (Maks. 2MB)</p>
             </div>
 
             <!-- Show active category info -->
@@ -290,11 +305,22 @@
 
         <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mb-6">Ubah Produk</h3>
 
-        <form id="editForm" action="" method="POST" class="space-y-4">
+        <form id="editForm" action="" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <div>
                 <label for="edit_name" class="block text-xs font-bold text-slate-500 uppercase mb-2">Nama Produk</label>
                 <input type="text" id="edit_name" name="name" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+            </div>
+
+            <div>
+                <label for="edit_image" class="block text-xs font-bold text-slate-500 uppercase mb-2">Foto Produk (Opsional)</label>
+                <div class="flex items-center space-x-4 mb-2">
+                    <div id="edit_image_preview_container" class="hidden w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0">
+                        <img id="edit_image_preview" src="" alt="Preview" class="w-full h-full object-cover">
+                    </div>
+                    <input type="file" id="edit_image" name="image" accept="image/*" class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                </div>
+                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Biarkan kosong jika tidak ingin mengubah foto. Format: JPG, JPEG, PNG, GIF (Maks. 2MB)</p>
             </div>
 
             <div>
@@ -579,6 +605,16 @@
         document.getElementById('edit_visibility').value = product.visibility || 'all';
         if (document.getElementById('edit_user_id')) {
             document.getElementById('edit_user_id').value = product.user_id;
+        }
+        
+        const previewContainer = document.getElementById('edit_image_preview_container');
+        const previewImg = document.getElementById('edit_image_preview');
+        if (product.image_path) {
+            previewImg.src = `/storage/${product.image_path}`;
+            previewContainer.classList.remove('hidden');
+        } else {
+            previewImg.src = '';
+            previewContainer.classList.add('hidden');
         }
         
         document.getElementById('editForm').action = `/admin/products/${product.id}/update`;

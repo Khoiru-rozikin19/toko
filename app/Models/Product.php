@@ -15,6 +15,7 @@ class Product extends Model
         'vps_server_id',
         'vps_command_template',
         'name',
+        'image_path',
         'description',
         'price',
         'harga_modal',
