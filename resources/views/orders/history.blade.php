@@ -304,7 +304,7 @@
 
         <div class="space-y-6">
             <div class="text-center">
-                <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Detail Akun VPN Anda</h3>
+                <h3 class="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-tight">Detail Pesanan Anda</h3>
                 <p id="accountModalOrderId" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Order ID: ORD-XXXXXX</p>
             </div>
 
