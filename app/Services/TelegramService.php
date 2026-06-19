@@ -10,12 +10,38 @@ class TelegramService
     protected $token;
     protected $adminId;
     protected $apiBase;
+    protected $sellerToken;
+    protected $currentToken;
 
     public function __construct()
     {
         $this->token = env('TELEGRAM_BOT_TOKEN');
         $this->adminId = env('TELEGRAM_ADMIN_ID');
         $this->apiBase = rtrim(env('TELEGRAM_API_BASE', 'https://api.telegram.org'), '/');
+        $this->sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN') ?: $this->token;
+        $this->currentToken = $this->token;
+    }
+
+    public function useAdminToken()
+    {
+        $this->currentToken = $this->token;
+        return $this;
+    }
+
+    public function useSellerToken()
+    {
+        $this->currentToken = $this->sellerToken;
+        return $this;
+    }
+
+    public function getAdminToken()
+    {
+        return $this->token;
+    }
+
+    public function getSellerToken()
+    {
+        return $this->sellerToken;
     }
 
     /**
@@ -73,8 +99,8 @@ class TelegramService
      */
     public function sendSellerOrderNotification($orderId, $amount, $customerName, $sellerChatId)
     {
-        if (empty($this->token) || empty($sellerChatId)) {
-            Log::warning('TelegramService: Token atau Seller Chat ID belum diset');
+        if (empty($this->sellerToken) || empty($sellerChatId)) {
+            Log::warning('TelegramService: Seller Token atau Seller Chat ID belum diset');
             return false;
         }
 
@@ -94,7 +120,7 @@ class TelegramService
             ]
         ];
 
-        $response = $this->sendMessage($sellerChatId, $text, $keyboard);
+        $response = $this->sendMessage($sellerChatId, $text, $keyboard, $this->sellerToken);
         if ($response && isset($response['ok']) && $response['ok']) {
             $messageId = $response['result']['message_id'] ?? null;
             if ($messageId) {
@@ -115,7 +141,7 @@ class TelegramService
      * @param array|null $keyboard
      * @return array|bool
      */
-    public function sendMessage($chatId, $text, $keyboard = null)
+    public function sendMessage($chatId, $text, $keyboard = null, $token = null)
     {
         if (empty($chatId)) {
             Log::warning("TelegramService: Chat ID is empty.");
@@ -128,6 +154,12 @@ class TelegramService
             } else {
                 Log::warning("TelegramService: Chat ID '{$chatId}' is not numeric. Telegram requires numeric Chat IDs for private chats.");
             }
+        }
+
+        $activeToken = $token ?: $this->currentToken;
+        if (empty($activeToken)) {
+            Log::warning("TelegramService: Bot Token is empty.");
+            return false;
         }
 
         $payload = [
@@ -143,7 +175,7 @@ class TelegramService
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("{$this->apiBase}/bot{$this->token}/sendMessage", $payload);
+                ->post("{$this->apiBase}/bot{$activeToken}/sendMessage", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService sendMessage Failed: " . $response->body());
                 return false;
@@ -160,9 +192,10 @@ class TelegramService
      *
      * @param string $callbackQueryId
      * @param string|null $text
+     * @param string|null $token
      * @return bool
      */
-    public function answerCallbackQuery($callbackQueryId, $text = null)
+    public function answerCallbackQuery($callbackQueryId, $text = null, $token = null)
     {
         $payload = [
             'callback_query_id' => $callbackQueryId,
@@ -172,10 +205,16 @@ class TelegramService
             $payload['text'] = $text;
         }
 
+        $activeToken = $token ?: $this->currentToken;
+        if (empty($activeToken)) {
+            Log::warning("TelegramService: Bot Token is empty.");
+            return false;
+        }
+
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("{$this->apiBase}/bot{$this->token}/answerCallbackQuery", $payload);
+                ->post("{$this->apiBase}/bot{$activeToken}/answerCallbackQuery", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService answerCallbackQuery Failed: " . $response->body());
                 return false;
@@ -193,9 +232,10 @@ class TelegramService
      * @param string $chatId
      * @param int $messageId
      * @param string $text
+     * @param string|null $token
      * @return bool
      */
-    public function editMessageText($chatId, $messageId, $text)
+    public function editMessageText($chatId, $messageId, $text, $token = null)
     {
         $payload = [
             'chat_id' => $chatId,
@@ -204,10 +244,16 @@ class TelegramService
             'parse_mode' => 'Markdown',
         ];
 
+        $activeToken = $token ?: $this->currentToken;
+        if (empty($activeToken)) {
+            Log::warning("TelegramService: Bot Token is empty.");
+            return false;
+        }
+
         try {
             $response = Http::timeout(8)
                 ->withoutVerifying()
-                ->post("{$this->apiBase}/bot{$this->token}/editMessageText", $payload);
+                ->post("{$this->apiBase}/bot{$activeToken}/editMessageText", $payload);
             if ($response->failed()) {
                 Log::error("TelegramService editMessageText Failed: " . $response->body());
                 return false;

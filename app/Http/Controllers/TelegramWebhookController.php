@@ -52,6 +52,13 @@ class TelegramWebhookController extends Controller
 
         list($action, $orderId) = explode(':', $data, 2);
 
+        // Switch to the correct bot token dynamically depending on the action type
+        if (in_array($action, ['seller_accept', 'seller_reject'])) {
+            $this->telegramService->useSellerToken();
+        } else {
+            $this->telegramService->useAdminToken();
+        }
+
         $order = Order::with('product.seller')->find($orderId);
         if (!$order) {
             Log::warning("Telegram Webhook Warning: Order ID {$orderId} not found.");
