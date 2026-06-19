@@ -94,60 +94,76 @@ class CatalogController extends Controller
         // === BALANCE PAYMENT ===
         if ($paymentMethod === 'balance') {
             $user = auth()->user();
-            $balanceRecord = $user->getOrCreateBalance();
             $price = $product->price;
-
-            if ($balanceRecord->balance < $price) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Saldo tidak cukup. Saldo Anda: Rp ' . number_format($balanceRecord->balance, 0, ',', '.') . ', Harga: Rp ' . number_format($price, 0, ',', '.'),
-                ], 422);
-            }
-
             $orderId = 'ORD-' . strtoupper(Str::random(8));
 
-            $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price, $balanceRecord) {
-                // Deduct balance
-                $balanceBefore = $balanceRecord->balance;
-                $balanceRecord->decrement('balance', $price);
-                $balanceRecord->refresh();
+            try {
+                $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price) {
+                    // Lock the user balance row
+                    $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                    if (!$balanceRecord) {
+                        $balanceRecord = $user->getOrCreateBalance();
+                        $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                    }
 
-                // Create balance transaction
-                \App\Models\BalanceTransaction::create([
-                    'user_id' => $user->id,
-                    'type' => 'purchase',
-                    'amount' => $price,
-                    'balance_before' => $balanceBefore,
-                    'balance_after' => $balanceRecord->balance,
-                    'description' => 'Pembelian: ' . $product->name,
-                    'reference_id' => $orderId,
-                    'status' => 'success',
-                ]);
+                    // Check balance inside the transaction
+                    if ($balanceRecord->balance < $price) {
+                        throw new \Exception('Saldo tidak cukup. Saldo Anda: Rp ' . number_format($balanceRecord->balance, 0, ',', '.') . ', Harga: Rp ' . number_format($price, 0, ',', '.'));
+                    }
 
-                // Create the order (paid immediately)
-                $order = Order::create([
-                    'id' => $orderId,
-                    'user_id' => $user->id,
-                    'product_id' => $product->id,
-                    'email_or_whatsapp' => $request->email_or_whatsapp,
-                    'target_phone' => $request->target_phone,
-                    'base_amount' => $price,
-                    'unique_code' => 0,
-                    'total_amount' => $price,
-                    'status' => 'success',
-                    'payment_method' => 'balance',
-                    'qris_payload' => null,
-                    'vpn_config' => $product->config_template,
-                    'expired_at' => null,
-                ]);
+                    // Verify stock inside the transaction for limited products
+                    if ($product->stock > 0 && !$product->stocks()->where('status', 'ready')->exists()) {
+                        $prod = \App\Models\Product::where('id', $product->id)->lockForUpdate()->first();
+                        if ($prod->stock <= 0) {
+                            throw new \Exception('Stok produk ini sedang habis.');
+                        }
+                    }
 
-                // Assign local account stock if product uses dynamic stock
-                if ($product->stocks()->where('status', 'ready')->exists()) {
-                    $stock = \App\Models\AccountStock::where('product_id', $product->id)
-                        ->where('status', 'ready')
-                        ->first();
+                    // Deduct balance
+                    $balanceBefore = $balanceRecord->balance;
+                    $balanceRecord->decrement('balance', $price);
+                    $balanceRecord->refresh();
 
-                    if ($stock) {
+                    // Create balance transaction
+                    \App\Models\BalanceTransaction::create([
+                        'user_id' => $user->id,
+                        'type' => 'purchase',
+                        'amount' => $price,
+                        'balance_before' => $balanceBefore,
+                        'balance_after' => $balanceRecord->balance,
+                        'description' => 'Pembelian: ' . $product->name,
+                        'reference_id' => $orderId,
+                        'status' => 'success',
+                    ]);
+
+                    // Create the order (paid immediately)
+                    $order = Order::create([
+                        'id' => $orderId,
+                        'user_id' => $user->id,
+                        'product_id' => $product->id,
+                        'email_or_whatsapp' => $request->email_or_whatsapp,
+                        'target_phone' => $request->target_phone,
+                        'base_amount' => $price,
+                        'unique_code' => 0,
+                        'total_amount' => $price,
+                        'status' => 'success',
+                        'payment_method' => 'balance',
+                        'qris_payload' => null,
+                        'vpn_config' => $product->config_template,
+                        'expired_at' => null,
+                    ]);
+
+                    // Assign local account stock if product uses dynamic stock
+                    if ($product->stocks()->where('status', 'ready')->exists()) {
+                        $stock = \App\Models\AccountStock::where('product_id', $product->id)
+                            ->where('status', 'ready')
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$stock) {
+                            throw new \Exception('Stok akun untuk produk ini sedang habis.');
+                        }
+
                         $stock->update([
                             'status' => 'sold',
                             'order_id' => $order->id,
@@ -155,29 +171,37 @@ class CatalogController extends Controller
                         $order->vpn_config = $stock->account_data;
                         $order->save();
                     }
-                }
 
-                // Run VPS account creation if product is linked to a VPS server
-                if ($product->vps_server_id) {
-                    app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                    $order->save();
-                }
-
-                // Kirim pesanan ke Orderkuota jika applicable
-                app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
-
-                // Decrement product stock if not unlimited
-                if ($product->stock > 0) {
-                    if (!$product->stocks()->where('status', 'ready')->exists()) {
-                        $product->decrement('stock');
+                    // Run VPS account creation if product is linked to a VPS server
+                    if ($product->vps_server_id) {
+                        app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                        $order->save();
                     }
-                }
 
-                // Process seller commissions
-                \App\Models\SellerCommission::processForOrder($order);
+                    // Kirim pesanan ke Orderkuota jika applicable
+                    app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
 
-                return $order;
-            });
+                    // Decrement product stock if not unlimited
+                    if ($product->stock > 0) {
+                        if (!$product->stocks()->where('status', 'ready')->exists()) {
+                            $prod = \App\Models\Product::where('id', $product->id)->lockForUpdate()->first();
+                            if ($prod && $prod->stock > 0) {
+                                $prod->decrement('stock');
+                            }
+                        }
+                    }
+
+                    // Process seller commissions
+                    \App\Models\SellerCommission::processForOrder($order);
+
+                    return $order;
+                });
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
 
             return response()->json([
                 'success' => true,

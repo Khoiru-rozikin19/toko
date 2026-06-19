@@ -141,57 +141,66 @@ class AdminController extends Controller
         $user = auth()->user();
         $amount = (int) $request->amount;
 
-        // Calculate current seller wallet balance
-        $orderQuery = Order::whereHas('product', function ($pq) use ($user) {
-            $pq->where('user_id', $user->id);
-        });
+        try {
+            DB::transaction(function () use ($user, $amount) {
+                // Lock the user balance row
+                $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                if (!$balanceRecord) {
+                    $balanceRecord = $user->getOrCreateBalance();
+                    $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                }
 
-        $walletBalance = 0;
-        
-        // Profit dari penjualan produk sendiri
-        $successfulOrders = $orderQuery->whereIn('status', ['success', 'paid'])->with('product')->get();
-        foreach ($successfulOrders as $order) {
-            $product = $order->product;
-            $modal = $product ? ($product->harga_modal ?? 0) : 0;
-            $walletBalance += ($order->total_amount - $modal);
+                // Calculate current seller wallet balance
+                $orderQuery = Order::whereHas('product', function ($pq) use ($user) {
+                    $pq->where('user_id', $user->id);
+                });
+
+                $walletBalance = 0;
+                
+                // Profit dari penjualan produk sendiri
+                $successfulOrders = $orderQuery->whereIn('status', ['success', 'paid'])->with('product')->get();
+                foreach ($successfulOrders as $order) {
+                    $product = $order->product;
+                    $modal = $product ? ($product->harga_modal ?? 0) : 0;
+                    $walletBalance += ($order->total_amount - $modal);
+                }
+
+                // Tambah komisi/cashback yang didapatkan dari pembelian produk
+                $totalCommissions = Order::where('user_id', $user->id)
+                    ->whereIn('status', ['success', 'paid'])
+                    ->sum('commission_earned');
+                $walletBalance += $totalCommissions;
+
+                // Deduct already transferred amounts
+                $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
+                    ->where('type', 'transfer_in')
+                    ->where('status', 'success')
+                    ->where('description', 'like', '%Transfer dari Dompet Seller%')
+                    ->sum('amount');
+
+                $availableBalance = $walletBalance - $totalTransferred;
+
+                if ($amount > $availableBalance) {
+                    throw new \Exception('Saldo dompet seller tidak mencukupi untuk transfer nominal tersebut. Maksimal transfer: Rp ' . number_format($availableBalance, 0, ',', '.'));
+                }
+
+                $balanceBefore = $balanceRecord->balance;
+                $balanceRecord->increment('balance', $amount);
+                $balanceRecord->refresh();
+
+                \App\Models\BalanceTransaction::create([
+                    'user_id' => $user->id,
+                    'type' => 'transfer_in',
+                    'amount' => $amount,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceRecord->balance,
+                    'description' => 'Transfer dari Dompet Seller',
+                    'status' => 'success',
+                ]);
+            });
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        // Tambah komisi/cashback yang didapatkan dari pembelian produk
-        $totalCommissions = Order::where('user_id', $user->id)
-            ->whereIn('status', ['success', 'paid'])
-            ->sum('commission_earned');
-        $walletBalance += $totalCommissions;
-
-        // Deduct already transferred amounts
-        $totalTransferred = \App\Models\BalanceTransaction::where('user_id', $user->id)
-            ->where('type', 'transfer_in')
-            ->where('status', 'success')
-            ->where('description', 'like', '%Transfer dari Dompet Seller%')
-            ->sum('amount');
-
-        $availableBalance = $walletBalance - $totalTransferred;
-
-        if ($amount > $availableBalance) {
-            return back()->with('error', 'Saldo dompet seller tidak mencukupi untuk transfer nominal tersebut. Maksimal transfer: Rp ' . number_format($availableBalance, 0, ',', '.'));
-        }
-
-        // Perform transfer inside transaction
-        DB::transaction(function () use ($user, $amount) {
-            $balanceRecord = $user->getOrCreateBalance();
-            $balanceBefore = $balanceRecord->balance;
-            $balanceRecord->increment('balance', $amount);
-            $balanceRecord->refresh();
-
-            \App\Models\BalanceTransaction::create([
-                'user_id' => $user->id,
-                'type' => 'transfer_in',
-                'amount' => $amount,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceRecord->balance,
-                'description' => 'Transfer dari Dompet Seller',
-                'status' => 'success',
-            ]);
-        });
 
         return back()->with('success', 'Berhasil memindahkan saldo Rp ' . number_format($amount, 0, ',', '.') . ' ke saldo akun Anda.');
     }

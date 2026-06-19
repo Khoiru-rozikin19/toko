@@ -623,3 +623,186 @@ test('dashboard statistics are separated per user and wallet balance subtracts h
     $sellerResponse->assertSee('Rp 8.000'); // Wallet profit
     $sellerResponse->assertDontSee('Rp 15.000'); // Shouldn't see admin's revenue
 });
+
+test('duplicate payment callback notification with identical raw_text does not match second order', function () {
+    $product1 = Product::create([
+        'name' => 'VPN Pack A',
+        'price' => 15000,
+        'duration_days' => 30,
+        'stock' => 5,
+    ]);
+
+    $product2 = Product::create([
+        'name' => 'VPN Pack B',
+        'price' => 15000,
+        'duration_days' => 30,
+        'stock' => 5,
+    ]);
+
+    // Create two pending orders with identical total_amount
+    $orderA = Order::create([
+        'id' => 'ORD-11111111',
+        'product_id' => $product1->id,
+        'email_or_whatsapp' => 'buyer1@example.com',
+        'base_amount' => 15000,
+        'unique_code' => 42,
+        'total_amount' => 15042,
+        'status' => 'pending',
+        'vpn_config' => 'config-text',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    $orderB = Order::create([
+        'id' => 'ORD-22222222',
+        'product_id' => $product2->id,
+        'email_or_whatsapp' => 'buyer2@example.com',
+        'base_amount' => 15000,
+        'unique_code' => 42,
+        'total_amount' => 15042,
+        'status' => 'pending',
+        'vpn_config' => 'config-text',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // First callback should match Order A
+    $response1 = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'GOPAY TRANSFER Rp 15.042 FROM TESTER_DUP',
+        'amount' => 15042,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response1->assertStatus(200)
+              ->assertJson([
+                  'success' => true,
+                  'order_id' => 'ORD-11111111',
+              ]);
+
+    expect($orderA->fresh()->status)->toBe('success');
+    expect($orderB->fresh()->status)->toBe('pending'); // Order B must still be pending
+
+    // Second callback with the EXACT SAME raw_text should not match Order B
+    $response2 = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'GOPAY TRANSFER Rp 15.042 FROM TESTER_DUP',
+        'amount' => 15042,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response2->assertStatus(200)
+              ->assertJson([
+                  'success' => true,
+                  'message' => 'Pembayaran ini sudah diproses sebelumnya.',
+                  'order_id' => 'ORD-11111111',
+              ]);
+
+    expect($orderB->fresh()->status)->toBe('pending'); // Order B must still be pending
+});
+
+test('telegram duplicate approval requests are protected against duplicate processing', function () {
+    $product = Product::create([
+        'name' => 'VPN Test',
+        'price' => 10000,
+        'duration_days' => 30,
+        'stock' => 5,
+    ]);
+
+    $order = Order::create([
+        'id' => 'ORD-TG123456',
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'buyer@example.com',
+        'base_amount' => 10000,
+        'unique_code' => 5,
+        'total_amount' => 10005,
+        'status' => 'pending',
+        'vpn_config' => 'config-text',
+        'expired_at' => Carbon::now()->addMinutes(15),
+    ]);
+
+    // Mock Telegram Bot credentials in env
+    putenv('TELEGRAM_ADMIN_ID=987654321');
+    config(['services.telegram.bot_token' => '123456:ABC-DEF']);
+
+    // First Telegram Webhook callback query to approve
+    $response1 = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb_1',
+            'from' => ['id' => 987654321],
+            'data' => 'approve:ORD-TG123456',
+            'message' => [
+                'message_id' => 123,
+                'chat' => ['id' => 456],
+            ],
+        ],
+    ]);
+
+    $response1->assertStatus(200)
+              ->assertJson([
+                  'success' => true,
+                  'message' => 'Order ORD-TG123456 approved and processed.',
+              ]);
+
+    expect($order->fresh()->status)->toBe('paid');
+
+    // Second Telegram Webhook callback query to approve should be rejected as already processed
+    $response2 = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb_2',
+            'from' => ['id' => 987654321],
+            'data' => 'approve:ORD-TG123456',
+            'message' => [
+                'message_id' => 123,
+                'chat' => ['id' => 456],
+            ],
+        ],
+    ]);
+
+    $response2->assertStatus(200)
+              ->assertJson([
+                  'success' => false,
+                  'message' => 'Order already processed.',
+              ]);
+});
+
+test('buyer cannot make duplicate purchase if balance is insufficient after first purchase', function () {
+    $user = User::create([
+        'name' => 'Test Buyer Balance',
+        'email' => 'buyer_bal@example.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+
+    $balance = $user->getOrCreateBalance();
+    $balance->update(['balance' => 15000]); // exactly enough for 1 package
+
+    $product = Product::create([
+        'name' => 'Premium SG Pack',
+        'price' => 15000,
+        'duration_days' => 30,
+        'config_template' => 'vpn-config-data',
+        'stock' => 5,
+    ]);
+
+    // First checkout should succeed
+    $response1 = $this->actingAs($user)->postJson(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'tester@whatsapp.com',
+        'payment_method' => 'balance',
+    ]);
+
+    $response1->assertStatus(200)
+              ->assertJsonPath('success', true);
+
+    expect($user->getBalance())->toBe(0.0);
+
+    // Second checkout should fail since balance is now 0
+    $response2 = $this->actingAs($user)->postJson(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'tester@whatsapp.com',
+        'payment_method' => 'balance',
+    ]);
+
+    $response2->assertStatus(422)
+              ->assertJsonPath('success', false)
+              ->assertJsonPath('message', 'Saldo tidak cukup. Saldo Anda: Rp 0, Harga: Rp 15.000');
+});
+
