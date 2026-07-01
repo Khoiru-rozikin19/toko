@@ -33,16 +33,32 @@ if [ -z "$SUBDOMAIN" ]; then
   exit 1
 fi
 
+# Cek konflik port (jika port 80/443 sudah digunakan oleh HAProxy/Xray)
+echo -e "\n${KUNING}Konfigurasi Port Nginx & SSL:${NC}"
+read -p "Apakah port 80/443 digunakan service lain (seperti HAProxy/Xray)? (y/n, default n): " PORT_CONFLICT
+NGINX_PORT=80
+if [[ "$PORT_CONFLICT" =~ ^[Yy]$ ]]; then
+  read -p "Masukkan port kustom untuk Nginx (contoh: 8080 atau 81): " NGINX_PORT
+  if [ -z "$NGINX_PORT" ]; then
+    NGINX_PORT=8080
+  fi
+fi
+
+read -p "Apakah Anda ingin memasang SSL otomatis menggunakan Certbot? (y/n, default y): " INSTALL_SSL
+INSTALL_SSL=${INSTALL_SSL:-y}
+
 # Generate Password Acak untuk MySQL
 DB_PASS=$(openssl rand -base64 12 | tr -d '/+=')
 DB_NAME="toko_vpn"
 DB_USER="vpn_user"
 
 echo -e "\n${HIJAU}Konfigurasi deploy yang akan digunakan:${NC}"
-echo -e "• Subdomain  : ${SUBDOMAIN}"
-echo -e "• Database   : ${DB_NAME}"
-echo -e "• DB User    : ${DB_USER}"
-echo -e "• DB Password: ${DB_PASS}"
+echo -e "• Subdomain   : ${SUBDOMAIN}"
+echo -e "• Port Nginx  : ${NGINX_PORT}"
+echo -e "• Pasang SSL  : ${INSTALL_SSL}"
+echo -e "• Database    : ${DB_NAME}"
+echo -e "• DB User     : ${DB_USER}"
+echo -e "• DB Password : ${DB_PASS}"
 echo -e "--------------------------------------------------------"
 read -p "Apakah data di atas sudah benar? (y/n): " KONFIRMASI
 if [ "$KONFIRMASI" != "y" ] && [ "$KONFIRMASI" != "Y" ]; then
@@ -67,11 +83,18 @@ apt install -y nginx php8.3 php8.3-fpm php8.3-cli php8.3-mysql php8.3-sqlite3 ph
 
 # 5. Pasang & Konfigurasi MySQL Server
 echo -e "\n${KUNING}Langkah 4: Memasang & mengamankan MySQL Server...${NC}"
-apt install -y mysql-server
+# Cek apakah MySQL atau MariaDB sudah aktif
+MYSQL_INSTALLED=false
+if systemctl is-active mysql &>/dev/null || systemctl is-active mariadb &>/dev/null; then
+  MYSQL_INSTALLED=true
+  echo -e "${HIJAU}Database server (MySQL/MariaDB) terdeteksi sudah berjalan. Menggunakan database yang ada.${NC}"
+fi
 
-# Nyalakan MySQL
-systemctl start mysql
-systemctl enable mysql
+if [ "$MYSQL_INSTALLED" = false ]; then
+  apt install -y mysql-server
+  systemctl start mysql
+  systemctl enable mysql
+fi
 
 # Buat Database dan User
 echo -e "${BIRU}Membuat database ${DB_NAME} dan user ${DB_USER}...${NC}"
@@ -207,7 +230,7 @@ NGINX_CONF="/etc/nginx/sites-available/${SUBDOMAIN}"
 
 cat <<EOT > "$NGINX_CONF"
 server {
-    listen 80;
+    listen ${NGINX_PORT};
     server_name ${SUBDOMAIN};
     root ${APP_DIR}/public;
 
@@ -248,9 +271,14 @@ nginx -t
 systemctl restart nginx
 
 # 13. SSL dengan Certbot (Let's Encrypt)
-echo -e "\n${KUNING}Langkah 12: Memasang SSL Certbot untuk ${SUBDOMAIN}...${NC}"
-apt install -y certbot python3-certbot-nginx
-certbot --nginx -d "$SUBDOMAIN" --non-interactive --agree-tos -m "admin@${SUBDOMAIN}" --redirect
+if [[ "$INSTALL_SSL" =~ ^[Yy]$ ]]; then
+  echo -e "\n${KUNING}Langkah 12: Memasang SSL Certbot untuk ${SUBDOMAIN}...${NC}"
+  apt install -y certbot python3-certbot-nginx
+  certbot --nginx -d "$SUBDOMAIN" --non-interactive --agree-tos -m "admin@${SUBDOMAIN}" --redirect
+else
+  echo -e "\n${KUNING}Langkah 12: Melewati pemasangan SSL otomatis Certbot.${NC}"
+  echo -e "${BIRU}Silakan atur SSL secara manual melalui HAProxy/Xray atau web proxy Anda.${NC}"
+fi
 
 # 14. Pasang PM2 untuk Background Queue Worker
 echo -e "\n${KUNING}Langkah 13: Memasang PM2 & menjalankan Laravel Queue Worker...${NC}"
