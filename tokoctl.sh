@@ -483,11 +483,16 @@ backup_website() {
                     print_info "Mengunggah file ke Google Drive (folder: toko_backups)..."
                     if rclone copy "${backup_dir}/${backup_filename}" gdrive:toko_backups/; then
                         print_success "File berhasil diunggah ke Google Drive!"
-                        local share_link=$(rclone link "gdrive:toko_backups/${backup_filename}" 2>/dev/null)
-                        if [ -n "$share_link" ]; then
+                        
+                        # Generate Link Sharing secara langsung
+                        print_info "Membuat link sharing publik..."
+                        local share_link
+                        share_link=$(rclone link "gdrive:toko_backups/${backup_filename}" 2>&1)
+                        if [ $? -eq 0 ] && [ -n "$share_link" ]; then
                             echo -e "  ${CYAN}Link Sharing:${NC} ${GREEN}${share_link}${NC}"
                         else
-                            echo -e "  ${YELLOW}[INFO] Silakan aktifkan link sharing pada file '${backup_filename}' di Google Drive Anda jika ingin menggunakannya untuk pemulihan (restore) di VPS lain.${NC}"
+                            print_warning "Gagal membuat link sharing secara otomatis: $share_link"
+                            echo -e "  ${YELLOW}Silakan buka Google Drive Anda, cari file '${backup_filename}', lalu klik kanan -> Bagikan (Share) -> Salin Link.${NC}"
                         fi
                     else
                         print_error "Gagal mengunggah file ke Google Drive."
@@ -604,10 +609,38 @@ restore_website() {
         return 1
     fi
 
+    # 1. Cadangkan file .env lokal saat ini ke /tmp sebelum penimpaan file backup
+    local temp_env="/tmp/toko_current_env_backup"
+    if [ -f ".env" ]; then
+        cp ".env" "$temp_env"
+        print_info "Mencadangkan file .env lokal saat ini..."
+    fi
+
     print_info "Mengekstrak file backup..."
     if ! tar -xzf "$selected_backup"; then
         print_error "Ekstraksi arsip gagal."
+        rm -f "$temp_env"
         return 1
+    fi
+
+    # 2. Sinkronisasikan kredensial database dan domain agar tetap mengarah ke VPS baru
+    if [ -f "$temp_env" ] && [ -f ".env" ]; then
+        print_info "Menyelaraskan konfigurasi database & domain (.env)..."
+        local new_db_host=$(grep "^DB_HOST=" "$temp_env" | cut -d'=' -f2-)
+        local new_db_port=$(grep "^DB_PORT=" "$temp_env" | cut -d'=' -f2-)
+        local new_db_name=$(grep "^DB_DATABASE=" "$temp_env" | cut -d'=' -f2-)
+        local new_db_user=$(grep "^DB_USERNAME=" "$temp_env" | cut -d'=' -f2-)
+        local new_db_pass=$(grep "^DB_PASSWORD=" "$temp_env" | cut -d'=' -f2-)
+        local new_app_url=$(grep "^APP_URL=" "$temp_env" | cut -d'=' -f2-)
+
+        [ -n "$new_db_host" ] && sed -i "s|^DB_HOST=.*|DB_HOST=$new_db_host|g" .env
+        [ -n "$new_db_port" ] && sed -i "s|^DB_PORT=.*|DB_PORT=$new_db_port|g" .env
+        [ -n "$new_db_name" ] && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=$new_db_name|g" .env
+        [ -n "$new_db_user" ] && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=$new_db_user|g" .env
+        [ -n "$new_db_pass" ] && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$new_db_pass|g" .env
+        [ -n "$new_app_url" ] && sed -i "s|^APP_URL=.*|APP_URL=$new_app_url|g" .env
+        
+        rm -f "$temp_env"
     fi
 
     # Restore DB jika temp dump ada
@@ -635,7 +668,7 @@ restore_website() {
             if [ -n "$db_pass" ]; then
                 export MYSQL_PWD="$db_pass"
             fi
-            mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS ${db_name:-toko};" 2>/dev/null
+            mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" 2>/dev/null
             mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" < "$db_temp_file" 2>/dev/null
             local mysql_status=$?
             unset MYSQL_PWD
@@ -660,19 +693,57 @@ restore_website() {
     # Pembuatan ulang cache & pemasangan dependensi
     print_info "Menginstal ulang dependensi & membangun aset frontend..."
     composer install --no-dev --optimize-autoloader --ignore-platform-reqs || true
-    npm install --no-audit --no-fund || true
-    npm run build || npx vite build || true
+    if [ -f "package.json" ]; then
+        npm install --no-audit --no-fund || true
+        npm run build || npx vite build || true
+    fi
     
+    # Bersihkan Cache Laravel secara menyeluruh
+    print_info "Mengosongkan & memproses ulang cache Laravel..."
     php artisan optimize:clear || true
-    php artisan optimize || true
+    php artisan cache:clear || true
+    php artisan config:clear || true
+    php artisan route:clear || true
+    php artisan view:clear || true
 
-    print_info "Mengonfigurasi hak akses folder..."
+    # Amankan Perizinan folder & file
+    print_info "Mengatur perizinan folder & file..."
     chown -R www-data:www-data . 2>/dev/null || true
+    find . -path "./node_modules" -prune -o -path "./vendor" -prune -o -path "./.git" -prune -o -type d -exec chmod 755 {} \; 2>/dev/null || true
+    find . -path "./node_modules" -prune -o -path "./vendor" -prune -o -path "./.git" -prune -o -type f -exec chmod 644 {} \; 2>/dev/null || true
+    chmod +x artisan *.sh 2>/dev/null || true
     chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-    # Restart PM2
+    # Perbaikan jika folder berada di /root
+    if [[ "$PWD" == "/root"* ]]; then
+        print_warning "Proyek berada di dalam direktori /root. Membuka akses masuk direktori untuk Nginx..."
+        chmod +x /root
+    fi
+
+    # Auto-adjust Nginx root path agar langsung aktif mengarah ke direktori baru
+    local current_root="$PWD/public"
+    local app_url=$(grep "^APP_URL=" .env | cut -d'=' -f2- | sed 's/https\?:\/\///' | sed 's/\/$//' | tr -d '\r')
+    if [ -n "$app_url" ]; then
+        # Cari file konfigurasi nginx di sites-available yang sesuai dengan APP_URL
+        for conf in /etc/nginx/sites-available/*; do
+            if [ -f "$conf" ] && (grep -q "server_name.*$app_url" "$conf" || grep -q "server_name.*${app_url//\./\\.}" "$conf"); then
+                print_info "Menyesuaikan root directory Nginx di $conf menjadi $current_root..."
+                sed -i "s|root .*/public;|root $current_root;|g" "$conf"
+                nginx -t &>/dev/null && systemctl reload nginx
+            fi
+        done
+    fi
+
+    # Restart FastCGI & Nginx
+    detect_php_service
+    print_info "Memuat ulang layanan PHP ($php_service) & Web Server (Nginx)..."
+    systemctl restart "$php_service" || service "$php_service" restart || true
+    systemctl reload nginx || service nginx reload || true
+
+    # Restart PM2 Queue Worker
     if command -v pm2 &>/dev/null; then
-        pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker
+        print_info "Merestart PM2 Queue Worker..."
+        pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PWD"
         pm2 save
     fi
 
