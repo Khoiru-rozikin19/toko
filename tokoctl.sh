@@ -457,6 +457,48 @@ backup_website() {
         print_success "Cadangan website berhasil dibuat!"
         echo -e "  ${CYAN}File Hasil:${NC} ${backup_dir}/${backup_filename}"
         echo -e "  ${CYAN}Ukuran   :${NC} $size"
+
+        echo
+        read -p "Apakah Anda ingin mengunggah file backup ini ke Google Drive? (y/n, default n): " upload_gdrive
+        if [[ "$upload_gdrive" =~ ^[Yy]$ ]]; then
+            if ! command -v rclone &>/dev/null; then
+                print_warning "Rclone tidak terdeteksi di server."
+                read -p "Apakah Anda ingin menginstal rclone secara otomatis sekarang? (y/n): " install_rclone_ans
+                if [[ "$install_rclone_ans" =~ ^[Yy]$ ]]; then
+                    print_info "Menginstal rclone..."
+                    apt-get update && apt-get install -y rclone
+                fi
+            fi
+
+            if command -v rclone &>/dev/null; then
+                if ! rclone listremotes | grep -q "^gdrive:"; then
+                    print_warning "Remote 'gdrive' belum dikonfigurasi di Rclone."
+                    echo -e "Untuk menggunakan Google Drive, Anda harus mengonfigurasi remote bernama 'gdrive'."
+                    echo -e "Silakan jalankan perintah ${BOLD}rclone config${NC} di terminal terpisah."
+                    echo -e "Ikuti petunjuk konfigurasi untuk membuat remote Google Drive dengan nama 'gdrive'."
+                    read -p "Tekan [Enter] setelah Anda selesai mengonfigurasi rclone..."
+                fi
+
+                if rclone listremotes | grep -q "^gdrive:"; then
+                    print_info "Mengunggah file ke Google Drive (folder: toko_backups)..."
+                    if rclone copy "${backup_dir}/${backup_filename}" gdrive:toko_backups/; then
+                        print_success "File berhasil diunggah ke Google Drive!"
+                        local share_link=$(rclone link "gdrive:toko_backups/${backup_filename}" 2>/dev/null)
+                        if [ -n "$share_link" ]; then
+                            echo -e "  ${CYAN}Link Sharing:${NC} ${GREEN}${share_link}${NC}"
+                        else
+                            echo -e "  ${YELLOW}[INFO] Silakan aktifkan link sharing pada file '${backup_filename}' di Google Drive Anda jika ingin menggunakannya untuk pemulihan (restore) di VPS lain.${NC}"
+                        fi
+                    else
+                        print_error "Gagal mengunggah file ke Google Drive."
+                    fi
+                else
+                    print_error "Konfigurasi remote 'gdrive' tidak ditemukan. Upload dibatalkan."
+                fi
+            else
+                print_error "Rclone tidak terpasang. Upload dibatalkan."
+            fi
+        fi
     else
         print_error "Gagal mengompresi backup."
         return 1
@@ -467,42 +509,98 @@ restore_website() {
     echo -e "${BOLD}${RED}=== PULIHKAN (RESTORE) DATA WEBSITE ===${NC}"
     
     local backup_dir="backups"
-    if [ ! -d "$backup_dir" ] || [ -z "$(ls -A "$backup_dir" 2>/dev/null)" ]; then
-        print_error "Tidak ada file backup yang terdeteksi di folder '$backup_dir'."
-        return 1
-    fi
+    mkdir -p "$backup_dir"
 
-    echo -e "Pilih file backup untuk dipulihkan:"
-    local i=1
-    local backups_list=()
-    for file in "$backup_dir"/toko_backup_*.tar.gz; do
-        if [ -f "$file" ]; then
-            backups_list+=("$file")
-            local size=$(du -sh "$file" | awk '{print $1}')
-            local date_str=$(basename "$file" | sed -E 's/toko_backup_(.*)\.tar\.gz/\1/')
-            local formatted_date=$(echo "$date_str" | sed -E 's/([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})/\1-\2-\3 \4:\5:\6/')
-            echo -e "  [$i] $(basename "$file") ($size) - [$formatted_date]"
-            i=$((i+1))
+    echo -e "Pilih sumber file backup:"
+    echo -e "  [1] File Backup Lokal (di folder backups/)"
+    echo -e "  [2] Download & Pulihkan dari Google Drive via Link Sharing"
+    read -p "Pilih sumber [1-2, default 1]: " sumber_backup
+    sumber_backup=${sumber_backup:-1}
+
+    local selected_backup=""
+
+    if [ "$sumber_backup" = "2" ]; then
+        read -p "Masukkan Link Sharing Google Drive: " gdrive_url
+        if [ -z "$gdrive_url" ]; then
+            print_error "Link tidak boleh kosong!"
+            return 1
         fi
-    done
 
-    if [ ${#backups_list[@]} -eq 0 ]; then
-        print_error "Tidak ada arsip backup valid."
-        return 1
+        local file_id=""
+        if [[ "$gdrive_url" =~ d/([^/]+) ]]; then
+            file_id="${BASH_REMATCH[1]}"
+        elif [[ "$gdrive_url" =~ id=([^&]+) ]]; then
+            file_id="${BASH_REMATCH[1]}"
+        else
+            file_id="$gdrive_url"
+        fi
+
+        local timestamp=$(date +%Y%m%d_%H%M%S)
+        local downloaded_file="${backup_dir}/toko_backup_gdrive_${timestamp}.tar.gz"
+        print_info "Mengunduh file backup dari Google Drive (ID: $file_id)..."
+        
+        local confirm_url="https://docs.google.com/uc?export=download&id=${file_id}"
+        local confirm_cookie="/tmp/gdrive_confirm_cookie.txt"
+        
+        local confirm_code=$(curl -sL -c "$confirm_cookie" "$confirm_url" | grep -o -E 'confirm=[^&]*' | head -n 1)
+        if [ -n "$confirm_code" ]; then
+            curl -L -b "$confirm_cookie" "https://docs.google.com/uc?export=download&${confirm_code}&id=${file_id}" -o "$downloaded_file"
+        else
+            curl -L "$confirm_url" -o "$downloaded_file"
+        fi
+        rm -f "$confirm_cookie"
+
+        if [ -f "$downloaded_file" ] && [ -s "$downloaded_file" ]; then
+            print_success "File backup berhasil diunduh dari Google Drive."
+            selected_backup="$downloaded_file"
+        else
+            print_error "Gagal mengunduh file backup dari Google Drive."
+            print_warning "Pastikan link valid dan diatur ke 'Siapa saja yang memiliki link dapat melihat/mengunduh'."
+            rm -f "$downloaded_file"
+            return 1
+        fi
+    else
+        if [ ! -d "$backup_dir" ] || [ -z "$(ls -A "$backup_dir" 2>/dev/null)" ]; then
+            print_error "Tidak ada file backup yang terdeteksi di folder '$backup_dir'."
+            return 1
+        fi
+
+        echo -e "Pilih file backup untuk dipulihkan:"
+        local i=1
+        local backups_list=()
+        for file in "$backup_dir"/toko_backup_*.tar.gz; do
+            if [ -f "$file" ]; then
+                backups_list+=("$file")
+                local size=$(du -sh "$file" | awk '{print $1}')
+                local date_str=$(basename "$file" | sed -E 's/toko_backup_(.*)\.tar\.gz/\1/')
+                local formatted_date=$(echo "$date_str" | sed -E 's/([0-9]{4})([0-9]{2})([0-9]{2})_([0-9]{2})([0-9]{2})([0-9]{2})/\1-\2-\3 \4:\5:\6/')
+                echo -e "  [$i] $(basename "$file") ($size) - [$formatted_date]"
+                i=$((i+1))
+            fi
+        done
+
+        if [ ${#backups_list[@]} -eq 0 ]; then
+            print_error "Tidak ada arsip backup valid."
+            return 1
+        fi
+
+        read -p "Masukkan nomor backup [1-$((i-1))] (atau Enter untuk batal): " pilihan
+        if [ -z "$pilihan" ] || ! [[ "$pilihan" =~ ^[0-9]+$ ]] || [ "$pilihan" -lt 1 ] || [ "$pilihan" -ge "$i" ]; then
+            print_warning "Batal memulihkan."
+            return 1
+        fi
+
+        selected_backup="${backups_list[$((pilihan-1))]}"
     fi
-
-    read -p "Masukkan nomor backup [1-$((i-1))] (atau Enter untuk batal): " pilihan
-    if [ -z "$pilihan" ] || ! [[ "$pilihan" =~ ^[0-9]+$ ]] || [ "$pilihan" -lt 1 ] || [ "$pilihan" -ge "$i" ]; then
-        print_warning "Batal memulihkan."
-        return 1
-    fi
-
-    local selected_backup="${backups_list[$((pilihan-1))]}"
     
     echo -e "\n${BOLD}${RED}[PERINGATAN] Mengembalikan backup akan menghapus data saat ini!${NC}"
     read -p "Apakah Anda yakin ingin melanjutkan? (y/n): " konfirmasi
     if [[ ! "$konfirmasi" =~ ^[Yy]$ ]]; then
         print_warning "Pemulihan dibatalkan."
+        # Hapus file unduhan sementara jika dilingkari
+        if [ "$sumber_backup" = "2" ] && [ -f "$selected_backup" ]; then
+            rm -f "$selected_backup"
+        fi
         return 1
     fi
 
@@ -576,6 +674,11 @@ restore_website() {
     if command -v pm2 &>/dev/null; then
         pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker
         pm2 save
+    fi
+
+    # Hapus file unduhan Google Drive agar tidak memenuhi ruang disk
+    if [ "$sumber_backup" = "2" ] && [ -f "$selected_backup" ]; then
+        rm -f "$selected_backup"
     fi
 
     print_success "Data website berhasil dipulihkan dengan sukses!"
