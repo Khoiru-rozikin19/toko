@@ -28,7 +28,7 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (Auth::attempt($credentials, true)) {
             $user = Auth::user();
 
             // Pengecekan status verifikasi akun

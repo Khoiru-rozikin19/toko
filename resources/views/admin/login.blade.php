@@ -68,7 +68,7 @@
 
             <div class="flex items-center justify-between pt-2">
                 <label class="flex items-center space-x-2 text-xs text-slate-500 cursor-pointer">
-                    <input type="checkbox" name="remember" class="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500">
+                    <input type="checkbox" name="remember" checked class="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500">
                     <span>Ingat saya</span>
                 </label>
                 
