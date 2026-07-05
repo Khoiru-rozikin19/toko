@@ -72,10 +72,35 @@ echo -e "\n${BIRU}Direktori aplikasi terdeteksi di: ${APP_DIR}${NC}"
 
 # 3. Update System & Pasang Repository Ondrej PHP
 echo -e "\n${KUNING}Langkah 2: Melakukan update system & registrasi PPA PHP...${NC}"
-apt update && apt upgrade -y
-apt install -y software-properties-common curl git unzip nano
-add-apt-repository ppa:ondrej/php -y
-apt update
+
+# Optimalisasi koneksi (Paksa IPv4 untuk menghindari timeout IPv6 pada VPS baru)
+echo -e "${BIRU}Mengoptimalkan konfigurasi jaringan (Prioritas IPv4)...${NC}"
+sysctl -w net.ipv6.conf.all.disable_ipv6=1 &>/dev/null || true
+sysctl -w net.ipv6.conf.default.disable_ipv6=1 &>/dev/null || true
+sysctl -w net.ipv6.conf.lo.disable_ipv6=1 &>/dev/null || true
+echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+
+apt update --allow-releaseinfo-change && apt upgrade -y
+apt install -y software-properties-common curl git unzip nano gnupg2 ca-certificates lsb-release apt-transport-https
+
+# Coba daftarkan PPA Ondrej PHP
+if ! add-apt-repository ppa:ondrej/php -y; then
+  echo -e "${KUNING}[WARNING] add-apt-repository gagal (koneksi timeout). Mencoba menambahkan PPA secara manual...${NC}"
+  
+  mkdir -p /etc/apt/keyrings
+  
+  # Ambil key dari keyserver hkp port 80 (biasanya lolos firewall)
+  if ! gpg --no-default-keyring --keyring /etc/apt/keyrings/ondrej-php.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 14AA40EC0831756756D7F66C4F4EA0AAE5267A6C; then
+    echo -e "${KUNING}[WARNING] Gagal mengambil key dari keyserver. Mengunduh via HTTPS...${NC}"
+    curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x14AA40EC0831756756D7F66C4F4EA0AAE5267A6C" | gpg --dearmor -o /etc/apt/keyrings/ondrej-php.gpg
+  fi
+  
+  # Dapatkan codename OS secara dinamis (misal: noble, jammy, dll.)
+  CODENAME=$(lsb_release -sc)
+  echo "deb [signed-by=/etc/apt/keyrings/ondrej-php.gpg] https://ppa.launchpadcontent.net/ondrej/php/ubuntu ${CODENAME} main" | tee /etc/apt/sources.list.d/ondrej-php.list
+fi
+
+apt update --allow-releaseinfo-change
 
 # 4. Pasang Web Server Nginx & PHP 8.3
 echo -e "\n${KUNING}Langkah 3: Memasang Nginx & PHP 8.3 FPM beserta modul...${NC}"
@@ -102,6 +127,9 @@ mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COL
 mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
 mysql -e "ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';"
 mysql -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'localhost';"
+mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';"
+mysql -e "ALTER USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';"
+mysql -e "GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';"
 mysql -e "FLUSH PRIVILEGES;"
 
 # 6. Pasang Composer & Node.js

@@ -466,7 +466,7 @@ backup_website() {
                 read -p "Apakah Anda ingin menginstal rclone secara otomatis sekarang? (y/n): " install_rclone_ans
                 if [[ "$install_rclone_ans" =~ ^[Yy]$ ]]; then
                     print_info "Menginstal rclone..."
-                    apt-get update && apt-get install -y rclone
+                    apt-get update --allow-releaseinfo-change && apt-get install -y rclone
                 fi
             fi
 
