@@ -160,21 +160,12 @@ class PaymentCallbackController extends Controller
                     }
                 }
 
-                // Run VPS account creation if product is linked to a VPS server
-                if ($order->product && $order->product->vps_server_id) {
-                    app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                }
-
                 // Complete the order
                 $order->status = 'success';
                 $order->save();
-                $order->processEscrowAndNotification();
 
                 // Process seller commissions
                 \App\Models\SellerCommission::processForOrder($order);
-
-                // Kirim pesanan ke Orderkuota secara langsung
-                $this->orderkuotaService->kirimPesananKeOrderkuota($order->id);
 
                 // Decrement product stock if not unlimited
                 if ($order->product && $order->product->stock > 0) {
@@ -195,29 +186,68 @@ class PaymentCallbackController extends Controller
             });
 
             if ($result['success'] && isset($result['order_id'])) {
-                $order = Order::find($result['order_id']);
-                if ($order && $order->telegram_message_id) {
-                    $telegramService = app(\App\Services\TelegramService::class);
-                    $adminId = env('TELEGRAM_ADMIN_ID');
-                    $formattedAmount = number_format($order->total_amount, 0, ',', '.');
-                    $customerName = $order->email_or_whatsapp;
+                $orderId = $result['order_id'];
 
-                    if ($order->payment_method === 'topup_balance') {
-                        $updatedText = "✅ *Top Up Sukses (Otomatis)*\n\n"
-                                     . "📦 *ID Order:* `{$order->id}`\n"
-                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
-                                     . "👤 *Pelanggan:* {$customerName}\n\n"
-                                     . "Status top up telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
-                    } else {
-                        $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
-                                     . "📦 *ID Order:* `{$order->id}`\n"
-                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
-                                     . "👤 *Pelanggan:* {$customerName}\n\n"
-                                     . "Status transaksi telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                // Defer slow operations (SSH connection, Telegram requests, Okeconnect APIs)
+                // to run asynchronously after the HTTP response has been sent to the Android app.
+                app()->terminating(function () use ($orderId) {
+                    $order = Order::with('product')->find($orderId);
+                    if (!$order) {
+                        return;
                     }
 
-                    $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
-                }
+                    // 1. VPS account creation via SSH
+                    if ($order->product && $order->product->vps_server_id) {
+                        try {
+                            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                            $order->save();
+                        } catch (\Exception $e) {
+                            Log::error("PaymentCallback: Failed to create VPS account for order {$order->id}: " . $e->getMessage());
+                        }
+                    }
+
+                    // 2. Escrow processing and seller notifications
+                    try {
+                        $order->processEscrowAndNotification();
+                    } catch (\Exception $e) {
+                        Log::error("PaymentCallback: Failed to process escrow/notification for order {$order->id}: " . $e->getMessage());
+                    }
+
+                    // 3. Send order to Orderkuota API
+                    try {
+                        app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                    } catch (\Exception $e) {
+                        Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
+                    }
+
+                    // 4. Update Telegram message to Admin
+                    if ($order->telegram_message_id) {
+                        try {
+                            $telegramService = app(\App\Services\TelegramService::class);
+                            $adminId = env('TELEGRAM_ADMIN_ID');
+                            $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+                            $customerName = $order->email_or_whatsapp;
+
+                            if ($order->payment_method === 'topup_balance') {
+                                $updatedText = "✅ *Top Up Sukses (Otomatis)*\n\n"
+                                             . "📦 *ID Order:* `{$order->id}`\n"
+                                             . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                             . "👤 *Pelanggan:* {$customerName}\n\n"
+                                             . "Status top up telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
+                            } else {
+                                $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
+                                             . "📦 *ID Order:* `{$order->id}`\n"
+                                             . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                             . "👤 *Pelanggan:* {$customerName}\n\n"
+                                             . "Status transaksi telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                            }
+
+                            $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
+                        } catch (\Exception $e) {
+                            Log::error("PaymentCallback: Failed to update Telegram message for order {$order->id}: " . $e->getMessage());
+                        }
+                    }
+                });
             }
 
             return response()->json([

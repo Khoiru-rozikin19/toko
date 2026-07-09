@@ -60,6 +60,11 @@ class VpsSshService
                 }
             }
 
+            // If the SSH user is not root, wrap command with sudo for root privileges
+            if (strtolower($server->ssh_username) !== 'root') {
+                $command = 'sudo -n bash -c ' . escapeshellarg($command);
+            }
+
             $output = $ssh->exec($command);
             $ssh->disconnect();
             

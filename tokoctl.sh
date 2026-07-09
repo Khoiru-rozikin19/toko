@@ -408,12 +408,22 @@ backup_website() {
     # Export DB sesuai tipe koneksi
     if [ "$db_conn" = "mysql" ]; then
         print_info "Mengekspor basis data MySQL..."
-        if [ -n "$db_pass" ]; then
-            export MYSQL_PWD="$db_pass"
+        local dump_status=1
+        
+        # Coba 1: Menggunakan koneksi root local socket (paling cepat dan aman)
+        if mysqldump "${db_name:-toko}" > "$db_temp_file" 2>/dev/null; then
+            dump_status=0
+        else
+            # Coba 2: Fallback menggunakan kredensial .env via TCP
+            print_warning "Ekspor root lokal gagal. Mencoba menggunakan kredensial .env..."
+            if [ -n "$db_pass" ]; then
+                export MYSQL_PWD="$db_pass"
+            fi
+            mysqldump -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" > "$db_temp_file" 2>/dev/null
+            dump_status=$?
+            unset MYSQL_PWD
         fi
-        mysqldump -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" > "$db_temp_file" 2>/dev/null
-        local dump_status=$?
-        unset MYSQL_PWD
+
         if [ $dump_status -ne 0 ]; then
             print_error "Gagal mengekspor database MySQL! Pastikan kredensial di .env valid."
             rm -f "$db_temp_file"
@@ -609,6 +619,14 @@ restore_website() {
         return 1
     fi
 
+    # 0. Hentikan service sementara agar tidak ada lock database saat restore
+    print_info "Menghentikan service sementara untuk menghindari lock database..."
+    detect_php_service
+    systemctl stop nginx "$php_service" 2>/dev/null || true
+    if command -v pm2 &>/dev/null; then
+        pm2 stop vpn-queue-worker 2>/dev/null || true
+    fi
+
     # 1. Cadangkan file .env lokal saat ini ke /tmp sebelum penimpaan file backup
     local temp_env="/tmp/toko_current_env_backup"
     if [ -f ".env" ]; then
@@ -665,13 +683,23 @@ restore_website() {
 
         if [ "$db_conn" = "mysql" ]; then
             print_info "Memulihkan database MySQL..."
-            if [ -n "$db_pass" ]; then
-                export MYSQL_PWD="$db_pass"
+            local mysql_status=1
+            
+            # Coba 1: Menggunakan koneksi root local socket (paling cepat dan aman, tanpa TCP/DNS)
+            if mysql -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" &>/dev/null; then
+                mysql "${db_name:-toko}" < "$db_temp_file" &>/dev/null
+                mysql_status=$?
+            else
+                # Coba 2: Fallback menggunakan kredensial dari file .env via TCP
+                print_warning "Koneksi root lokal dibatasi atau gagal. Mencoba menggunakan kredensial dari file .env..."
+                if [ -n "$db_pass" ]; then
+                    export MYSQL_PWD="$db_pass"
+                fi
+                mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" 2>/dev/null
+                mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" < "$db_temp_file" 2>/dev/null
+                mysql_status=$?
+                unset MYSQL_PWD
             fi
-            mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" 2>/dev/null
-            mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" < "$db_temp_file" 2>/dev/null
-            local mysql_status=$?
-            unset MYSQL_PWD
             
             if [ $mysql_status -eq 0 ]; then
                 print_success "Database MySQL berhasil dipulihkan."
