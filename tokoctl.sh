@@ -13,9 +13,23 @@ if [ "$EUID" -ne 0 ]; then
     exec sudo bash "$0" "$@"
 fi
 
-# Pindah ke direktori script dijalankan agar path relatif berfungsi dengan aman
+# Pindah ke direktori script dijalankan
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR" || exit 1
+
+# Deteksi direktori project Laravel secara otomatis
+# Prioritas: 1) /var/www/toko, 2) Direktori script (jika ada artisan), 3) /var/www/html, 4) Direktori script
+PROJECT_DIR=""
+if [ -f "/var/www/toko/artisan" ]; then
+    PROJECT_DIR="/var/www/toko"
+elif [ -f "$SCRIPT_DIR/artisan" ]; then
+    PROJECT_DIR="$SCRIPT_DIR"
+elif [ -f "/var/www/html/artisan" ]; then
+    PROJECT_DIR="/var/www/html"
+else
+    PROJECT_DIR="$SCRIPT_DIR"
+fi
+
+cd "$PROJECT_DIR" || { echo -e "\e[31m[ERROR] Gagal masuk ke direktori project: $PROJECT_DIR\e[0m"; exit 1; }
 
 # 2. Definisi Warna ANSI untuk Tampilan Premium (Aesthetics)
 RED='\e[31m'
@@ -88,6 +102,7 @@ show_dashboard() {
     echo -e "      ${BOLD}${GREEN}🚀   DASHBOARD MANAJEMEN VPS & WEBSITE   🚀${NC}"
     print_border
     echo -e "  ${BOLD}${WHITE}💻 Info Server:${NC}"
+    echo -e "    • Project  : ${CYAN}$PROJECT_DIR${NC}"
     echo -e "    • CPU Load : ${CYAN}$cpu_load${NC}"
     echo -e "    • RAM      : ${CYAN}${ram_used}MB${NC} / ${CYAN}${ram_total}MB${NC}"
     echo -e "    • Disk /   : ${CYAN}$disk_used${NC}"
