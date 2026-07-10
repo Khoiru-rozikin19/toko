@@ -18,6 +18,7 @@ class ProfileController extends Controller
         return view('profile', [
             'title' => 'Profil Saya',
             'user' => $user,
+            'currentBalance' => $user->getBalance(),
         ]);
     }
 

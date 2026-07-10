@@ -25,41 +25,23 @@
         </div>
     @endif
 
-    <!-- Balance Grid Info -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Balance Info Card -->
+    <div class="rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/15 flex flex-col sm:flex-row sm:items-center sm:justify-between relative overflow-hidden border border-blue-500/10 dark:border-blue-400/20" style="background: linear-gradient(to bottom right, #2563eb, #4338ca);">
+        <!-- Background Decoration -->
+        <div class="absolute -right-10 -top-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-blue-500/30 rounded-full blur-2xl pointer-events-none"></div>
         
-        <!-- Current Balance Card -->
-        <div class="rounded-3xl p-6 text-white shadow-xl shadow-blue-500/15 flex flex-col justify-between relative overflow-hidden h-52 lg:col-span-2 border border-blue-500/10 dark:border-blue-400/20" style="background: linear-gradient(to bottom right, #2563eb, #4338ca);">
-            <!-- Background Decoration -->
-            <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-            <div class="absolute -left-10 -bottom-10 w-36 h-36 bg-blue-500/30 rounded-full blur-2xl"></div>
-            
-            <div>
-                <span class="text-xs uppercase tracking-widest text-blue-200/80 font-semibold">Total Saldo Saat Ini</span>
-                <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mt-2">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h1>
-            </div>
-            
-            <div class="flex items-center justify-between border-t border-white/10 pt-4 mt-4">
-                <span class="text-xs text-blue-100/70">Akun: {{ auth()->user()->name }}</span>
-                <button type="button" onclick="openTopupModal()" class="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 transition font-bold rounded-2xl text-xs flex items-center space-x-2 shadow-lg shadow-black/10">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                    <span>Isi Saldo</span>
-                </button>
-            </div>
+        <div class="relative z-10 space-y-1">
+            <span class="text-xs uppercase tracking-widest text-blue-200/80 font-bold">Total Saldo Saat Ini</span>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h1>
+            <span class="text-xs text-blue-100/75 block">Akun: {{ auth()->user()->name }}</span>
         </div>
-
-        <!-- QRIS Info / Static instructions -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-sm">
-            <div>
-                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-lg mb-2">Metode Pembayaran QRIS</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-405 leading-relaxed">
-                    Sistem topup menggunakan QRIS otomatis. Masukkan nominal topup, lakukan pembayaran sesuai nominal total (termasuk kode unik) agar saldo otomatis masuk ke akun Anda dalam hitungan detik.
-                </p>
-            </div>
-            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center space-x-3 text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                <span>Diproses Secara Otomatis & Aman</span>
-            </div>
+        
+        <div class="relative z-10 mt-5 sm:mt-0">
+            <button type="button" onclick="openTopupModal()" class="w-full sm:w-auto px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 transition-all font-bold rounded-2xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-black/10 active:scale-95 duration-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                <span>Isi Saldo</span>
+            </button>
         </div>
     </div>
 

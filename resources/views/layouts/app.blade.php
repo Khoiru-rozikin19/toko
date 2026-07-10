@@ -66,19 +66,35 @@
             </div>
 
             <!-- Profile Widget -->
-            <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
-                <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20">
-                    {{ Auth::check() ? strtoupper(substr(Auth::user()->name, 0, 1)) : 'G' }}
+            @if(Auth::check())
+                <a href="{{ route('profile.edit') }}" class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-205">
+                    <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20 flex-shrink-0">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight truncate">
+                            {{ Auth::user()->name }}
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Role: {{ ucfirst(Auth::user()->role) }}
+                        </p>
+                    </div>
+                </a>
+            @else
+                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-lg flex-shrink-0">
+                        G
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                            Tamu Pengunjung
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Role: Guest
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h4 class="font-bold text-slate-800 dark:text-slate-100 leading-tight">
-                        {{ Auth::check() ? Auth::user()->name : 'Tamu Pengunjung' }}
-                    </h4>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">
-                        Role: {{ Auth::check() ? ucfirst(Auth::user()->role) : 'Guest' }}
-                    </p>
-                </div>
-            </div>
+            @endif
 
             <!-- Sidebar Nav Items -->
             <div id="sidebarMenu" class="flex-1 overflow-y-auto px-4 py-6 space-y-6">
@@ -97,20 +113,7 @@
                     </div>
                 </div>
 
-                <!-- AKUN -->
-                <div>
-                    <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Akun</span>
-                    <div class="mt-2 space-y-1">
-                        <a href="{{ Auth::check() ? route('profile.edit') : route('login') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('profile.edit') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                            <span>Profil Saya</span>
-                        </a>
-                        <a href="{{ Auth::check() ? route('balance.index') : route('login') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 {{ request()->routeIs('balance.index') ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800' }}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Saldo Saya</span>
-                        </a>
-                    </div>
-                </div>
+                <!-- AKUN SECTION REMOVED -->
 
                 <!-- SELLER PORTAL & PORTAL ADMIN -->
                 @if(Auth::check())
@@ -181,37 +184,7 @@
                         </div>
                     @endif
 
-                    @if(Auth::user()->role === 'buyer')
-                        <div>
-                            <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider font-bold">Upgrade Akun</span>
-                            <div class="mt-2 px-3">
-                                @if(Auth::user()->seller_request === 'none')
-                                    <form action="{{ route('buyer.request-seller') }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/10 active:scale-95 transition-all duration-200 text-center">
-                                            Ajukan Sebagai Seller
-                                        </button>
-                                    </form>
-                                @elseif(Auth::user()->seller_request === 'pending')
-                                    <div class="py-2 px-3 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200/20 rounded-xl text-xs font-semibold text-center">
-                                        Pengajuan Pending (Ditinjau)
-                                    </div>
-                                @elseif(Auth::user()->seller_request === 'rejected')
-                                    <div class="space-y-2">
-                                        <div class="py-2 px-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200/20 rounded-xl text-xs font-semibold text-center">
-                                            Pengajuan Ditolak
-                                        </div>
-                                        <form action="{{ route('buyer.request-seller') }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold active:scale-95 transition-all duration-200 text-center">
-                                                Ajukan Lagi
-                                            </button>
-                                        </form>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endif
+                    <!-- UPGRADE AKUN SECTION REMOVED -->
                 @endif
             </div>
         </aside>
