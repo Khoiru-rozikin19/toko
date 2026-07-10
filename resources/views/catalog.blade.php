@@ -599,9 +599,11 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid') {
+                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
                     showSuccessState(data.vpn_config, data.success_instruction);
                 } else if (data.status === 'expired') {
+                    showExpiredState();
+                } else if (data.status === 'ditolak' || data.status === 'rejected') {
                     showExpiredState();
                 }
             })

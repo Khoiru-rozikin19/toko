@@ -317,11 +317,11 @@
             fetch(`/orders/${activeOrderId}/status`)
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'success' || data.status === 'paid') {
+                if (data.status === 'success' || data.status === 'paid' || data.status === 'sukses') {
                     clearInterval(pollInterval);
                     alert("Pembayaran sukses terverifikasi!");
                     window.location.reload();
-                } else if (data.status === 'expired') {
+                } else if (data.status === 'expired' || data.status === 'ditolak' || data.status === 'rejected') {
                     clearInterval(pollInterval);
                     window.location.reload();
                 }
