@@ -114,10 +114,10 @@ class BalanceController extends Controller
                 'base_amount' => $amount,
                 'unique_code' => $uniqueCode,
                 'total_amount' => $totalAmount,
-                'status' => 'pending_manual',
+                'status' => 'pending',
                 'payment_method' => 'topup_balance',
                 'qris_payload' => $qrisPayload,
-                'expired_at' => Carbon::now()->addMinutes(15),
+                'expired_at' => Carbon::now()->addMinutes(30),
             ]);
 
             // Create pending balance transaction

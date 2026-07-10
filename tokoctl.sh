@@ -218,9 +218,10 @@ show_dashboard() {
     echo -e "    [6] 🤖  Menu Bot"
     echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
+    echo -e "    [9] 📊  Kelola Riwayat Transaksi"
     echo -e "    [0] 🚪  Keluar dari Panel"
     print_border
-    echo -n "Pilih menu [0-8]: "
+    echo -n "Pilih menu [0-9]: "
 }
 
 # =====================================================================
@@ -2268,6 +2269,123 @@ duid_reset_menu() {
         esac
     done
 }
+ 
+manage_transaction_history() {
+    # Inisialisasi koneksi database saat pertama kali masuk
+    if ! duid_init_db; then
+        print_error "Tidak dapat masuk karena koneksi database gagal."
+        return 1
+    fi
+
+    while true; do
+        duid_header
+        echo -e "  ${BOLD}📊  KELOLA RIWAYAT TRANSAKSI:${NC}"
+        echo ""
+        echo -e "    ${WHITE}1)${NC}  Hapus riwayat transaksi user (pilih user)"
+        echo -e "    ${WHITE}2)${NC}  Hapus semua riwayat transaksi user"
+        echo -e "    ${WHITE}0)${NC}  Kembali ke Menu Utama"
+        echo ""
+        echo -ne "  ${YELLOW}Pilihan: ${NC}"
+        read -r tx_pilihan
+
+        case "$tx_pilihan" in
+            1)
+                duid_lihat_daftar_user
+                echo -ne "  ${YELLOW}Masukkan ID user yang ingin dihapus riwayat transaksinya (0 = kembali): ${NC}"
+                read -r user_id
+                if [ "$user_id" = "0" ] || [ -z "$user_id" ]; then
+                    continue
+                fi
+
+                local user_info=$(db_query "SELECT id, name, email, phone FROM users WHERE id = $user_id;")
+                if [ -z "$user_info" ]; then
+                    echo -e "\n  ${RED}✗ User dengan ID $user_id tidak ditemukan.${NC}"
+                    echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+                    read -r
+                    continue
+                fi
+
+                IFS='|' read -r uid uname uemail uphone <<< "$user_info"
+
+                echo ""
+                garis
+                echo -e "  ${YELLOW}${BOLD}⚠ KONFIRMASI HAPUS RIWAYAT TRANSAKSI USER:${NC}"
+                echo -e "  ${WHITE}ID    : ${CYAN}$uid${NC}"
+                echo -e "  ${WHITE}Nama  : ${CYAN}$uname${NC}"
+                echo -e "  ${WHITE}Email : ${CYAN}$uemail${NC}"
+                echo -e "  ${WHITE}Phone : ${CYAN}$uphone${NC}"
+                garis
+                echo -ne "  ${YELLOW}Yakin ingin menghapus riwayat transaksi user ini? (y/n): ${NC}"
+                read -r konfirmasi
+
+                if [ "$konfirmasi" != "y" ] && [ "$konfirmasi" != "Y" ]; then
+                    echo -e "\n  ${DIM}Dibatalkan.${NC}"
+                    echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+                    read -r
+                    continue
+                fi
+
+                echo -e "\n  ${DIM}Sedang menghapus riwayat transaksi user $uname...${NC}"
+                
+                local query_order_ids="SELECT id FROM orders WHERE user_id = $uid"
+                if [ -n "$uemail" ]; then
+                    query_order_ids="$query_order_ids OR email_or_whatsapp = '$uemail'"
+                fi
+                if [ -n "$uphone" ]; then
+                    query_order_ids="$query_order_ids OR email_or_whatsapp = '$uphone'"
+                fi
+                
+                db_query "DELETE FROM complaints WHERE user_id = $uid OR order_id IN ($query_order_ids);"
+                db_query "DELETE FROM payment_logs WHERE matched_order_id IN ($query_order_ids);"
+                
+                local delete_orders_sql="DELETE FROM orders WHERE user_id = $uid"
+                if [ -n "$uemail" ]; then
+                    delete_orders_sql="$delete_orders_sql OR email_or_whatsapp = '$uemail'"
+                fi
+                if [ -n "$uphone" ]; then
+                    delete_orders_sql="$delete_orders_sql OR email_or_whatsapp = '$uphone'"
+                fi
+                db_query "$delete_orders_sql;"
+                db_query "DELETE FROM balance_transactions WHERE user_id = $uid;"
+
+                echo -e "  ${GREEN}✓ Berhasil menghapus riwayat transaksi user $uname!${NC}"
+                echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+                read -r
+                ;;
+            2)
+                echo ""
+                garis
+                echo -e "  ${RED}${BOLD}⚠ PERINGATAN KELAS BERAT: Anda akan menghapus SELURUH riwayat pesanan,${NC}"
+                echo -e "  ${RED}${BOLD}komplain, log pembayaran, dan transaksi saldo dari SEMUA user!${NC}"
+                garis
+                echo -ne "  ${YELLOW}Ketik 'RESET-ALL' untuk mengonfirmasi: ${NC}"
+                read -r konfirmasi
+                if [ "$konfirmasi" != "RESET-ALL" ]; then
+                    echo -e "\n  ${DIM}Dibatalkan.${NC}"
+                    sleep 1.5
+                    continue
+                fi
+
+                echo -e "\n  ${DIM}Sedang menghapus riwayat transaksi semua user...${NC}"
+                db_query "DELETE FROM complaints;"
+                db_query "DELETE FROM payment_logs;"
+                db_query "DELETE FROM orders;"
+                db_query "DELETE FROM balance_transactions;"
+                
+                echo -e "  ${GREEN}✓ Berhasil menghapus riwayat transaksi semua user!${NC}"
+                echo -ne "  ${DIM}Tekan Enter untuk kembali...${NC}"
+                read -r
+                ;;
+            0|"")
+                break
+                ;;
+            *)
+                echo -e "\n  ${RED}✗ Pilihan tidak valid.${NC}"
+                sleep 1
+                ;;
+        esac
+    done
+}
 
 manage_saldo() {
     # Inisialisasi koneksi database saat pertama kali masuk
@@ -2347,12 +2465,15 @@ while true; do
         8)
             manage_saldo
             ;;
+        9)
+            manage_transaction_history
+            ;;
         0)
             print_info "Keluar dari panel pengelola VPS. Sampai jumpa!"
             exit 0
             ;;
         *)
-            print_warning "Pilihan tidak valid. Silakan pilih menu [0-8]."
+            print_warning "Pilihan tidak valid. Silakan pilih menu [0-9]."
             ;;
     esac
     

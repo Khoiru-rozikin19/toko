@@ -88,7 +88,7 @@ test('user checkout buy route registers order with unique code and returns json'
     expect($order->unique_code)->toBeGreaterThanOrEqual(1);
     expect($order->unique_code)->toBeLessThanOrEqual(99);
     expect($order->total_amount)->toBe($order->base_amount + $order->unique_code);
-    expect($order->status)->toBe('pending_manual');
+    expect($order->status)->toBe('pending');
 });
 
 test('api callback notification processes successful payments and updates order and stock', function () {
@@ -133,7 +133,7 @@ test('api callback notification processes successful payments and updates order 
 
     // Check order status updated to success
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
 
     // Check stock decremented
     $product->refresh();
@@ -677,7 +677,7 @@ test('duplicate payment callback notification with identical raw_text does not m
                   'order_id' => 'ORD-11111111',
               ]);
 
-    expect($orderA->fresh()->status)->toBe('success');
+    expect($orderA->fresh()->status)->toBe('sukses');
     expect($orderB->fresh()->status)->toBe('pending'); // Order B must still be pending
 
     // Second callback with the EXACT SAME raw_text should not match Order B
@@ -740,7 +740,7 @@ test('telegram duplicate approval requests are protected against duplicate proce
                   'message' => 'Order ORD-TG123456 approved and processed.',
               ]);
 
-    expect($order->fresh()->status)->toBe('paid');
+    expect($order->fresh()->status)->toBe('sukses');
 
     // Second Telegram Webhook callback query to approve should be rejected as already processed
     $response2 = $this->postJson(route('webhook.telegram'), [

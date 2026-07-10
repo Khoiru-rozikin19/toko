@@ -78,7 +78,7 @@ test('buyer buys seller product via balance and funds enter held_balance, seller
     // Verify order was created with correct escrow details
     $order = Order::first();
     expect($order)->not->toBeNull();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
     expect($order->escrow_status)->toBe('held');
     expect((float)$order->escrow_amount)->toBe(10000.0); // 15000 - 5000
     expect($order->telegram_message_id)->toBe('998877');

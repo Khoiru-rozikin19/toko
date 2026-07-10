@@ -183,7 +183,7 @@ test('telegram webhook approval consumes a ready configuration and maps it to th
 
     // Verify order transitioned to 'paid' and vpn_config contains the oldest config
     $order->refresh();
-    expect($order->status)->toBe('paid');
+    expect($order->status)->toBe('sukses');
     expect($order->vpn_config)->toBe('vmess://oldest_ready');
 
     // Verify oldest config is sold and linked to the order
@@ -236,7 +236,7 @@ test('automated payment callback consumes a ready configuration and maps it to t
 
     // Verify order status updated to success and config is assigned
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
     expect($order->vpn_config)->toBe('vmess://auto_ready');
 
     // Verify configuration marked as sold

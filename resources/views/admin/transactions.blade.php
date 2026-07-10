@@ -72,7 +72,7 @@
                                 Rp {{ number_format($order->total_amount, 0, ',', '.') }}
                             </td>
                             <td class="py-4.5 px-6">
-                                @if(in_array($order->status, ['success', 'paid']))
+                                @if(in_array($order->status, ['success', 'paid', 'sukses']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
                                         Sukses
                                     </span>
@@ -80,7 +80,7 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
                                         Pending
                                     </span>
-                                @elseif($order->status === 'rejected')
+                                @elseif(in_array($order->status, ['rejected', 'ditolak']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                         Ditolak
                                     </span>

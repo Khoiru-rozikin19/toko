@@ -108,7 +108,7 @@ class PaymentCallbackController extends Controller
 
                 // === TOPUP BALANCE HANDLING ===
                 if ($order->payment_method === 'topup_balance') {
-                    $order->status = 'success';
+                    $order->status = 'sukses';
                     $order->save();
 
                     // Add balance to user
@@ -161,7 +161,7 @@ class PaymentCallbackController extends Controller
                 }
 
                 // Complete the order
-                $order->status = 'success';
+                $order->status = 'sukses';
                 $order->save();
 
                 // Process seller commissions
@@ -233,13 +233,13 @@ class PaymentCallbackController extends Controller
                                              . "📦 *ID Order:* `{$order->id}`\n"
                                              . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                              . "👤 *Pelanggan:* {$customerName}\n\n"
-                                             . "Status top up telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
+                                             . "Status top up telah diubah menjadi *SUKSES* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
                             } else {
                                 $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
                                              . "📦 *ID Order:* `{$order->id}`\n"
                                              . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                              . "👤 *Pelanggan:* {$customerName}\n\n"
-                                             . "Status transaksi telah diubah menjadi *SUCCESS* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                                             . "Status transaksi telah diubah menjadi *SUKSES* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
                             }
 
                             $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);

@@ -153,7 +153,7 @@ class CatalogController extends Controller
                         'base_amount' => $price,
                         'unique_code' => 0,
                         'total_amount' => $price,
-                        'status' => 'success',
+                        'status' => 'sukses',
                         'payment_method' => 'balance',
                         'qris_payload' => null,
                         'vpn_config' => $product->config_template,
@@ -220,7 +220,7 @@ class CatalogController extends Controller
                     'product_name' => $product->name,
                     'email_or_whatsapp' => $order->email_or_whatsapp,
                     'total_amount' => $order->total_amount,
-                    'status' => 'success',
+                    'status' => 'sukses',
                     'vpn_config' => $order->vpn_config,
                     'success_instruction' => $product->success_instruction,
                 ],
@@ -273,11 +273,11 @@ class CatalogController extends Controller
             'base_amount' => $product->price,
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
-            'status' => 'pending_manual',
+            'status' => 'pending',
             'payment_method' => 'qris',
             'qris_payload' => $qrisPayload,
             'vpn_config' => $product->config_template,
-            'expired_at' => Carbon::now()->addMinutes(15),
+            'expired_at' => Carbon::now()->addMinutes(30),
         ]);
 
         // Kirim notifikasi ke Telegram Admin secara asynchronous via background queue
@@ -312,10 +312,10 @@ class CatalogController extends Controller
 
         $response = [
             'status' => $order->status,
-            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid']),
+            'has_config' => !empty($order->vpn_config) && in_array($order->status, ['success', 'paid', 'sukses']),
         ];
 
-        if (in_array($order->status, ['success', 'paid'])) {
+        if (in_array($order->status, ['success', 'paid', 'sukses'])) {
             $response['vpn_config'] = $order->vpn_config;
             $response['success_instruction'] = $order->product ? $order->product->success_instruction : null;
         }
@@ -330,7 +330,7 @@ class CatalogController extends Controller
     {
         $order = Order::findOrFail($id);
 
-        if (!in_array($order->status, ['success', 'paid'])) {
+        if (!in_array($order->status, ['success', 'paid', 'sukses'])) {
             return abort(403, 'Akses ditolak. Pembayaran belum sukses.');
         }
 
@@ -403,7 +403,7 @@ class CatalogController extends Controller
             return redirect()->back()->with('error', 'Akses ditolak. Anda tidak berhak mengajukan komplain untuk order ini.');
         }
 
-        if (!in_array($order->status, ['success', 'paid', 'proses'])) {
+        if (!in_array($order->status, ['success', 'paid', 'proses', 'sukses'])) {
             return redirect()->back()->with('error', 'Hanya pesanan sukses atau sedang diproses yang dapat dikomplain.');
         }
 

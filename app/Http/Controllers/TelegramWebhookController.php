@@ -134,7 +134,7 @@ class TelegramWebhookController extends Controller
                     ];
                 }
             } elseif (in_array($action, ['seller_accept', 'seller_reject'])) {
-                if ($order->status !== 'success' && $order->status !== 'paid') {
+                if ($order->status !== 'success' && $order->status !== 'paid' && $order->status !== 'sukses') {
                     if ($callbackQueryId) {
                         $this->telegramService->answerCallbackQuery($callbackQueryId, "Order tidak dalam status untuk diproses seller (Status: {$order->status}).");
                     }
@@ -151,7 +151,7 @@ class TelegramWebhookController extends Controller
             
             if ($action === 'approve') {
                 if ($order->payment_method === 'topup_balance') {
-                    $order->status = 'success';
+                    $order->status = 'sukses';
                     $order->save();
 
                     // Add balance to user
@@ -185,11 +185,11 @@ class TelegramWebhookController extends Controller
 
                     // Edit message to reflect approval
                     if ($chatId && $messageId) {
-                        $updatedText = "✅ *Top Up Disetujui*\n\n"
+                        $updatedText = "✅ *Top Up Sukses*\n\n"
                                      . "📦 *ID Order:* `{$orderId}`\n"
                                      . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                      . "👤 *Pelanggan:* {$customerName}\n\n"
-                                     . "Status top up telah diubah menjadi *SUCCESS* dan saldo telah ditambahkan ke akun user.";
+                                     . "Status top up telah diubah menjadi *SUKSES* dan saldo telah ditambahkan ke akun user.";
                         $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                     }
 
@@ -233,7 +233,7 @@ class TelegramWebhookController extends Controller
                 }
 
                 // Update order status to paid
-                $order->status = 'paid';
+                $order->status = 'sukses';
                 $order->save();
                 $order->processEscrowAndNotification();
 
@@ -260,11 +260,11 @@ class TelegramWebhookController extends Controller
 
                 // Edit message to reflect approval
                 if ($chatId && $messageId) {
-                    $updatedText = "✅ *Transaksi Disetujui*\n\n"
+                    $updatedText = "✅ *Transaksi Sukses*\n\n"
                                  . "📦 *ID Order:* `{$orderId}`\n"
                                  . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                  . "👤 *Pelanggan:* {$customerName}\n\n"
-                                 . "Status transaksi telah diubah menjadi *PAID* dan pesanan diteruskan ke supplier.";
+                                 . "Status transaksi telah diubah menjadi *SUKSES* dan pesanan diteruskan ke supplier.";
                     $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                 }
 
@@ -277,7 +277,7 @@ class TelegramWebhookController extends Controller
 
             if ($action === 'reject') {
                 // Update order status to rejected
-                $order->status = 'rejected';
+                $order->status = 'ditolak';
                 $order->save();
 
                 if ($order->payment_method === 'topup_balance') {
@@ -300,7 +300,7 @@ class TelegramWebhookController extends Controller
                                  . "📦 *ID Order:* `{$orderId}`\n"
                                  . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                  . "👤 *Pelanggan:* {$customerName}\n\n"
-                                 . "Status transaksi telah diubah menjadi *REJECTED* oleh Admin.";
+                                 . "Status transaksi telah diubah menjadi *DITOLAK* oleh Admin.";
                     $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                 }
 

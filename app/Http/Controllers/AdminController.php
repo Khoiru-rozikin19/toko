@@ -36,14 +36,14 @@ class AdminController extends Controller
         };
 
         // 1. Wallets & Earnings (Stats matching screenshot 2)
-        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->sum('total_amount');
+        $totalRevenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->sum('total_amount');
         
         // Saldo Dompet Saya (Profit/Wallet Balance) - Released or Non-escrow only
         $walletBalance = 0;
         
         // Profit dari penjualan produk sendiri yang sudah dirilis atau non-escrow
         $successfulOrders = $orderQuery()
-            ->whereIn('status', ['success', 'paid', 'proses'])
+            ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
             ->whereIn('escrow_status', ['released', 'none'])
             ->with('product')
             ->get();
@@ -52,10 +52,10 @@ class AdminController extends Controller
             $modal = $product ? ($product->harga_modal ?? 0) : 0;
             $walletBalance += ($order->total_amount - $modal);
         }
-
+ 
         // Tambah komisi/cashback yang didapatkan dari pembelian produk
         $totalCommissions = Order::where('user_id', $user->id)
-            ->whereIn('status', ['success', 'paid', 'proses'])
+            ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
             ->sum('commission_earned');
         $walletBalance += $totalCommissions;
 
@@ -78,7 +78,7 @@ class AdminController extends Controller
             $orderkuotaBalance = app(\App\Services\OrderkuotaService::class)->getSaldoOrderkuota();
         }
 
-        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->count();
+        $totalSalesCount = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->count();
         $totalOrdersCount = $orderQuery()->count();
 
         $readyStockCount = 0;
@@ -93,14 +93,14 @@ class AdminController extends Controller
             $date = Carbon::now()->subDays($i);
             $chartLabels[] = $date->isoFormat('D MMM');
             
-            $revenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])
+            $revenue = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
                 ->whereDate('created_at', $date->format('Y-m-d'))
                 ->sum('total_amount');
             $chartData[] = $revenue;
         }
 
         // 3. Rasio Status Order (Donut Chart)
-        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid', 'proses'])->count();
+        $statusSuccess = $orderQuery()->whereIn('status', ['success', 'paid', 'proses', 'sukses'])->count();
         $statusPending = $orderQuery()->whereIn('status', ['pending', 'pending_manual'])->count();
         $statusExpired = $orderQuery()->where('status', 'expired')->count();
 
@@ -170,7 +170,7 @@ class AdminController extends Controller
                 
                 // Profit dari penjualan produk sendiri yang sudah dirilis atau non-escrow
                 $successfulOrders = $orderQuery
-                    ->whereIn('status', ['success', 'paid', 'proses'])
+                    ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
                     ->whereIn('escrow_status', ['released', 'none'])
                     ->with('product')
                     ->get();
@@ -182,7 +182,7 @@ class AdminController extends Controller
 
                 // Tambah komisi/cashback yang didapatkan dari pembelian produk
                 $totalCommissions = Order::where('user_id', $user->id)
-                    ->whereIn('status', ['success', 'paid', 'proses'])
+                    ->whereIn('status', ['success', 'paid', 'proses', 'sukses'])
                     ->sum('commission_earned');
                 $walletBalance += $totalCommissions;
 
@@ -422,6 +422,10 @@ class AdminController extends Controller
         if ($status) {
             if ($status === 'pending') {
                 $query->whereIn('status', ['pending', 'pending_manual']);
+            } elseif ($status === 'success') {
+                $query->whereIn('status', ['success', 'paid', 'sukses']);
+            } elseif ($status === 'rejected') {
+                $query->whereIn('status', ['rejected', 'ditolak']);
             } else {
                 $query->where('status', $status);
             }

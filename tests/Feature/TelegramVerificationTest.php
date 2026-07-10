@@ -58,7 +58,7 @@ test('checkout route transitions order status to pending_manual and dispatches t
     // Verify order was created with status 'pending_manual'
     $order = Order::first();
     expect($order)->not->toBeNull();
-    expect($order->status)->toBe('pending_manual');
+    expect($order->status)->toBe('pending');
     expect($order->telegram_message_id)->toBe('12345');
 
     // Verify Telegram notification was dispatched
@@ -170,7 +170,7 @@ test('telegram webhook processes approval callback from admin and triggers H2H t
 
     // Verify order transitioned to 'paid' and stock decremented
     $order->refresh();
-    expect($order->status)->toBe('paid');
+    expect($order->status)->toBe('sukses');
 
     $product->refresh();
     expect($product->stock)->toBe(7);
@@ -187,8 +187,8 @@ test('telegram webhook processes approval callback from admin and triggers H2H t
         if (str_contains($url, 'editMessageText')) {
             return $data['chat_id'] === 987654321 &&
                    $data['message_id'] === 45 &&
-                   str_contains($data['text'], 'Transaksi Disetujui') &&
-                   str_contains($data['text'], 'PAID');
+                    str_contains($data['text'], 'Transaksi Sukses') &&
+                    str_contains($data['text'], 'SUKSES');
         }
 
         return true;
@@ -247,7 +247,7 @@ test('telegram webhook processes rejection callback from admin', function () {
 
     // Verify order transitioned to 'rejected'
     $order->refresh();
-    expect($order->status)->toBe('rejected');
+    expect($order->status)->toBe('ditolak');
 
     // Verify Telegram callback was answered and message text updated
     Http::assertSent(function ($request) {
@@ -262,7 +262,7 @@ test('telegram webhook processes rejection callback from admin', function () {
             return $data['chat_id'] === 987654321 &&
                    $data['message_id'] === 45 &&
                    str_contains($data['text'], 'Transaksi Ditolak') &&
-                   str_contains($data['text'], 'REJECTED');
+                   str_contains($data['text'], 'DITOLAK');
         }
 
         return true;
@@ -331,7 +331,7 @@ test('telegram webhook processes approval callback from admin for topup orders a
 
     // Verify order transitioned to 'success' (for topup)
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
 
     // Verify user balance incremented
     $userBalance = $user->getOrCreateBalance();
@@ -355,8 +355,7 @@ test('telegram webhook processes approval callback from admin for topup orders a
         if (str_contains($url, 'editMessageText')) {
             return $data['chat_id'] === 987654321 &&
                    $data['message_id'] === 77 &&
-                   str_contains($data['text'], 'Top Up Disetujui') &&
-                   str_contains($data['text'], 'SUCCESS');
+                    str_contains($data['text'], 'SUKSES');
         }
 
         return true;
@@ -421,7 +420,7 @@ test('telegram webhook processes rejection callback from admin for topup orders'
 
     // Verify order transitioned to 'rejected'
     $order->refresh();
-    expect($order->status)->toBe('rejected');
+    expect($order->status)->toBe('ditolak');
 
     // Verify balance transaction updated to failed
     $tx = \App\Models\BalanceTransaction::where('reference_id', 'TOP-REJ-TEST')->first();
@@ -484,7 +483,7 @@ test('automated payment callback updates status and edits Telegram message to re
 
     // Verify order status is success
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
 
     // Verify Telegram editMessageText was called with correct parameters and no buttons
     Http::assertSent(function ($request) {
@@ -494,8 +493,8 @@ test('automated payment callback updates status and edits Telegram message to re
         if (str_contains($url, 'editMessageText')) {
             return $data['chat_id'] === '987654321' &&
                    $data['message_id'] === '998877' &&
-                   str_contains($data['text'], 'Transaksi Sukses (Otomatis)') &&
-                   str_contains($data['text'], 'SUCCESS') &&
+                    str_contains($data['text'], 'Transaksi Sukses (Otomatis)') &&
+                    str_contains($data['text'], 'SUKSES') &&
                    !isset($data['reply_markup']);
         }
 
@@ -550,7 +549,7 @@ test('automated payment callback for topup updates status and edits Telegram mes
 
     // Verify order status is success
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
 
     // Verify Telegram editMessageText was called with correct parameters and no buttons
     Http::assertSent(function ($request) {
@@ -560,8 +559,8 @@ test('automated payment callback for topup updates status and edits Telegram mes
         if (str_contains($url, 'editMessageText')) {
             return $data['chat_id'] === '987654321' &&
                    $data['message_id'] === '887766' &&
-                   str_contains($data['text'], 'Top Up Sukses (Otomatis)') &&
-                   str_contains($data['text'], 'SUCCESS') &&
+                    str_contains($data['text'], 'Top Up Sukses (Otomatis)') &&
+                    str_contains($data['text'], 'SUKSES') &&
                    !isset($data['reply_markup']);
         }
 

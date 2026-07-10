@@ -128,7 +128,7 @@ test('successful payment callback triggers VPS account creator and sets vpn_conf
              ->assertJsonPath('success', true);
 
     $order->refresh();
-    expect($order->status)->toBe('success');
+    expect($order->status)->toBe('sukses');
     expect($order->vpn_config)->toContain('host: 127.0.0.1');
     expect($order->vpn_config)->toContain('user: clientvpstest');
 });
