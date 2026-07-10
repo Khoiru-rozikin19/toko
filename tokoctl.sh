@@ -215,7 +215,7 @@ show_dashboard() {
     echo -e "    [3] ⚡  Cek Status Layanan & Sistem"
     echo -e "    [4] 📊  Pantau Aktivitas Pengunjung (Access Log)"
     echo -e "    [5] 📂  Backup & Restore Website (Files & DB)"
-    echo -e "    [6] 🤖  Konfigurasi Bot Telegram & Webhook"
+    echo -e "    [6] 🤖  Menu Bot"
     echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
     echo -e "    [0] 🚪  Keluar dari Panel"
@@ -1493,11 +1493,11 @@ manage_backup_restore() {
 }
 
 # =====================================================================
-#  MENU 6: Konfigurasi Bot Telegram, Proxy, & Webhook
+#  MENU 6: Menu Bot Telegram (Sub-menu)
 # =====================================================================
-configure_telegram() {
+setting_bot_token_admin() {
     print_border
-    echo -e "      ${BOLD}${BLUE}🤖   KONFIGURASI INTEGRASI BOT TELEGRAM   🤖${NC}"
+    echo -e "      ${BOLD}${BLUE}🤖   SETTING BOT TOKEN & ID TELEGRAM ADMIN   🤖${NC}"
     print_border
     
     local old_token=""
@@ -1584,6 +1584,47 @@ configure_telegram() {
         print_error "Gagal mendaftarkan webhook! HTTP Status: $http_status. Respons: $response_body"
         print_warning "Pastikan token bot valid dan domain VPS Anda sudah terpasang HTTPS (SSL)."
     fi
+}
+
+configure_telegram() {
+    while true; do
+        clear
+        echo
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        echo -e "                            🤖  MENU BOT  🤖"
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        echo -e "  [1] ⚙️   Setting Bot Token & ID Telegram Admin"
+        echo -e "  [2] 🧹  Clear Cache Konfigurasi (config:clear & optimize:clear)"
+        echo -e "  [3] ⚡  Tes Koneksi Bot (telegram:test)"
+        echo -e "  [0] 🚪  Kembali ke Menu Utama"
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        read -p "Pilih opsi [0-3]: " bot_pilihan
+        echo
+
+        case "$bot_pilihan" in
+            1)
+                setting_bot_token_admin
+                ;;
+            2)
+                print_info "Membersihkan cache konfigurasi Laravel..."
+                php artisan config:clear
+                php artisan optimize:clear
+                print_success "Cache konfigurasi berhasil dibersihkan!"
+                ;;
+            3)
+                print_info "Menguji koneksi bot Telegram..."
+                php artisan telegram:test
+                ;;
+            0|"")
+                break
+                ;;
+            *)
+                print_warning "Pilihan tidak valid. Silakan pilih 0-3."
+                ;;
+        esac
+        echo
+        read -p "Tekan [Enter] untuk melanjutkan..." temp
+    done
 }
 
 # =====================================================================
