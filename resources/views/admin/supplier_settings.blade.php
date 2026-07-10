@@ -100,11 +100,15 @@
         <form action="{{ route('admin.supplier_settings.import') }}" method="POST">
             @csrf
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl gap-4">
-                <div class="space-y-1">
+                <div class="space-y-1 pr-4">
                     <span class="block text-sm font-bold text-slate-700 dark:text-slate-300">Jalankan Proses Impor Massal</span>
                     <span class="block text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
                         Ini akan mendaftarkan pekerjaan latar belakang (*Background Queue Job*) untuk menarik ribuan data produk Okeconnect. Proses ini aman dan tidak akan menyebabkan timeout pada browser Anda.
                     </span>
+                    <label class="inline-flex items-center mt-2 cursor-pointer">
+                        <input type="checkbox" name="update_prices" value="1" class="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-xs font-bold text-slate-600 dark:text-slate-400">Timpa harga jual kustom produk lama dengan default markup baru</span>
+                    </label>
                 </div>
                 <button type="submit" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-95 shadow-sm">
                     🚀 Impor Sekarang

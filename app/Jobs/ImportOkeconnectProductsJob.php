@@ -15,15 +15,18 @@ class ImportOkeconnectProductsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     protected $markup;
+    protected $updatePrices;
 
     /**
      * Create a new job instance.
      *
      * @param int|null $markup
+     * @param bool $updatePrices
      */
-    public function __construct($markup = null)
+    public function __construct($markup = null, $updatePrices = false)
     {
         $this->markup = $markup ?? (int) Setting::get('okeconnect_markup_price', 1000);
+        $this->updatePrices = $updatePrices;
     }
 
     /**
@@ -31,8 +34,14 @@ class ImportOkeconnectProductsJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Artisan::call('okeconnect:import-products', [
+        $params = [
             '--markup' => $this->markup
-        ]);
+        ];
+
+        if ($this->updatePrices) {
+            $params['--update-prices'] = true;
+        }
+
+        Artisan::call('okeconnect:import-products', $params);
     }
 }

@@ -512,9 +512,10 @@ class AdminController extends Controller
     public function importSupplierProducts(Request $request)
     {
         $markup = Setting::get('okeconnect_markup_price', '1000');
+        $updatePrices = $request->has('update_prices');
         
         // Dispatch the queue job to run in background
-        \App\Jobs\ImportOkeconnectProductsJob::dispatch((int)$markup);
+        \App\Jobs\ImportOkeconnectProductsJob::dispatch((int)$markup, $updatePrices);
 
         return redirect()->route('admin.supplier_settings')->with('success', 'Proses impor & update massal produk H2H berhasil dijalankan di background (antrean job). Silakan cek katalog beberapa saat lagi.');
     }

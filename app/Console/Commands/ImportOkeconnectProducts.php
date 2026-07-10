@@ -17,7 +17,7 @@ class ImportOkeconnectProducts extends Command
      *
      * @var string
      */
-    protected $signature = 'okeconnect:import-products {--markup=1000} {--limit=}';
+    protected $signature = 'okeconnect:import-products {--markup=1000} {--limit=} {--update-prices}';
 
     /**
      * The console command description.
@@ -95,7 +95,9 @@ class ImportOkeconnectProducts extends Command
                 if ($product) {
                     // Update existing product
                     $product->harga_modal = $supplierPrice;
-                    $product->price = $sellingPrice;
+                    if ($this->option('update-prices')) {
+                        $product->price = $sellingPrice;
+                    }
                     $product->stock = $stock;
                     $product->category_id = $category->id;
                     $product->save();
