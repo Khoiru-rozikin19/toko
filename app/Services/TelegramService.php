@@ -18,7 +18,7 @@ class TelegramService
         $this->token = env('TELEGRAM_BOT_TOKEN');
         $this->adminId = env('TELEGRAM_ADMIN_ID');
         $this->apiBase = rtrim(env('TELEGRAM_API_BASE', 'https://api.telegram.org'), '/');
-        $this->sellerToken = env('TELEGRAM_SELLER_BOT_TOKEN') ?: $this->token;
+        $this->sellerToken = $this->token; // Always use the main admin bot token
         $this->currentToken = $this->token;
     }
 

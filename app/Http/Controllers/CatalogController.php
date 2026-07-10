@@ -136,7 +136,10 @@ class CatalogController extends Controller
                         'status' => 'success',
                     ]);
 
-                    // Create the order (paid immediately)
+                    $isSellerProduct = ($product->seller && $product->seller->role === 'seller');
+                    $initialStatus = $isSellerProduct ? 'pending_manual' : 'success';
+
+                    // Create the order
                     $order = Order::create([
                         'id' => $orderId,
                         'user_id' => $user->id,
@@ -146,55 +149,57 @@ class CatalogController extends Controller
                         'base_amount' => $price,
                         'unique_code' => 0,
                         'total_amount' => $price,
-                        'status' => 'success',
+                        'status' => $initialStatus,
                         'payment_method' => 'balance',
                         'qris_payload' => null,
                         'vpn_config' => $product->config_template,
                         'expired_at' => null,
                     ]);
 
-                    $order->processEscrowAndNotification();
+                    if (!$isSellerProduct) {
+                        $order->processEscrowAndNotification();
 
-                    // Assign local account stock if product uses dynamic stock
-                    if ($product->stocks()->where('status', 'ready')->exists()) {
-                        $stock = \App\Models\AccountStock::where('product_id', $product->id)
-                            ->where('status', 'ready')
-                            ->lockForUpdate()
-                            ->first();
+                        // Assign local account stock if product uses dynamic stock
+                        if ($product->stocks()->where('status', 'ready')->exists()) {
+                            $stock = \App\Models\AccountStock::where('product_id', $product->id)
+                                ->where('status', 'ready')
+                                ->lockForUpdate()
+                                ->first();
 
-                        if (!$stock) {
-                            throw new \Exception('Stok akun untuk produk ini sedang habis.');
+                            if (!$stock) {
+                                throw new \Exception('Stok akun untuk produk ini sedang habis.');
+                            }
+
+                            $stock->update([
+                                'status' => 'sold',
+                                'order_id' => $order->id,
+                            ]);
+                            $order->vpn_config = $stock->account_data;
+                            $order->save();
                         }
 
-                        $stock->update([
-                            'status' => 'sold',
-                            'order_id' => $order->id,
-                        ]);
-                        $order->vpn_config = $stock->account_data;
-                        $order->save();
-                    }
+                        // Run VPS account creation if product is linked to a VPS server
+                        if ($product->vps_server_id) {
+                            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                            $order->save();
+                        }
 
-                    // Run VPS account creation if product is linked to a VPS server
-                    if ($product->vps_server_id) {
-                        app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                        $order->save();
-                    }
+                        // Kirim pesanan ke Orderkuota jika applicable
+                        app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
 
-                    // Kirim pesanan ke Orderkuota jika applicable
-                    app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
-
-                    // Decrement product stock if not unlimited
-                    if ($product->stock > 0) {
-                        if (!$product->stocks()->where('status', 'ready')->exists()) {
-                            $prod = \App\Models\Product::where('id', $product->id)->lockForUpdate()->first();
-                            if ($prod && $prod->stock > 0) {
-                                $prod->decrement('stock');
+                        // Decrement product stock if not unlimited
+                        if ($product->stock > 0) {
+                            if (!$product->stocks()->where('status', 'ready')->exists()) {
+                                $prod = \App\Models\Product::where('id', $product->id)->lockForUpdate()->first();
+                                if ($prod && $prod->stock > 0) {
+                                    $prod->decrement('stock');
+                                }
                             }
                         }
-                    }
 
-                    // Process seller commissions
-                    \App\Models\SellerCommission::processForOrder($order);
+                        // Process seller commissions
+                        \App\Models\SellerCommission::processForOrder($order);
+                    }
 
                     return $order;
                 });
@@ -205,6 +210,11 @@ class CatalogController extends Controller
                 ], 422);
             }
 
+            // Kirim notifikasi ke Telegram Admin secara asynchronous via background queue jika statusnya pending_manual
+            if ($order->status === 'pending_manual') {
+                \App\Jobs\SendTelegramNotificationJob::dispatch($order->id, $order->total_amount, $order->email_or_whatsapp);
+            }
+
             return response()->json([
                 'success' => true,
                 'payment_method' => 'balance',
@@ -213,7 +223,7 @@ class CatalogController extends Controller
                     'product_name' => $product->name,
                     'email_or_whatsapp' => $order->email_or_whatsapp,
                     'total_amount' => $order->total_amount,
-                    'status' => 'success',
+                    'status' => $order->status,
                     'vpn_config' => $order->vpn_config,
                     'success_instruction' => $product->success_instruction,
                 ],

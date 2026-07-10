@@ -67,7 +67,7 @@ class Order extends Model
         $this->paid_at = now();
         $product = $this->product;
         
-        if ($product && $product->user_id) {
+        if ($product && $product->user_id && $product->seller && $product->seller->role === 'seller') {
             // Seller product
             $escrowAmount = $this->total_amount - ($product->harga_modal ?? 0);
             $this->escrow_status = 'held';

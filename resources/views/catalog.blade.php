@@ -260,6 +260,30 @@
             </div>
         </div>
 
+        <!-- TRANSACTION PENDING/WAITING VERIFICATION STATE -->
+        <div id="modalStepPending" class="hidden text-center space-y-6 py-6">
+            <div class="w-20 h-20 bg-amber-100 dark:bg-amber-950/40 rounded-full flex items-center justify-center mx-auto text-amber-600 shadow-xl shadow-amber-500/10">
+                <svg class="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+
+            <div>
+                <h3 class="text-2xl font-black text-slate-800 dark:text-slate-100">Menunggu Verifikasi Admin</h3>
+                <p id="pendingModalOrderId" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Order ID: ORD-XXXXXX</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-4 leading-relaxed">
+                    Pembelian menggunakan saldo berhasil dilakukan. Karena produk ini milik Seller, pesanan Anda saat ini sedang menunggu verifikasi pembayaran & transaksi oleh Admin.
+                </p>
+                <p class="text-xs text-slate-400 dark:text-slate-550 mt-2">
+                    Detail akun atau produk akan siap diunduh setelah disetujui.
+                </p>
+            </div>
+
+            <button onclick="closeModal()" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-semibold transition-all duration-200">
+                Tutup
+            </button>
+        </div>
+
         <!-- EXPIRED / ERROR STATE -->
         <div id="modalStepExpired" class="hidden text-center space-y-6 py-6">
             <div class="w-20 h-20 bg-rose-100 dark:bg-rose-950/40 rounded-full flex items-center justify-center mx-auto text-rose-600 shadow-xl shadow-rose-500/10">
@@ -383,6 +407,7 @@
         document.getElementById('modalStepPayment').classList.add('hidden');
         document.getElementById('modalStepSuccess').classList.add('hidden');
         document.getElementById('modalStepExpired').classList.add('hidden');
+        document.getElementById('modalStepPending').classList.add('hidden');
         
         document.getElementById('purchaseModal').classList.remove('hidden');
     }
@@ -474,8 +499,13 @@
             if (data.success) {
                 if (data.payment_method === 'balance') {
                     document.getElementById('modalStepInput').classList.add('hidden');
-                    document.getElementById('modalStepSuccess').classList.remove('hidden');
-                    populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id);
+                    if (data.order.status === 'pending_manual') {
+                        document.getElementById('modalStepPending').classList.remove('hidden');
+                        document.getElementById('pendingModalOrderId').innerText = 'Order ID: ' + data.order.id;
+                    } else {
+                        document.getElementById('modalStepSuccess').classList.remove('hidden');
+                        populateSuccessDetails(data.order.vpn_config, data.order.success_instruction, data.order.id);
+                    }
                 } else {
                     renderPaymentInstructions(data.order);
                 }
