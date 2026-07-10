@@ -49,16 +49,19 @@ class SyncOkeconnectProductStatus extends Command
                 return 1;
             }
 
+            // Clean HTML comments to avoid matching commented-out elements
+            $html = preg_replace('/<!--.*?-->/s', '', $html);
+
             // Parse HTML rows using regex
             preg_match_all('/<tr>(.*?)<\/tr>/s', $html, $matches);
             
             $statuses = [];
             foreach ($matches[1] as $rowHtml) {
-                // Find code in the first <td> and status in the 4th <td>
+                // Find code in the first <td> and status in the last <td>
                 if (preg_match_all('/<td.*?>(.*?)<\/td>/s', $rowHtml, $tdMatches)) {
                     if (count($tdMatches[1]) >= 4) {
                         $code = trim(strip_tags($tdMatches[1][0]));
-                        $statusHtml = $tdMatches[1][3];
+                        $statusHtml = end($tdMatches[1]);
                         $status = strtolower(trim(strip_tags($statusHtml)));
                         if (!empty($code)) {
                             $statuses[$code] = $status;
