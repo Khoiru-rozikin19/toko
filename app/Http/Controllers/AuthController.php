@@ -71,7 +71,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'phone' => $request->phone,
             'email' => $request->email,
@@ -80,6 +80,9 @@ class AuthController extends Controller
             'is_verified' => false, // Default dinonaktifkan
             'seller_request' => 'none',
         ]);
+
+        // Dispatch Telegram registration notification to Admin
+        \App\Jobs\SendUserRegistrationNotificationJob::dispatch($user);
 
         return redirect()->route('login')->with('success', 'Pendaftaran berhasil! Akun Anda sedang menunggu persetujuan verifikasi dari Admin Utama.');
     }

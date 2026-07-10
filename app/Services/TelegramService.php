@@ -278,4 +278,35 @@ class TelegramService
             return false;
         }
     }
+
+    /**
+     * Send user registration notification to Telegram Admin.
+     *
+     * @param \App\Models\User $user
+     * @return bool
+     */
+    public function sendUserRegistrationNotification($user)
+    {
+        if (empty($this->token) || empty($this->adminId)) {
+            Log::warning('TelegramService: Token atau Admin ID belum diset di .env');
+            return false;
+        }
+
+        $text = "👤 *Notifikasi Registrasi User Baru*\n\n"
+              . "👤 *Nama:* {$user->name}\n"
+              . "📱 *No. HP/WA:* {$user->phone}\n"
+              . "📧 *Email:* {$user->email}\n\n"
+              . "Silakan tentukan persetujuan akun di bawah ini:";
+
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '✅ Setujui', 'callback_data' => "user_approve:{$user->id}"],
+                    ['text' => '❌ Tolak', 'callback_data' => "user_reject:{$user->id}"]
+                ]
+            ]
+        ];
+
+        return $this->sendMessage($this->adminId, $text, $keyboard);
+    }
 }

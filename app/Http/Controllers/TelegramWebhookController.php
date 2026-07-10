@@ -52,6 +52,95 @@ class TelegramWebhookController extends Controller
 
         list($action, $orderId) = explode(':', $data, 2);
 
+        $adminId = env('TELEGRAM_ADMIN_ID');
+
+        // Handle user registration approval/rejection from Admin
+        if (in_array($action, ['user_approve', 'user_reject'])) {
+            // Security check: Only Admin can approve/reject registrations
+            if ((string)$senderId !== (string)$adminId) {
+                Log::warning("Telegram Webhook Unauthorized User Registration Action: Sender ID {$senderId} does not match Admin ID {$adminId}");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Admin.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized admin action.',
+                ], 403);
+            }
+
+            // Always use admin token
+            $this->telegramService->useAdminToken();
+
+            $user = \App\Models\User::find($orderId); // here $orderId is actually $userId
+            if (!$user) {
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "User tidak ditemukan.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found.',
+                ], 404);
+            }
+
+            if ($action === 'user_approve') {
+                if ($user->is_verified) {
+                    if ($callbackQueryId) {
+                        $this->telegramService->answerCallbackQuery($callbackQueryId, "User sudah disetujui sebelumnya.");
+                    }
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'User already approved.',
+                    ]);
+                }
+
+                $user->is_verified = true;
+                $user->save();
+
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Registrasi User berhasil disetujui!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "✅ *Registrasi User Disetujui*\n\n"
+                                 . "👤 *Nama:* {$user->name}\n"
+                                 . "📱 *No. HP/WA:* {$user->phone}\n"
+                                 . "📧 *Email:* {$user->email}\n\n"
+                                 . "Status akun telah disetujui (Aktif).";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User approved successfully.',
+                ]);
+            }
+
+            if ($action === 'user_reject') {
+                $userName = $user->name;
+                $userPhone = $user->phone;
+                $userEmail = $user->email;
+                $user->delete();
+
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Registrasi User ditolak & data akun dihapus!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "❌ *Registrasi User Ditolak*\n\n"
+                                 . "👤 *Nama:* {$userName}\n"
+                                 . "📱 *No. HP/WA:* {$userPhone}\n"
+                                 . "📧 *Email:* {$userEmail}\n\n"
+                                 . "Status registrasi ditolak dan data akun telah dihapus dari sistem.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'User rejected and deleted.',
+                ]);
+            }
+        }
+
         // Switch to the correct bot token dynamically depending on the action type
         if (in_array($action, ['seller_accept', 'seller_reject'])) {
             $this->telegramService->useSellerToken();
