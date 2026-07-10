@@ -312,11 +312,11 @@ class TelegramWebhookController extends Controller
             }
 
             if ($action === 'seller_accept') {
-                $order->status = 'proses';
+                $order->status = 'success';
                 $order->save();
 
                 if ($callbackQueryId) {
-                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pesanan diterima dan sedang diproses!");
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pesanan diterima dan sukses!");
                 }
 
                 if ($chatId && $messageId) {
@@ -324,7 +324,7 @@ class TelegramWebhookController extends Controller
                                  . "📦 *ID Order:* `{$orderId}`\n"
                                  . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                  . "👤 *Pelanggan:* {$customerName}\n\n"
-                                 . "Status pesanan telah diubah menjadi *PROSES* oleh Seller.";
+                                 . "Status pesanan telah diubah menjadi *SUCCESS* oleh Seller.";
                     $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                 }
 
