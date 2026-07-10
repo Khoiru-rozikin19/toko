@@ -56,12 +56,19 @@ class CatalogController extends Controller
     public function buy(Request $request)
     {
         $product = Product::findOrFail($request->product_id);
+        $isPreorder = ($product->status === 'close' && !empty($product->orderkuota_product_code));
 
         $rules = [
             'product_id' => 'required|exists:products,id',
             'email_or_whatsapp' => 'required|string|max:255',
             'payment_method' => 'nullable|in:qris,balance',
         ];
+
+        if ($isPreorder) {
+            $rules['preorder_name'] = 'required|string|max:255';
+        } else {
+            $rules['preorder_name'] = 'nullable|string|max:255';
+        }
 
         // Validasi Nomor HP Tujuan / ID Pelanggan secara dinamis untuk produk supplier (pulsa/kuota)
         if (!empty($product->orderkuota_product_code)) {
@@ -91,7 +98,6 @@ class CatalogController extends Controller
             ], 422);
         }
 
-        $isPreorder = false;
         if ($product->status === 'close') {
             if (empty($product->orderkuota_product_code)) {
                 return response()->json([
@@ -99,7 +105,6 @@ class CatalogController extends Controller
                     'message' => 'Produk ini sedang ditutup oleh supplier.',
                 ], 422);
             }
-            $isPreorder = true;
         }
 
         // === BALANCE PAYMENT ===
@@ -153,6 +158,7 @@ class CatalogController extends Controller
                         'user_id' => $user->id,
                         'product_id' => $product->id,
                         'email_or_whatsapp' => $request->email_or_whatsapp,
+                        'customer_name' => $isPreorder ? $request->preorder_name : null,
                         'target_phone' => $request->target_phone,
                         'base_amount' => $price,
                         'unique_code' => 0,
@@ -212,6 +218,14 @@ class CatalogController extends Controller
 
                     return $order;
                 });
+ 
+                if ($order && $order->is_preorder) {
+                    try {
+                        app(\App\Services\TelegramService::class)->sendAdminPreorderNotification($order);
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error("CatalogController: Gagal mengirim notifikasi pre-order ke Telegram: " . $e->getMessage());
+                    }
+                }
             } catch (\Exception $e) {
                 return response()->json([
                     'success' => false,
@@ -276,6 +290,7 @@ class CatalogController extends Controller
             'user_id' => auth()->id(),
             'product_id' => $product->id,
             'email_or_whatsapp' => $request->email_or_whatsapp,
+            'customer_name' => $isPreorder ? $request->preorder_name : null,
             'target_phone' => $request->target_phone,
             'base_amount' => $product->price,
             'unique_code' => $uniqueCode,

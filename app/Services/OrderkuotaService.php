@@ -349,11 +349,11 @@ class OrderkuotaService
                         $adminId = env('TELEGRAM_ADMIN_ID');
                         $formattedAmount = number_format($order->total_amount, 0, ',', '.');
                         $customerName = $order->email_or_whatsapp;
-                        $updatedText = "✅ *Pre-Order Diproses (Otomatis)*\n\n"
+                        $updatedText = "✅ *Pre-Order Berhasil (Otomatis)*\n\n"
                                      . "📦 *ID Order:* `{$order->id}`\n"
                                      . "💰 *Nominal:* Rp {$formattedAmount}\n"
                                      . "👤 *Pelanggan:* {$customerName}\n\n"
-                                     . "Status pre-order telah otomatis diproses dan diubah menjadi *SUKSES* setelah produk dibuka oleh supplier.";
+                                     . "Pre-order berhasil diteruskan ke supplier (status berubah menjadi *SUKSES*).";
                         $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
                     } catch (\Exception $te) {
                         Log::error("OrderkuotaService: Gagal memperbarui Telegram pre-order {$order->id}: " . $te->getMessage());

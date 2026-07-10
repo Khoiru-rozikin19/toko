@@ -5,6 +5,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\UserBalance;
+use App\Models\BalanceTransaction;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -19,6 +20,7 @@ beforeEach(function () {
     Order::truncate();
     User::truncate();
     UserBalance::truncate();
+    BalanceTransaction::truncate();
 
     Setting::set('qris_static_string', '00020101021126610014COM.GO-JEK...');
     Setting::set('api_secret_key', 'rahasiahappy123');
@@ -32,7 +34,7 @@ beforeEach(function () {
 test('buyer can pre-order closed Okeconnect product using balance and it is marked as proses', function () {
     Http::fake([
         'h2h.okeconnect.com/*' => Http::response('PROSES', 200),
-        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+        'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 123456]], 200),
     ]);
 
     $buyer = User::create([
@@ -58,6 +60,7 @@ test('buyer can pre-order closed Okeconnect product using balance and it is mark
         'product_id' => $product->id,
         'email_or_whatsapp' => 'buyer@test.com',
         'target_phone' => '081234567890',
+        'preorder_name' => 'Budi Santoso',
         'payment_method' => 'balance',
     ]);
 
@@ -68,6 +71,7 @@ test('buyer can pre-order closed Okeconnect product using balance and it is mark
     expect($order)->not->toBeNull();
     expect($order->status)->toBe('proses');
     expect($order->is_preorder)->toBeTrue();
+    expect($order->customer_name)->toBe('Budi Santoso');
     expect($order->target_phone)->toBe('081234567890');
 
     // Balance should be deducted
@@ -77,6 +81,45 @@ test('buyer can pre-order closed Okeconnect product using balance and it is mark
     Http::assertNotSent(function ($request) {
         return str_contains($request->url(), 'h2h.okeconnect.com/trx');
     });
+
+    // Verify Telegram notification was dispatched
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'sendMessage') &&
+               str_contains($request['text'], 'Pre-Order Baru Diterima') &&
+               str_contains($request['text'], 'Budi Santoso');
+    });
+});
+
+test('buyer must input name when pre-ordering closed Okeconnect product', function () {
+    $buyer = User::create([
+        'name' => 'Buyer Account',
+        'email' => 'buyer@test.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+
+    $buyerBalance = $buyer->getOrCreateBalance();
+    $buyerBalance->update(['balance' => 20000]);
+
+    $product = Product::create([
+        'name' => 'Okeconnect Closed Product',
+        'price' => 15000,
+        'stock' => 5,
+        'status' => 'close',
+        'orderkuota_product_code' => 'OKCLOSE',
+    ]);
+
+    // Request without preorder_name should fail validation (422)
+    $response = $this->actingAs($buyer)->postJson(route('buy'), [
+        'product_id' => $product->id,
+        'email_or_whatsapp' => 'buyer@test.com',
+        'target_phone' => '081234567890',
+        'payment_method' => 'balance',
+    ]);
+
+    $response->assertStatus(422);
+    expect($response->json('message'))->toContain('preorder name');
 });
 
 test('buyer can pre-order closed Okeconnect product using QRIS and it is marked as pending', function () {
@@ -104,6 +147,7 @@ test('buyer can pre-order closed Okeconnect product using QRIS and it is marked 
         'product_id' => $product->id,
         'email_or_whatsapp' => 'buyer@test.com',
         'target_phone' => '081234567890',
+        'preorder_name' => 'Budi Santoso',
         'payment_method' => 'qris',
     ]);
 
@@ -113,12 +157,12 @@ test('buyer can pre-order closed Okeconnect product using QRIS and it is marked 
     expect($order)->not->toBeNull();
     expect($order->status)->toBe('pending');
     expect($order->is_preorder)->toBeTrue();
+    expect($order->customer_name)->toBe('Budi Santoso');
 });
 
-test('auto callback payment transitions pre-order from pending to proses without calling Okeconnect', function () {
+test('auto callback payment transitions pre-order from pending to proses and fires Telegram notification', function () {
     Http::fake([
-        'h2h.okeconnect.com/*' => Http::response('PROSES', 200),
-        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+        'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 9999]], 200),
     ]);
 
     $product = Product::create([
@@ -133,13 +177,13 @@ test('auto callback payment transitions pre-order from pending to proses without
         'id' => 'ORD-PRE-AUTO',
         'product_id' => $product->id,
         'email_or_whatsapp' => 'buyer@test.com',
+        'customer_name' => 'Budi Santoso',
         'target_phone' => '081234567890',
         'base_amount' => 10000,
         'unique_code' => 5,
         'total_amount' => 10005,
         'status' => 'pending',
         'is_preorder' => true,
-        'telegram_message_id' => '123456',
         'expired_at' => Carbon::now()->addMinutes(30),
     ]);
 
@@ -153,18 +197,31 @@ test('auto callback payment transitions pre-order from pending to proses without
 
     $order->refresh();
     expect($order->status)->toBe('proses');
+    expect($order->telegram_message_id)->toBe('9999');
 
-    // No Okeconnect HTTP requests should have been recorded because it was a pre-order
-    Http::assertNotSent(function ($request) {
-        return str_contains($request->url(), 'h2h.okeconnect.com/trx');
+    // Pre-order notification sent with Cancel Pre-Order button
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'sendMessage') &&
+               str_contains($request['text'], 'Pre-Order Baru Diterima') &&
+               isset($request['reply_markup']['inline_keyboard'][0][0]['callback_data']) &&
+               $request['reply_markup']['inline_keyboard'][0][0]['callback_data'] === 'cancel_preorder:ORD-PRE-AUTO';
     });
 });
 
-test('manual Telegram approval transitions pre-order from pending to proses without calling Okeconnect', function () {
+test('admin can cancel pre-order from Telegram webhook which refunds balance and updates status to ditolak', function () {
     Http::fake([
-        'h2h.okeconnect.com/*' => Http::response('PROSES', 200),
         'api.telegram.org/*' => Http::response(['ok' => true], 200),
     ]);
+
+    $buyer = User::create([
+        'name' => 'Buyer Account',
+        'email' => 'buyer@test.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => true,
+    ]);
+    $buyerBalance = $buyer->getOrCreateBalance();
+    $buyerBalance->update(['balance' => 2000]); // initial balance
 
     $product = Product::create([
         'name' => 'Okeconnect Closed Product',
@@ -175,14 +232,16 @@ test('manual Telegram approval transitions pre-order from pending to proses with
     ]);
 
     $order = Order::create([
-        'id' => 'ORD-PRE-TG',
+        'id' => 'ORD-PRE-CANCEL',
+        'user_id' => $buyer->id,
         'product_id' => $product->id,
         'email_or_whatsapp' => 'buyer@test.com',
+        'customer_name' => 'Budi Santoso',
         'target_phone' => '081234567890',
         'base_amount' => 10000,
         'unique_code' => 5,
         'total_amount' => 10005,
-        'status' => 'pending',
+        'status' => 'proses', // paid preorder
         'is_preorder' => true,
         'telegram_message_id' => '123456',
         'expired_at' => Carbon::now()->addMinutes(30),
@@ -190,9 +249,9 @@ test('manual Telegram approval transitions pre-order from pending to proses with
 
     $response = $this->postJson(route('webhook.telegram'), [
         'callback_query' => [
-            'id' => 'cb_123',
-            'from' => ['id' => 987654321],
-            'data' => 'approve:ORD-PRE-TG',
+            'id' => 'cb_987',
+            'from' => ['id' => 987654321], // Admin ID
+            'data' => 'cancel_preorder:ORD-PRE-CANCEL',
             'message' => [
                 'message_id' => 123456,
                 'chat' => ['id' => 987654321],
@@ -203,15 +262,27 @@ test('manual Telegram approval transitions pre-order from pending to proses with
     $response->assertStatus(200);
 
     $order->refresh();
-    expect($order->status)->toBe('proses');
+    expect($order->status)->toBe('ditolak');
+    expect($order->is_preorder)->toBeFalse();
 
-    // No Okeconnect HTTP requests should have been recorded because it was a pre-order
-    Http::assertNotSent(function ($request) {
-        return str_contains($request->url(), 'h2h.okeconnect.com/trx');
+    // User should have their balance refunded
+    expect((int) $buyer->fresh()->getOrCreateBalance()->balance)->toBe(12005); // 2000 + 10005
+
+    // Balance transaction log should exist
+    $tx = BalanceTransaction::where('reference_id', 'ORD-PRE-CANCEL')->first();
+    expect($tx)->not->toBeNull();
+    expect($tx->type)->toBe('topup');
+    expect((int) $tx->amount)->toBe(10005);
+
+    // Verify Telegram message was edited to reflect cancellation
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'editMessageText') &&
+               str_contains($request['text'], 'Pre-Order Dibatalkan oleh Admin') &&
+               str_contains($request['text'], 'DITOLAK');
     });
 });
 
-test('syncing Okeconnect product status to open automatically dispatches pending pre-orders and updates status to sukses', function () {
+test('syncing Okeconnect product status to open dispatches pending pre-orders, updates status to sukses, and removes Telegram buttons', function () {
     Http::fake([
         'h2h.okeconnect.com/*' => Http::response('PROSES', 200),
         'api.telegram.org/*' => Http::response(['ok' => true], 200),
@@ -229,6 +300,7 @@ test('syncing Okeconnect product status to open automatically dispatches pending
         'id' => 'ORD-PRE-SYNC',
         'product_id' => $product->id,
         'email_or_whatsapp' => 'buyer@test.com',
+        'customer_name' => 'Budi Santoso',
         'target_phone' => '081234567890',
         'base_amount' => 10000,
         'unique_code' => 0,
@@ -246,11 +318,12 @@ test('syncing Okeconnect product status to open automatically dispatches pending
 
     $order->refresh();
     expect($order->status)->toBe('sukses');
+    expect($order->is_preorder)->toBeFalse();
 
-    // Okeconnect HTTP request should have been dispatched now
+    // Verify Telegram message was edited to "Pre-Order Berhasil"
     Http::assertSent(function ($request) {
-        return str_contains($request->url(), 'h2h.okeconnect.com/trx') &&
-               str_contains($request->url(), 'OKP123') &&
-               str_contains($request->url(), '081234567890');
+        return str_contains($request->url(), 'editMessageText') &&
+               str_contains($request['text'], 'Pre-Order Berhasil') &&
+               !isset($request['reply_markup']);
     });
 });

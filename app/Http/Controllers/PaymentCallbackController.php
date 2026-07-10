@@ -220,6 +220,12 @@ class PaymentCallbackController extends Controller
                         } catch (\Exception $e) {
                             Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
                         }
+                    } else {
+                        try {
+                            app(\App\Services\TelegramService::class)->sendAdminPreorderNotification($order);
+                        } catch (\Exception $e) {
+                            Log::error("PaymentCallback: Failed to send pre-order notification for {$order->id}: " . $e->getMessage());
+                        }
                     }
 
                     // 4. Update Telegram message to Admin

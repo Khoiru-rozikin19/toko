@@ -74,7 +74,7 @@ class TelegramWebhookController extends Controller
         $adminId = env('TELEGRAM_ADMIN_ID');
 
         // Security check
-        if (in_array($action, ['approve', 'reject'])) {
+        if (in_array($action, ['approve', 'reject', 'cancel_preorder'])) {
             // Admin action
             if ((string)$senderId !== (string)$adminId) {
                 Log::warning("Telegram Webhook Unauthorized Admin Action: Sender ID {$senderId} does not match Admin ID {$adminId}");
@@ -130,6 +130,17 @@ class TelegramWebhookController extends Controller
                     return [
                         'success' => false,
                         'message' => 'Order already processed.',
+                        'status_code' => 200
+                    ];
+                }
+            } elseif ($action === 'cancel_preorder') {
+                if ($order->status !== 'proses' || !$order->is_preorder) {
+                    if ($callbackQueryId) {
+                        $this->telegramService->answerCallbackQuery($callbackQueryId, "Pre-order tidak aktif atau sudah diproses.");
+                    }
+                    return [
+                        'success' => false,
+                        'message' => 'Pre-order not active or already processed.',
                         'status_code' => 200
                     ];
                 }
@@ -282,6 +293,61 @@ class TelegramWebhookController extends Controller
                 return [
                     'success' => true,
                     'message' => "Order {$orderId} approved and processed.",
+                    'status_code' => 200
+                ];
+            }
+
+            if ($action === 'cancel_preorder') {
+                // Update order status to ditolak
+                $order->status = 'ditolak';
+                $order->is_preorder = false; // no longer a pre-order
+                $order->save();
+ 
+                // Refund balance to the user's account
+                if ($order->user_id) {
+                    $user = \App\Models\User::find($order->user_id);
+                    if ($user) {
+                        $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                        if (!$balanceRecord) {
+                            $balanceRecord = $user->getOrCreateBalance();
+                            $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
+                        }
+                        $balanceBefore = $balanceRecord->balance;
+                        $balanceRecord->increment('balance', $order->total_amount);
+                        $balanceRecord->refresh();
+ 
+                        // Record balance transaction
+                        \App\Models\BalanceTransaction::create([
+                            'user_id' => $user->id,
+                            'type' => 'topup',
+                            'amount' => $order->total_amount,
+                            'balance_before' => $balanceBefore,
+                            'balance_after' => $balanceRecord->balance,
+                            'reference_id' => $order->id,
+                            'status' => 'success',
+                            'description' => 'Refund Pre-Order Dibatalkan: ' . $order->id,
+                        ]);
+                    }
+                }
+ 
+                // Acknowledge Telegram callback query
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pre-order {$orderId} berhasil dibatalkan dan saldo telah di-refund!");
+                }
+ 
+                // Edit message to reflect cancellation
+                if ($chatId && $messageId) {
+                    $updatedText = "❌ *Pre-Order Dibatalkan oleh Admin*\n\n"
+                                 . "📦 *ID Order:* `{$orderId}`\n"
+                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                 . "Status pre-order telah diubah menjadi *DITOLAK*. Saldo senilai Rp " . number_format($order->total_amount, 0, ',', '.') . " telah berhasil dikembalikan ke akun user.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+ 
+                return [
+                    'success' => true,
+                    'message' => "Pre-order {$orderId} cancelled and refunded.",
                     'status_code' => 200
                 ];
             }

@@ -125,7 +125,7 @@
                         
                         @if($product->stock > 0 && (($product->status ?? 'open') === 'open' || !empty($product->orderkuota_product_code)) && $qris_configured)
                             @auth
-                                <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
+                                <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}', {{ ($product->status ?? 'open') === 'close' ? 'true' : 'false' }})" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                                     <span>{{ ($product->status ?? 'open') === 'close' ? 'Pre-Order' : 'Beli' }}</span>
                                 </button>
@@ -180,6 +180,12 @@
                     <label for="target_phone" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nomor HP Tujuan / ID Pelanggan</label>
                     <input type="text" id="target_phone" name="target_phone" placeholder="Contoh: 081234567890" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
                     <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Nomor HP ini akan diisi pulsa/kuota otomatis oleh supplier setelah pembayaran sukses.</p>
+                </div>
+
+                <div id="preorderNameContainer" class="hidden">
+                    <label for="preorder_name" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Nama Penerima Pre-Order</label>
+                    <input type="text" id="preorder_name" name="preorder_name" placeholder="Contoh: Budi Santoso" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-medium text-slate-800 dark:text-slate-100 transition-all duration-200">
+                    <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">Masukkan nama penerima untuk catatan transaksi pre-order.</p>
                 </div>
 
                 @auth
@@ -336,7 +342,7 @@
     }
 
     // Open buy modal
-    function openBuyModal(productId, productName, productPrice, hasSupplierCode) {
+    function openBuyModal(productId, productName, productPrice, hasSupplierCode, isClosed) {
         document.getElementById('formProductId').value = productId;
         document.getElementById('modalProductTitle').innerText = productName;
         document.getElementById('modalProductPrice').innerText = 'Rp ' + parseInt(productPrice).toLocaleString('id-ID');
@@ -351,6 +357,18 @@
             targetPhoneContainer.classList.add('hidden');
             targetPhoneInput.required = false;
             targetPhoneInput.value = '';
+        }
+
+        const preorderNameContainer = document.getElementById('preorderNameContainer');
+        const preorderNameInput = document.getElementById('preorder_name');
+        
+        if (isClosed) {
+            preorderNameContainer.classList.remove('hidden');
+            preorderNameInput.required = true;
+        } else {
+            preorderNameContainer.classList.add('hidden');
+            preorderNameInput.required = false;
+            preorderNameInput.value = '';
         }
 
         // Set default payment method selection to QRIS
@@ -467,6 +485,9 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Memproses...';
  
+        const preorderNameInput = document.getElementById('preorder_name');
+        const preorderName = preorderNameInput ? preorderNameInput.value.trim() : '';
+
         fetch("{{ route('buy') }}", {
             method: 'POST',
             headers: {
@@ -477,6 +498,7 @@
                 product_id: productId,
                 email_or_whatsapp: emailOrWhatsapp,
                 target_phone: targetPhone,
+                preorder_name: preorderName,
                 payment_method: paymentMethod
             })
         })

@@ -17,6 +17,7 @@ class Order extends Model
         'user_id',
         'product_id',
         'email_or_whatsapp',
+        'customer_name',
         'target_phone',
         'base_amount',
         'unique_code',

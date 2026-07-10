@@ -89,6 +89,58 @@ class TelegramService
     }
 
     /**
+     * Send pre-order notification with cancel button to Telegram Admin.
+     *
+     * @param \App\Models\Order $order
+     * @return bool
+     */
+    public function sendAdminPreorderNotification($order)
+    {
+        if (empty($this->token) || empty($this->adminId)) {
+            Log::warning('TelegramService: Token atau Admin ID belum diset di .env');
+            return false;
+        }
+
+        $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+        $customerName = $order->email_or_whatsapp;
+        $preorderName = $order->customer_name ?: '-';
+        $targetPhone = $order->target_phone ?: '-';
+        $productName = $order->product ? $order->product->name : 'Produk';
+
+        $text = "⏳ *Pre-Order Baru Diterima*\n\n"
+              . "📦 *ID Order:* `{$order->id}`\n"
+              . "🛍️ *Produk:* {$productName}\n"
+              . "💰 *Nominal:* Rp {$formattedAmount}\n"
+              . "👤 *Pelanggan:* {$customerName}\n"
+              . "📝 *Nama Pre-Order:* {$preorderName}\n"
+              . "📱 *No HP Tujuan:* `{$targetPhone}`\n\n"
+              . "Status pre-order saat ini adalah *PROSES*.\n"
+              . "Pesanan akan diteruskan otomatis ke Okeconnect ketika status produk dibuka oleh supplier.\n\n"
+              . "Anda dapat membatalkan pre-order dan mengembalikan saldo user menggunakan tombol di bawah:";
+
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '❌ Batalkan Pre-Order', 'callback_data' => "cancel_preorder:{$order->id}"]
+                ]
+            ]
+        ];
+
+        $this->useAdminToken();
+        $response = $this->sendMessage($this->adminId, $text, $keyboard);
+        if ($response && isset($response['ok']) && $response['ok']) {
+            $messageId = $response['result']['message_id'] ?? null;
+            if ($messageId) {
+                $order->update([
+                    'telegram_message_id' => $messageId
+                ]);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Send order verification notification to Telegram Seller.
      *
      * @param string $orderId
@@ -235,7 +287,7 @@ class TelegramService
      * @param string|null $token
      * @return bool
      */
-    public function editMessageText($chatId, $messageId, $text, $token = null)
+    public function editMessageText($chatId, $messageId, $text, $keyboard = null, $token = null)
     {
         $payload = [
             'chat_id' => $chatId,
@@ -243,6 +295,10 @@ class TelegramService
             'text' => $text,
             'parse_mode' => 'Markdown',
         ];
+
+        if ($keyboard) {
+            $payload['reply_markup'] = $keyboard;
+        }
 
         $activeToken = $token ?: $this->currentToken;
         if (empty($activeToken)) {
