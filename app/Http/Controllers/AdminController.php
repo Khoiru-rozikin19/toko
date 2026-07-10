@@ -477,8 +477,9 @@ class AdminController extends Controller
         $pin = Setting::get('orderkuota_pin', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
         $priceListId = Setting::get('okeconnect_price_list_id', '905ccd028329b0a');
+        $markupPrice = Setting::get('okeconnect_markup_price', '1000');
 
-        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode', 'priceListId'));
+        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode', 'priceListId', 'markupPrice'));
     }
 
     /**
@@ -492,6 +493,7 @@ class AdminController extends Controller
             'orderkuota_pin' => 'nullable|string|max:10',
             'orderkuota_mode' => 'required|in:sandbox,production',
             'okeconnect_price_list_id' => 'nullable|string|max:255',
+            'okeconnect_markup_price' => 'nullable|numeric|min:0',
         ]);
 
         Setting::set('orderkuota_member_id', $request->orderkuota_member_id);
@@ -499,8 +501,22 @@ class AdminController extends Controller
         Setting::set('orderkuota_pin', $request->orderkuota_pin);
         Setting::set('orderkuota_mode', $request->orderkuota_mode);
         Setting::set('okeconnect_price_list_id', $request->okeconnect_price_list_id);
+        Setting::set('okeconnect_markup_price', $request->okeconnect_markup_price);
 
         return redirect()->route('admin.supplier_settings')->with('success', 'Pengaturan API Supplier berhasil diperbarui.');
+    }
+
+    /**
+     * Trigger bulk import of H2H products from Okeconnect.
+     */
+    public function importSupplierProducts(Request $request)
+    {
+        $markup = Setting::get('okeconnect_markup_price', '1000');
+        
+        // Dispatch the queue job to run in background
+        \App\Jobs\ImportOkeconnectProductsJob::dispatch((int)$markup);
+
+        return redirect()->route('admin.supplier_settings')->with('success', 'Proses impor & update massal produk H2H berhasil dijalankan di background (antrean job). Silakan cek katalog beberapa saat lagi.');
     }
 
     /**
