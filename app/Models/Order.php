@@ -69,8 +69,10 @@ class Order extends Model
     {
         $this->paid_at = now();
         $product = $this->product;
+        $seller = $product ? $product->seller : null;
         
-        if ($product && $product->user_id) {
+        // Produk milik admin (bukan seller) → tidak perlu escrow dan notifikasi seller
+        if ($product && $product->user_id && $seller && $seller->role !== 'admin') {
             // Seller product
             $escrowAmount = $this->total_amount - ($product->harga_modal ?? 0);
             $this->escrow_status = 'held';
@@ -85,8 +87,7 @@ class Order extends Model
             $sellerBalance->increment('held_balance', $escrowAmount);
             
             // Send seller Telegram notification
-            $seller = $product->seller;
-            if ($seller && !empty($seller->telegram_chat_id)) {
+            if (!empty($seller->telegram_chat_id)) {
                 $telegramService = app(\App\Services\TelegramService::class);
                 $telegramService->sendSellerOrderNotification(
                     $this->id,
