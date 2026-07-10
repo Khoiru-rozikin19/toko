@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('escrow:release')->everyMinute();
+Schedule::command('okeconnect:sync-status')->everyFiveMinutes();

@@ -64,6 +64,15 @@
                 </p>
             </div>
 
+            <!-- Okeconnect Price List ID -->
+            <div class="space-y-2">
+                <label for="okeconnect_price_list_id" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Okeconnect Price List ID</label>
+                <input type="text" id="okeconnect_price_list_id" name="okeconnect_price_list_id" value="{{ $priceListId }}" placeholder="Masukkan ID Daftar Harga (misal: 905ccd028329b0a)..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200">
+                <p class="text-[11px] text-slate-450 dark:text-slate-500 leading-relaxed">
+                    ID unik rencana harga Anda yang tertera di URL halaman daftar harga Okeconnect (contoh: <code>905ccd028329b0a</code> dari <code>https://okeconnect.com/harga/list?id=905ccd028329b0a</code>).
+                </p>
+            </div>
+
             <!-- Save Button -->
             <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">

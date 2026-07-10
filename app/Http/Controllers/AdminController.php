@@ -476,8 +476,9 @@ class AdminController extends Controller
         $apiKey = Setting::get('orderkuota_api_key', '');
         $pin = Setting::get('orderkuota_pin', '');
         $mode = Setting::get('orderkuota_mode', 'sandbox');
+        $priceListId = Setting::get('okeconnect_price_list_id', '905ccd028329b0a');
 
-        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode'));
+        return view('admin.supplier_settings', compact('memberId', 'apiKey', 'pin', 'mode', 'priceListId'));
     }
 
     /**
@@ -490,12 +491,14 @@ class AdminController extends Controller
             'orderkuota_api_key' => 'nullable|string|max:255',
             'orderkuota_pin' => 'nullable|string|max:10',
             'orderkuota_mode' => 'required|in:sandbox,production',
+            'okeconnect_price_list_id' => 'nullable|string|max:255',
         ]);
 
         Setting::set('orderkuota_member_id', $request->orderkuota_member_id);
         Setting::set('orderkuota_api_key', $request->orderkuota_api_key);
         Setting::set('orderkuota_pin', $request->orderkuota_pin);
         Setting::set('orderkuota_mode', $request->orderkuota_mode);
+        Setting::set('okeconnect_price_list_id', $request->okeconnect_price_list_id);
 
         return redirect()->route('admin.supplier_settings')->with('success', 'Pengaturan API Supplier berhasil diperbarui.');
     }

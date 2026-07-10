@@ -1598,9 +1598,10 @@ menu_bot() {
         echo -e "  [3] 🔄  Restart Bot (Muat Ulang Queue Worker)"
         echo -e "  [4] ⚡  Tes Koneksi Bot"
         echo -e "  [5] 🧹  Clear Cache Konfigurasi (config:clear)"
+        echo -e "  [6] 🔄  Sinkronkan Status Produk H2H (Okeconnect)"
         echo -e "  [0] 🚪  Kembali ke Menu Utama"
         echo -e "${BOLD}${CYAN}=====================================================================${NC}"
-        read -p "Pilih opsi [0-5]: " bot_pilihan
+        read -p "Pilih opsi [0-6]: " bot_pilihan
         echo
 
         case "$bot_pilihan" in
@@ -1640,11 +1641,15 @@ menu_bot() {
                 php artisan config:clear
                 print_success "Cache konfigurasi berhasil dibersihkan!"
                 ;;
+            6)
+                print_info "Menjalankan sinkronisasi status produk dari Okeconnect..."
+                php artisan okeconnect:sync-status
+                ;;
             0|"")
                 break
                 ;;
             *)
-                print_warning "Pilihan tidak valid. Silakan pilih 0-5."
+                print_warning "Pilihan tidak valid. Silakan pilih 0-6."
                 ;;
         esac
 
