@@ -21,4 +21,4 @@ Artisan::command('products:sync-okeconnect', function () {
     }
 })->purpose('Sync product open/close status from Okeconnect price list page');
 
-Schedule::command('products:sync-okeconnect')->everyFifteenMinutes();
+Schedule::command('products:sync-okeconnect')->everyFiveMinutes();
