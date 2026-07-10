@@ -73,15 +73,6 @@
                 </p>
             </div>
 
-            <!-- Okeconnect Markup Price -->
-            <div class="space-y-2">
-                <label for="okeconnect_markup_price" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Default Markup Harga (Rupiah)</label>
-                <input type="number" id="okeconnect_markup_price" name="okeconnect_markup_price" value="{{ $markupPrice }}" placeholder="Masukkan keuntungan harga (contoh: 1000)..." class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-blue-500 focus:bg-white focus:outline-none rounded-2xl text-sm font-mono text-slate-800 dark:text-slate-100 transition-all duration-200">
-                <p class="text-[11px] text-slate-450 dark:text-slate-500 leading-relaxed">
-                    Jumlah keuntungan (markup) dalam Rupiah yang ditambahkan ke harga modal dari Okeconnect saat membuat/memperbarui produk (Harga Jual = Harga Modal + Markup).
-                </p>
-            </div>
-
             <!-- Save Button -->
             <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
                 <button type="submit" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
@@ -90,31 +81,6 @@
             </div>
         </form>
 
-    </div>
-
-    <!-- Bulk Import and Sync Section -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-5 sm:p-8 shadow-sm mt-6">
-        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100">Impor & Pembaruan Massal Produk H2H</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">Lakukan impor semua produk dari daftar harga JSON Okeconnect secara massal. Kategori dan produk akan dibuat atau diperbarui otomatis.</p>
-        
-        <form action="{{ route('admin.supplier_settings.import') }}" method="POST">
-            @csrf
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 rounded-2xl gap-4">
-                <div class="space-y-1 pr-4">
-                    <span class="block text-sm font-bold text-slate-700 dark:text-slate-300">Jalankan Proses Impor Massal</span>
-                    <span class="block text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
-                        Ini akan mendaftarkan pekerjaan latar belakang (*Background Queue Job*) untuk menarik ribuan data produk Okeconnect. Proses ini aman dan tidak akan menyebabkan timeout pada browser Anda.
-                    </span>
-                    <label class="inline-flex items-center mt-2 cursor-pointer">
-                        <input type="checkbox" name="update_prices" value="1" class="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500">
-                        <span class="ml-2 text-xs font-bold text-slate-600 dark:text-slate-400">Timpa harga jual kustom produk lama dengan default markup baru</span>
-                    </label>
-                </div>
-                <button type="submit" class="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap active:scale-95 shadow-sm">
-                    🚀 Impor Sekarang
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 @endsection

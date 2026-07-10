@@ -379,8 +379,39 @@ update_website() {
         return 0
     fi
 
+    # Analisis file yang berubah untuk optimasi performa deployment
+    local RUN_COMPOSER=true
+    local RUN_NPM=true
+    local RUN_MIGRATION=true
+
+    if [ -n "$BEFORE_HASH" ] && [ -n "$AFTER_HASH" ] && [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
+        local CHANGED_FILES=$(git diff --name-only "$BEFORE_HASH" "$AFTER_HASH" 2>/dev/null)
+        
+        # Cek Composer
+        if echo "$CHANGED_FILES" | grep -E "composer\.(json|lock)" >/dev/null; then
+            RUN_COMPOSER=true
+        else
+            RUN_COMPOSER=false
+        fi
+
+        # Cek NPM / Vite (package.json, package-lock.json, vite.config.js, tailwind.config.js, resources/)
+        if echo "$CHANGED_FILES" | grep -E "(package\.(json|lock)|vite\.config\.js|tailwind\.config\.js|resources/)" >/dev/null; then
+            RUN_NPM=true
+        else
+            RUN_NPM=false
+        fi
+
+        # Cek Migrasi
+        if echo "$CHANGED_FILES" | grep -E "database/migrations/" >/dev/null; then
+            RUN_MIGRATION=true
+        else
+            RUN_MIGRATION=false
+        fi
+    fi
+
     # 2. Pasang Dependensi Composer Baru
-    echo -e "\n${YELLOW}Langkah 2: Memasang package PHP baru via Composer...${NC}"
+    if [ "$RUN_COMPOSER" = true ]; then
+        echo -e "\n${YELLOW}Langkah 2: Memasang package PHP baru via Composer...${NC}"
     local COMPOSER_EXEC=""
     if command -v composer &> /dev/null; then
         COMPOSER_EXEC="composer"
@@ -421,24 +452,30 @@ update_website() {
                 return 1
             fi
         fi
+    else
+        echo -e "\n${GREEN}Langkah 2: [DILEWATI] Tidak ada perubahan pada file composer.json atau composer.lock.${NC}"
     fi
 
     # 3. Jalankan Migrasi Database Baru & Auto-Repair Admin
-    echo -e "\n${YELLOW}Langkah 3: Mendiagnosis database & menjalankan migrasi...${NC}"
-    if php artisan migrate --force; then
-        print_success "Migrasi database berhasil."
-    else
-        print_warning "Migrasi gagal. Mencoba ulang setelah membersihkan cache..."
-        php artisan cache:clear
-        php artisan config:clear
-        php artisan migrate --force
-    fi
+    if [ "$RUN_MIGRATION" = true ]; then
+        echo -e "\n${YELLOW}Langkah 3: Mendiagnosis database & menjalankan migrasi...${NC}"
+        if php artisan migrate --force; then
+            print_success "Migrasi database berhasil."
+        else
+            print_warning "Migrasi gagal. Mencoba ulang setelah membersihkan cache..."
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan migrate --force
+        fi
 
-    # Jalankan seeder
-    if php artisan db:seed --force; then
-        print_success "Seeding database selesai."
+        # Jalankan seeder
+        if php artisan db:seed --force; then
+            print_success "Seeding database selesai."
+        else
+            print_warning "Seeding database gagal atau dilewati."
+        fi
     else
-        print_warning "Seeding database gagal atau dilewati."
+        echo -e "\n${GREEN}Langkah 3: [DILEWATI] Tidak ada perubahan migrasi database baru.${NC}"
     fi
 
     # Auto-repair admin utama
@@ -481,73 +518,77 @@ update_website() {
     php artisan view:cache
 
     # 5. Build Aset Frontend Baru dengan Fallback
-    echo -e "\n${YELLOW}Langkah 5: Memasang paket npm & melakukan build aset Vite...${NC}"
-    if [ -f "package.json" ]; then
-        if [ -d "node_modules" ]; then
-            chmod -R 777 node_modules &>/dev/null || true
-        fi
+    if [ "$RUN_NPM" = true ]; then
+        echo -e "\n${YELLOW}Langkah 5: Memasang paket npm & melakukan build aset Vite...${NC}"
+        if [ -f "package.json" ]; then
+            if [ -d "node_modules" ]; then
+                chmod -R 777 node_modules &>/dev/null || true
+            fi
 
-        local NPM_OK=false
-        if npm install --no-audit --no-fund; then
-            NPM_OK=true
-        else
-            print_warning "npm install standar gagal. Mengulang dengan --ignore-scripts..."
-            if npm install --ignore-scripts --no-audit --no-fund; then
+            local NPM_OK=false
+            if npm install --no-audit --no-fund; then
                 NPM_OK=true
-            fi
-        fi
-
-        if [ "$NPM_OK" = true ]; then
-            # Konfigurasi bin permissions
-            if [ -d "node_modules/.bin" ]; then
-                chmod -R +x node_modules/.bin 2>/dev/null || true
-                for file in node_modules/.bin/*; do
-                    if [ -L "$file" ]; then
-                        local target=$(readlink -f "$file" 2>/dev/null)
-                        if [ -f "$target" ]; then
-                            chmod +x "$target" 2>/dev/null || true
-                        fi
-                    fi
-                done
-            fi
-
-            # Eksekusi build (pastikan vite executable)
-            chmod +x node_modules/.bin/vite 2>/dev/null || true
-            if npm run build; then
-                print_success "npm run build berhasil."
             else
-                print_warning "npm run build gagal. Mengaktifkan fallback 1 (Node direct)..."
-                if [ -f "node_modules/vite/bin/vite.js" ]; then
-                    if node node_modules/vite/bin/vite.js build; then
-                        print_success "Aset frontend berhasil di-build via Node fallback."
-                    else
-                        print_warning "Node fallback gagal. Mencoba fallback 2 (npx)..."
-                        if npx vite build; then
-                            print_success "Aset frontend berhasil di-build via npx."
-                        else
-                            print_warning "npx gagal. Mencoba fallback 3 (RAM-disk isolation)..."
-                            local TMP_DIR="/dev/shm/vite-build-$(date +%s)"
-                            mkdir -p "$TMP_DIR"
-                            tar --exclude='./node_modules' --exclude='./.git' -cf - . | (cd "$TMP_DIR" && tar -xf -)
-                            ln -s "$APP_DIR/node_modules" "$TMP_DIR/node_modules"
-                            cd "$TMP_DIR"
-                            if node node_modules/vite/bin/vite.js build; then
-                                cp -r public/build "$APP_DIR/public/"
-                                print_success "Aset frontend berhasil di-build via RAM-disk isolation."
-                            else
-                                print_error "Semua metode build frontend gagal!"
-                            fi
-                            cd "$APP_DIR"
-                            rm -rf "$TMP_DIR"
-                        fi
-                    fi
-                else
-                    print_error "Berkas vite.js tidak ditemukan!"
+                print_warning "npm install standar gagal. Mengulang dengan --ignore-scripts..."
+                if npm install --ignore-scripts --no-audit --no-fund; then
+                    NPM_OK=true
                 fi
             fi
-        else
-            print_error "Gagal memasang dependensi NPM!"
+
+            if [ "$NPM_OK" = true ]; then
+                # Konfigurasi bin permissions
+                if [ -d "node_modules/.bin" ]; then
+                    chmod -R +x node_modules/.bin 2>/dev/null || true
+                    for file in node_modules/.bin/*; do
+                        if [ -L "$file" ]; then
+                            local target=$(readlink -f "$file" 2>/dev/null)
+                            if [ -f "$target" ]; then
+                                chmod +x "$target" 2>/dev/null || true
+                            fi
+                        fi
+                    done
+                fi
+
+                # Eksekusi build (pastikan vite executable)
+                chmod +x node_modules/.bin/vite 2>/dev/null || true
+                if npm run build; then
+                    print_success "npm run build berhasil."
+                else
+                    print_warning "npm run build gagal. Mengaktifkan fallback 1 (Node direct)..."
+                    if [ -f "node_modules/vite/bin/vite.js" ]; then
+                        if node node_modules/vite/bin/vite.js build; then
+                            print_success "Aset frontend berhasil di-build via Node fallback."
+                        else
+                            print_warning "Node fallback gagal. Mencoba fallback 2 (npx)..."
+                            if npx vite build; then
+                                print_success "Aset frontend berhasil di-build via npx."
+                            else
+                                print_warning "npx gagal. Mencoba fallback 3 (RAM-disk isolation)..."
+                                local TMP_DIR="/dev/shm/vite-build-$(date +%s)"
+                                mkdir -p "$TMP_DIR"
+                                tar --exclude='./node_modules' --exclude='./.git' -cf - . | (cd "$TMP_DIR" && tar -xf -)
+                                ln -s "$APP_DIR/node_modules" "$TMP_DIR/node_modules"
+                                cd "$TMP_DIR"
+                                if node node_modules/vite/bin/vite.js build; then
+                                    cp -r public/build "$APP_DIR/public/"
+                                    print_success "Aset frontend berhasil di-build via RAM-disk isolation."
+                                else
+                                    print_error "Semua metode build frontend gagal!"
+                                fi
+                                cd "$APP_DIR"
+                                rm -rf "$TMP_DIR"
+                            fi
+                        fi
+                    else
+                        print_error "Berkas vite.js tidak ditemukan!"
+                    fi
+                fi
+            else
+                print_error "Gagal memasang dependensi NPM!"
+            fi
         fi
+    else
+        echo -e "\n${GREEN}Langkah 5: [DILEWATI] Tidak ada perubahan aset frontend (package.json/resources/css/js).${NC}"
     fi
 
     # 6. Atur Ulang Permissions Folder secara aman
