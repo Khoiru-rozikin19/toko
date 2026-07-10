@@ -59,11 +59,18 @@ class TelegramService
             return false;
         }
 
+        $order = \App\Models\Order::find($orderId);
+        $targetPhoneText = "";
+        if ($order && !empty($order->target_phone)) {
+            $targetPhoneText = "📱 *No. HP Tujuan:* `{$order->target_phone}`\n";
+        }
+
         $formattedAmount = number_format($amount, 0, ',', '.');
         $text = "🔔 *Notifikasi Transaksi Baru*\n\n"
               . "📦 *ID Order:* `{$orderId}`\n"
               . "💰 *Nominal:* Rp {$formattedAmount}\n"
-              . "👤 *Pelanggan:* {$customerName}\n\n"
+              . "👤 *Pelanggan:* {$customerName}\n"
+              . $targetPhoneText . "\n"
               . "Silakan lakukan verifikasi pembayaran di bawah ini:";
 
         $keyboard = [
@@ -104,11 +111,18 @@ class TelegramService
             return false;
         }
 
+        $order = \App\Models\Order::find($orderId);
+        $targetPhoneText = "";
+        if ($order && !empty($order->target_phone)) {
+            $targetPhoneText = "📱 *No. HP Tujuan:* `{$order->target_phone}`\n";
+        }
+
         $formattedAmount = number_format($amount, 0, ',', '.');
         $text = "🔔 *Pesanan Baru untuk Seller*\n\n"
               . "📦 *ID Order:* `{$orderId}`\n"
               . "💰 *Nominal:* Rp {$formattedAmount}\n"
-              . "👤 *Pelanggan:* {$customerName}\n\n"
+              . "👤 *Pelanggan:* {$customerName}\n"
+              . $targetPhoneText . "\n"
               . "Silakan terima atau tolak pesanan ini:";
 
         $keyboard = [
