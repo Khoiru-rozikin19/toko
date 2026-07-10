@@ -57,7 +57,7 @@
         @forelse($products as $product)
             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 sm:p-4 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 shadow-sm">
                 <div>
-                    <!-- Badge Stock -->
+                    <!-- Badge Stock & Supplier Status -->
                     <div class="flex items-center justify-between mb-2">
                         @if($product->stock > 0)
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 space-x-1">
@@ -69,6 +69,20 @@
                                 <span class="w-1 h-1 rounded-full bg-rose-500"></span>
                                 <span>Habis</span>
                             </span>
+                        @endif
+
+                        @if($product->orderkuota_product_code)
+                            @if(($product->status ?? 'open') === 'open')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 space-x-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span>Open</span>
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 space-x-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Tutup</span>
+                                </span>
+                            @endif
                         @endif
                     </div>
 
@@ -109,7 +123,7 @@
                             Detail
                         </button>
                         
-                        @if($product->stock > 0 && $qris_configured)
+                        @if($product->stock > 0 && ($product->status ?? 'open') === 'open' && $qris_configured)
                             @auth
                                 <button onclick="openBuyModal({{ $product->id }}, '{{ $product->name }}', {{ $product->price }}, '{{ $product->orderkuota_product_code }}')" class="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-750 active:scale-95 text-white rounded-lg text-[10px] font-bold transition-all duration-200 shadow-sm shadow-blue-500/10">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -123,7 +137,7 @@
                             @endauth
                         @else
                             <button disabled class="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-lg text-[10px] font-bold cursor-not-allowed">
-                                <span>Beli</span>
+                                <span>{{ ($product->status ?? 'open') === 'close' ? 'Tutup' : 'Beli' }}</span>
                             </button>
                         @endif
                     </div>

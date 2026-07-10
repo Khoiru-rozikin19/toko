@@ -25,6 +25,7 @@ class Product extends Model
         'orderkuota_product_code',
         'success_instruction',
         'visibility',
+        'status',
     ];
 
     public function seller()

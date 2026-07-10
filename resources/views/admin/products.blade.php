@@ -11,6 +11,13 @@
         </div>
         <div class="mt-4 sm:mt-0 flex items-center space-x-3">
             @if(auth()->user()->role === 'admin')
+            <form action="{{ route('admin.products.sync_okeconnect') }}" method="POST" class="inline">
+                @csrf
+                <button type="submit" class="flex items-center space-x-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-amber-500/20 active:scale-95 transition-all duration-200">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
+                    <span>Sinkron Status Supplier</span>
+                </button>
+            </form>
             <button onclick="toggleManageCategoriesModal(true)" class="flex items-center space-x-2 px-5 py-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl text-sm font-bold shadow-sm active:scale-95 transition-all duration-200">
                 <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"></path></svg>
                 <span>Kelola Kategori</span>
@@ -90,6 +97,11 @@
                                         @if($product->orderkuota_product_code)
                                             <span class="block text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                                                 Supplier Code: <code class="bg-slate-100 dark:bg-slate-800/80 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
+                                                @if(($product->status ?? 'open') === 'open')
+                                                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 ml-1">Open</span>
+                                                @else
+                                                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-450 ml-1">Closed</span>
+                                                @endif
                                             </span>
                                         @endif
                                     </div>

@@ -91,6 +91,13 @@ class CatalogController extends Controller
             ], 422);
         }
 
+        if ($product->status === 'close') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk ini sedang ditutup oleh supplier.',
+            ], 422);
+        }
+
         // === BALANCE PAYMENT ===
         if ($paymentMethod === 'balance') {
             $user = auth()->user();

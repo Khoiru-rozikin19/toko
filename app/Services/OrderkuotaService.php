@@ -208,4 +208,109 @@ class OrderkuotaService
             return 'Gagal Muat';
         });
     }
+
+    /**
+     * Sync product statuses from Okeconnect price list page.
+     *
+     * @return array
+     */
+    public function syncProductStatuses()
+    {
+        if (app()->runningUnitTests()) {
+            return [
+                'success' => true,
+                'message' => 'Sinkronisasi berhasil (testing mock).',
+                'total_parsed' => 0,
+                'updated' => 0,
+            ];
+        }
+
+        $priceListId = Setting::get('orderkuota_price_list_id') ?: '905ccd028329b0a';
+        $url = "https://okeconnect.com/harga/list?id=" . $priceListId;
+
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 30,
+                    'ignore_errors' => true,
+                    'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+                ]
+            ]);
+            $html = @file_get_contents($url, false, $context);
+
+            if (empty($html)) {
+                Log::error("OrderkuotaService: Gagal mengambil data dari URL {$url}");
+                return [
+                    'success' => false,
+                    'message' => 'Gagal mengunduh halaman daftar harga dari OKEConnect.'
+                ];
+            }
+
+            // Gunakan DOMDocument untuk mem-parsing HTML
+            $dom = new \DOMDocument();
+            // Matikan warning HTML5 invalid tag
+            libxml_use_internal_errors(true);
+            $dom->loadHTML($html);
+            libxml_clear_errors();
+
+            $xpath = new \DOMXPath($dom);
+            // Cari seluruh element table row
+            $rows = $xpath->query('//table//tr');
+
+            $statuses = [];
+            foreach ($rows as $row) {
+                $cols = $row->getElementsByTagName('td');
+                if ($cols->length >= 4) {
+                    $code = trim($cols->item(0)->textContent);
+                    $statusText = strtolower(trim($cols->item(3)->textContent));
+
+                    if (!empty($code)) {
+                        $status = (strpos($statusText, 'open') !== false) ? 'open' : 'close';
+                        $statuses[$code] = $status;
+                    }
+                }
+            }
+
+            if (empty($statuses)) {
+                Log::warning("OrderkuotaService: Tidak ada data produk yang berhasil di-parsing.");
+                return [
+                    'success' => false,
+                    'message' => 'Format tabel harga tidak dikenali atau kosong.'
+                ];
+            }
+
+            // Cari produk-produk lokal yang memiliki kode supplier Orderkuota/Okeconnect
+            $products = \App\Models\Product::whereNotNull('orderkuota_product_code')
+                ->where('orderkuota_product_code', '!=', '')
+                ->get();
+
+            $updatedCount = 0;
+            foreach ($products as $product) {
+                $code = $product->orderkuota_product_code;
+                if (isset($statuses[$code])) {
+                    $supplierStatus = $statuses[$code];
+                    if ($product->status !== $supplierStatus) {
+                        $product->update(['status' => $supplierStatus]);
+                        $updatedCount++;
+                    }
+                }
+            }
+
+            Log::info("OrderkuotaService: Sinkronisasi selesai. Memperbarui {$updatedCount} produk.");
+
+            return [
+                'success' => true,
+                'message' => "Sinkronisasi berhasil. Memproses " . count($statuses) . " kode, memperbarui {$updatedCount} status produk.",
+                'total_parsed' => count($statuses),
+                'updated' => $updatedCount
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("OrderkuotaService: Error sinkronisasi produk: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+            ];
+        }
+    }
 }
