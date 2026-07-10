@@ -63,66 +63,93 @@ class ImportOkeconnectProducts extends Command
             $updated = 0;
             $processed = 0;
 
-            foreach ($items as $item) {
-                if ($limit && $processed >= (int)$limit) {
-                    break;
-                }
+            // Load categories and products into memory to avoid N+1 queries
+            $existingCategories = Category::all()->keyBy('name');
+            $existingProducts = Product::whereNotNull('orderkuota_product_code')
+                                       ->where('orderkuota_product_code', '!=', '')
+                                       ->get()
+                                       ->keyBy('orderkuota_product_code');
 
-                $code = trim($item['kode'] ?? '');
-                $categoryName = trim($item['kategori'] ?? 'LAIN-LAIN');
-                $name = trim($item['keterangan'] ?? '');
-                $desc = trim($item['produk'] ?? '');
-                $supplierPrice = (int) ($item['harga'] ?? 0);
-                $status = trim($item['status'] ?? '0'); // "1" for open
+            $updatePrices = $this->option('update-prices');
 
-                if (empty($code) || empty($name)) {
-                    continue;
-                }
-
-                // 1. Get or create Category
-                $category = Category::firstOrCreate(
-                    ['name' => $categoryName],
-                    ['sort_order' => 50]
-                );
-
-                // 2. Calculate selling price
-                $sellingPrice = $supplierPrice + $markup;
-                $stock = ($status === '1') ? 9999 : 0;
-
-                // 3. Find existing product
-                $product = Product::where('orderkuota_product_code', $code)->first();
-
-                if ($product) {
-                    // Update existing product
-                    $product->harga_modal = $supplierPrice;
-                    if ($this->option('update-prices')) {
-                        $product->price = $sellingPrice;
+            // Wrap all operations in a single Database Transaction to prevent SQLite disk locking issues
+            \Illuminate\Support\Facades\DB::transaction(function () use ($items, $limit, $existingCategories, $existingProducts, $adminId, $markup, $updatePrices, &$processed, &$imported, &$updated) {
+                foreach ($items as $item) {
+                    if ($limit && $processed >= (int)$limit) {
+                        break;
                     }
-                    $product->stock = $stock;
-                    $product->category_id = $category->id;
-                    $product->save();
-                    $updated++;
-                } else {
-                    // Create new product
-                    Product::create([
-                        'user_id' => $adminId,
-                        'category_id' => $category->id,
-                        'name' => $name,
-                        'description' => $desc,
-                        'price' => $sellingPrice,
-                        'harga_modal' => $supplierPrice,
-                        'stock' => $stock,
-                        'orderkuota_product_code' => $code,
-                        'visibility' => 'all',
-                    ]);
-                    $imported++;
-                }
 
-                $processed++;
-                if ($processed % 100 === 0) {
-                    $this->line("Processed {$processed} / {$totalItems}...");
+                    $code = trim($item['kode'] ?? '');
+                    $categoryName = trim($item['kategori'] ?? 'LAIN-LAIN');
+                    $name = trim($item['keterangan'] ?? '');
+                    $desc = trim($item['produk'] ?? '');
+                    $supplierPrice = (int) ($item['harga'] ?? 0);
+                    $status = trim($item['status'] ?? '0'); // "1" for open
+
+                    if (empty($code) || empty($name)) {
+                        continue;
+                    }
+
+                    // Get category from memory, create if not present
+                    if (!$existingCategories->has($categoryName)) {
+                        $category = Category::create([
+                            'name' => $categoryName,
+                            'sort_order' => 50
+                        ]);
+                        $existingCategories->put($categoryName, $category);
+                    } else {
+                        $category = $existingCategories->get($categoryName);
+                    }
+
+                    $sellingPrice = $supplierPrice + $markup;
+                    $stock = ($status === '1') ? 9999 : 0;
+
+                    // Get product from memory
+                    if ($existingProducts->has($code)) {
+                        $product = $existingProducts->get($code);
+                        
+                        $changed = false;
+                        if ($product->harga_modal != $supplierPrice) {
+                            $product->harga_modal = $supplierPrice;
+                            $changed = true;
+                        }
+                        if ($updatePrices && $product->price != $sellingPrice) {
+                            $product->price = $sellingPrice;
+                            $changed = true;
+                        }
+                        if ($product->stock != $stock) {
+                            $product->stock = $stock;
+                            $changed = true;
+                        }
+                        if ($product->category_id != $category->id) {
+                            $product->category_id = $category->id;
+                            $changed = true;
+                        }
+
+                        if ($changed) {
+                            $product->save();
+                            $updated++;
+                        }
+                    } else {
+                        // Create new product
+                        $newProduct = Product::create([
+                            'user_id' => $adminId,
+                            'category_id' => $category->id,
+                            'name' => $name,
+                            'description' => $desc,
+                            'price' => $sellingPrice,
+                            'harga_modal' => $supplierPrice,
+                            'stock' => $stock,
+                            'orderkuota_product_code' => $code,
+                            'visibility' => 'all',
+                        ]);
+                        $existingProducts->put($code, $newProduct);
+                        $imported++;
+                    }
+
+                    $processed++;
                 }
-            }
+            });
 
             $this->info("Import finished. Processed: {$processed}, Imported New: {$imported}, Updated: {$updated}");
             Log::info("OkeconnectImport Success: Processed: {$processed}, Imported: {$imported}, Updated: {$updated}");
