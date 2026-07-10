@@ -22,6 +22,7 @@ class Order extends Model
         'unique_code',
         'total_amount',
         'status',
+        'is_preorder',
         'payment_method',
         'qris_payload',
         'vpn_config',
@@ -40,6 +41,7 @@ class Order extends Model
         'commission_earned' => 'decimal:2',
         'escrow_released_at' => 'datetime',
         'paid_at' => 'datetime',
+        'is_preorder' => 'boolean',
     ];
 
     public function product()

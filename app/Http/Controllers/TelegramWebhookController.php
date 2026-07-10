@@ -228,12 +228,12 @@ class TelegramWebhookController extends Controller
                 }
 
                 // Run VPS account creation if product is linked to a VPS server
-                if ($order->product && $order->product->vps_server_id) {
+                if ($order->product && $order->product->vps_server_id && !$order->is_preorder) {
                     app(\App\Services\VpsSshService::class)->createVpnAccount($order);
                 }
 
                 // Update order status to paid
-                $order->status = 'sukses';
+                $order->status = $order->is_preorder ? 'proses' : 'sukses';
                 $order->save();
                 $order->processEscrowAndNotification();
 
@@ -251,20 +251,31 @@ class TelegramWebhookController extends Controller
                 \App\Models\SellerCommission::processForOrder($order);
 
                 // Run the pulsa transaction
-                $this->orderkuotaService->prosesTransaksiPulsa($order->id);
+                if (!$order->is_preorder) {
+                    $this->orderkuotaService->prosesTransaksiPulsa($order->id);
+                }
 
                 // Acknowledge Telegram callback query
                 if ($callbackQueryId) {
-                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Transaksi {$orderId} disetujui!");
+                    $answer = $order->is_preorder ? "Pre-order {$orderId} disetujui!" : "Transaksi {$orderId} disetujui!";
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, $answer);
                 }
 
                 // Edit message to reflect approval
                 if ($chatId && $messageId) {
-                    $updatedText = "✅ *Transaksi Sukses*\n\n"
-                                 . "📦 *ID Order:* `{$orderId}`\n"
-                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
-                                 . "👤 *Pelanggan:* {$customerName}\n\n"
-                                 . "Status transaksi telah diubah menjadi *SUKSES* dan pesanan diteruskan ke supplier.";
+                    if ($order->is_preorder) {
+                        $updatedText = "✅ *Pre-Order Disetujui*\n\n"
+                                     . "📦 *ID Order:* `{$orderId}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "Status pre-order telah diubah menjadi *PROSES* dan akan dikirim ke supplier otomatis ketika status produk open.";
+                    } else {
+                        $updatedText = "✅ *Transaksi Sukses*\n\n"
+                                     . "📦 *ID Order:* `{$orderId}`\n"
+                                     . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                     . "👤 *Pelanggan:* {$customerName}\n\n"
+                                     . "Status transaksi telah diubah menjadi *SUKSES* dan pesanan diteruskan ke supplier.";
+                    }
                     $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
                 }
 

@@ -161,7 +161,7 @@ class PaymentCallbackController extends Controller
                 }
 
                 // Complete the order
-                $order->status = 'sukses';
+                $order->status = $order->is_preorder ? 'proses' : 'sukses';
                 $order->save();
 
                 // Process seller commissions
@@ -197,7 +197,7 @@ class PaymentCallbackController extends Controller
                     }
 
                     // 1. VPS account creation via SSH
-                    if ($order->product && $order->product->vps_server_id) {
+                    if ($order->product && $order->product->vps_server_id && !$order->is_preorder) {
                         try {
                             app(\App\Services\VpsSshService::class)->createVpnAccount($order);
                             $order->save();
@@ -214,10 +214,12 @@ class PaymentCallbackController extends Controller
                     }
 
                     // 3. Send order to Orderkuota API
-                    try {
-                        app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
-                    } catch (\Exception $e) {
-                        Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
+                    if (!$order->is_preorder) {
+                        try {
+                            app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                        } catch (\Exception $e) {
+                            Log::error("PaymentCallback: Failed to send order {$order->id} to Orderkuota: " . $e->getMessage());
+                        }
                     }
 
                     // 4. Update Telegram message to Admin
@@ -235,11 +237,19 @@ class PaymentCallbackController extends Controller
                                              . "👤 *Pelanggan:* {$customerName}\n\n"
                                              . "Status top up telah diubah menjadi *SUKSES* (diverifikasi otomatis oleh pembaca notifikasi) dan saldo telah ditambahkan ke akun user.";
                             } else {
-                                $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
-                                             . "📦 *ID Order:* `{$order->id}`\n"
-                                             . "💰 *Nominal:* Rp {$formattedAmount}\n"
-                                             . "👤 *Pelanggan:* {$customerName}\n\n"
-                                             . "Status transaksi telah diubah menjadi *SUKSES* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                                if ($order->is_preorder) {
+                                    $updatedText = "✅ *Pre-Order Diterima (Otomatis)*\n\n"
+                                                 . "📦 *ID Order:* `{$order->id}`\n"
+                                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                                 . "Status pre-order telah diubah menjadi *PROSES* (pembayaran diverifikasi otomatis) dan akan diproses saat supplier buka.";
+                                } else {
+                                    $updatedText = "✅ *Transaksi Sukses (Otomatis)*\n\n"
+                                                 . "📦 *ID Order:* `{$order->id}`\n"
+                                                 . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                                 . "👤 *Pelanggan:* {$customerName}\n\n"
+                                                 . "Status transaksi telah diubah menjadi *SUKSES* (diverifikasi otomatis oleh pembaca notifikasi) dan pesanan diteruskan ke supplier.";
+                                }
                             }
 
                             $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);

@@ -14,25 +14,26 @@ class OrderkuotaService
      *
      * @param string $orderId
      * @return void
+     * @return bool
      */
     public function kirimPesananKeOrderkuota($orderId)
     {
         $order = Order::with('product')->find($orderId);
         if (!$order) {
             Log::error("OrderkuotaService: Pesanan dengan ID {$orderId} tidak ditemukan.");
-            return;
+            return false;
         }
 
         $product = $order->product;
         if (!$product) {
             Log::error("OrderkuotaService: Produk untuk pesanan {$orderId} tidak ditemukan.");
-            return;
+            return false;
         }
 
         $code = $product->orderkuota_product_code;
         if (empty($code)) {
             Log::info("OrderkuotaService: Pesanan ID {$orderId} dilewati karena produk tidak memiliki kode Orderkuota.");
-            return;
+            return false;
         }
 
         // Ambil data nomor HP tujuan pembeli (disimpan di target_phone dengan fallback ke email_or_whatsapp)
@@ -109,7 +110,7 @@ class OrderkuotaService
             if (app()->runningUnitTests()) {
                 $response = Http::get($urlTarget);
                 Log::info("OKEConnect HTTP Request Sent (Testing Mock): " . $urlTarget);
-                return;
+                return true;
             }
 
             // Eksekusi request menggunakan file_get_contents agar literal '@' terkirim murni secara raw text
@@ -117,8 +118,10 @@ class OrderkuotaService
             $responseBody = @file_get_contents($urlTarget, false, $context);
 
             Log::info("OKEConnect Shotgun Response: " . ($responseBody ?: 'TIMEOUT/NO RESPONSE'));
+            return true;
         } catch (\Exception $e) {
             Log::error("OKEConnect HTTP Request Failed (Shotgun URL): " . $e->getMessage());
+            return false;
         }
     }
 
@@ -296,6 +299,9 @@ class OrderkuotaService
                 }
             }
 
+            // Process any pending pre-orders that are now open
+            $this->processAllOpenPreorders();
+
             Log::info("OrderkuotaService: Sinkronisasi selesai. Memperbarui {$updatedCount} produk.");
 
             return [
@@ -311,6 +317,51 @@ class OrderkuotaService
                 'success' => false,
                 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
             ];
+        }
+    }
+ 
+    /**
+     * Process all pending pre-orders for products that are currently open.
+     *
+     * @return void
+     */
+    public function processAllOpenPreorders()
+    {
+        $preorders = Order::where('is_preorder', true)
+            ->where('status', 'proses')
+            ->whereHas('product', function ($q) {
+                $q->where('status', 'open');
+            })
+            ->get();
+ 
+        foreach ($preorders as $order) {
+            try {
+                Log::info("OrderkuotaService: Processing pre-order {$order->id}");
+                $success = $this->kirimPesananKeOrderkuota($order->id);
+                if ($success) {
+                    $order->update(['status' => 'sukses']);
+ 
+                    // Update Telegram notification
+                    if ($order->telegram_message_id) {
+                        try {
+                            $telegramService = app(\App\Services\TelegramService::class);
+                            $adminId = env('TELEGRAM_ADMIN_ID');
+                            $formattedAmount = number_format($order->total_amount, 0, ',', '.');
+                            $customerName = $order->email_or_whatsapp;
+                            $updatedText = "✅ *Pre-Order Diproses (Otomatis)*\n\n"
+                                         . "📦 *ID Order:* `{$order->id}`\n"
+                                         . "💰 *Nominal:* Rp {$formattedAmount}\n"
+                                         . "👤 *Pelanggan:* {$customerName}\n\n"
+                                         . "Status pre-order telah otomatis diproses dan diubah menjadi *SUKSES* setelah produk dibuka oleh supplier.";
+                            $telegramService->editMessageText($adminId, $order->telegram_message_id, $updatedText);
+                        } catch (\Exception $te) {
+                            Log::error("OrderkuotaService: Gagal memperbarui Telegram pre-order {$order->id}: " . $te->getMessage());
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("OrderkuotaService: Gagal memproses pre-order {$order->id}: " . $e->getMessage());
+            }
         }
     }
 }

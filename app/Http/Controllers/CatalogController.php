@@ -91,11 +91,15 @@ class CatalogController extends Controller
             ], 422);
         }
 
+        $isPreorder = false;
         if ($product->status === 'close') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Produk ini sedang ditutup oleh supplier.',
-            ], 422);
+            if (empty($product->orderkuota_product_code)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Produk ini sedang ditutup oleh supplier.',
+                ], 422);
+            }
+            $isPreorder = true;
         }
 
         // === BALANCE PAYMENT ===
@@ -105,7 +109,7 @@ class CatalogController extends Controller
             $orderId = 'ORD-' . strtoupper(Str::random(8));
 
             try {
-                $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price) {
+                $order = \Illuminate\Support\Facades\DB::transaction(function () use ($orderId, $user, $product, $request, $price, $isPreorder) {
                     // Lock the user balance row
                     $balanceRecord = \App\Models\UserBalance::where('user_id', $user->id)->lockForUpdate()->first();
                     if (!$balanceRecord) {
@@ -153,7 +157,8 @@ class CatalogController extends Controller
                         'base_amount' => $price,
                         'unique_code' => 0,
                         'total_amount' => $price,
-                        'status' => 'sukses',
+                        'status' => $isPreorder ? 'proses' : 'sukses',
+                        'is_preorder' => $isPreorder,
                         'payment_method' => 'balance',
                         'qris_payload' => null,
                         'vpn_config' => $product->config_template,
@@ -181,14 +186,16 @@ class CatalogController extends Controller
                         $order->save();
                     }
 
-                    // Run VPS account creation if product is linked to a VPS server
-                    if ($product->vps_server_id) {
-                        app(\App\Services\VpsSshService::class)->createVpnAccount($order);
-                        $order->save();
-                    }
+                    if (!$isPreorder) {
+                        // Run VPS account creation if product is linked to a VPS server
+                        if ($product->vps_server_id) {
+                            app(\App\Services\VpsSshService::class)->createVpnAccount($order);
+                            $order->save();
+                        }
 
-                    // Kirim pesanan ke Orderkuota jika applicable
-                    app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                        // Kirim pesanan ke Orderkuota jika applicable
+                        app(\App\Services\OrderkuotaService::class)->kirimPesananKeOrderkuota($order->id);
+                    }
 
                     // Decrement product stock if not unlimited
                     if ($product->stock > 0) {
@@ -220,7 +227,7 @@ class CatalogController extends Controller
                     'product_name' => $product->name,
                     'email_or_whatsapp' => $order->email_or_whatsapp,
                     'total_amount' => $order->total_amount,
-                    'status' => 'sukses',
+                    'status' => $order->status,
                     'vpn_config' => $order->vpn_config,
                     'success_instruction' => $product->success_instruction,
                 ],
@@ -274,6 +281,7 @@ class CatalogController extends Controller
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
             'status' => 'pending',
+            'is_preorder' => $isPreorder,
             'payment_method' => 'qris',
             'qris_payload' => $qrisPayload,
             'vpn_config' => $product->config_template,
