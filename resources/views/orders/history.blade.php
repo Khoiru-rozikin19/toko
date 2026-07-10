@@ -76,12 +76,8 @@
                                         Sukses
                                     </span>
                                 @elseif($order->status === 'proses')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400">
                                         Proses
-                                    </span>
-                                @elseif($order->status === 'gagal')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
-                                        Gagal
                                     </span>
                                 @elseif(in_array($order->status, ['pending', 'pending_manual']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
@@ -91,9 +87,13 @@
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
                                         Ditolak
                                     </span>
-                                @else
+                                @elseif($order->status === 'expired')
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                         Expired
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                        {{ ucfirst($order->status) }}
                                     </span>
                                 @endif
                             </td>
