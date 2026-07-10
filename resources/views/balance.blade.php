@@ -33,7 +33,7 @@
         
         <div class="relative z-10 space-y-1">
             <span class="text-xs uppercase tracking-widest text-blue-200/80 font-bold">Total Saldo Saat Ini</span>
-            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h1>
+            <h2 class="text-xl sm:text-2xl font-bold tracking-tight mt-1">Rp {{ number_format($currentBalance, 0, ',', '.') }}</h2>
             <span class="text-xs text-blue-100/75 block">Akun: {{ auth()->user()->name }}</span>
         </div>
         
