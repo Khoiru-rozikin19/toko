@@ -215,7 +215,7 @@ show_dashboard() {
     echo -e "    [3] ⚡  Cek Status Layanan & Sistem"
     echo -e "    [4] 📊  Pantau Aktivitas Pengunjung (Access Log)"
     echo -e "    [5] 📂  Backup & Restore Website (Files & DB)"
-    echo -e "    [6] 🤖  Konfigurasi Bot Telegram & Webhook"
+    echo -e "    [6] 🤖  Menu Bot"
     echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
     echo -e "    [0] 🚪  Keluar dari Panel"
@@ -1586,6 +1586,67 @@ configure_telegram() {
     fi
 }
 
+menu_bot() {
+    while true; do
+        clear
+        echo
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        echo -e "                       🤖  MENU BOT TELEGRAM  🤖"
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        echo -e "  [1] ⚙️   Setting Bot Token & ID Telegram Admin"
+        echo -e "  [2] 🚀  Start Bot (Jalankan Queue Worker)"
+        echo -e "  [3] 🔄  Restart Bot (Muat Ulang Queue Worker)"
+        echo -e "  [4] ⚡  Tes Koneksi Bot"
+        echo -e "  [0] 🚪  Kembali ke Menu Utama"
+        echo -e "${BOLD}${CYAN}=====================================================================${NC}"
+        read -p "Pilih opsi [0-4]: " bot_pilihan
+        echo
+
+        case "$bot_pilihan" in
+            1)
+                configure_telegram
+                ;;
+            2)
+                print_info "Memulai layanan background queue worker (bot daemon)..."
+                if command -v pm2 &>/dev/null; then
+                    pm2 start vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PWD"
+                    pm2 save
+                    print_success "Bot/Queue Worker berhasil dijalankan via PM2!"
+                else
+                    nohup php artisan queue:work --tries=3 >/dev/null 2>&1 &
+                    print_success "Bot/Queue Worker berhasil dijalankan di background!"
+                fi
+                ;;
+            3)
+                print_info "Memuat ulang (restart) layanan background queue worker (bot daemon)..."
+                php artisan queue:restart
+                if command -v pm2 &>/dev/null; then
+                    pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PWD"
+                    pm2 save
+                    print_success "Bot/Queue Worker berhasil direstart via PM2!"
+                else
+                    pkill -f "queue:work"
+                    nohup php artisan queue:work --tries=3 >/dev/null 2>&1 &
+                    print_success "Bot/Queue Worker berhasil direstart di background!"
+                fi
+                ;;
+            4)
+                print_info "Menguji koneksi bot Telegram..."
+                php artisan telegram:test
+                ;;
+            0|"")
+                break
+                ;;
+            *)
+                print_warning "Pilihan tidak valid. Silakan pilih 0-4."
+                ;;
+        esac
+
+        echo
+        read -p "Tekan [Enter] untuk melanjutkan..." temp
+    done
+}
+
 # =====================================================================
 #  MENU 7: Lihat Log Kesalahan (Error Log)
 # =====================================================================
@@ -2298,7 +2359,7 @@ while true; do
             manage_backup_restore
             ;;
         6)
-            configure_telegram
+            menu_bot
             ;;
         7)
             view_error_log
