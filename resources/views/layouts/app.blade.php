@@ -17,6 +17,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        html {
+            font-size: 14px;
+        }
+        @media (min-width: 768px) {
+            html {
+                font-size: 14.5px;
+            }
+        }
         body {
             font-family: 'Plus Jakarta Sans', 'Instrument Sans', sans-serif;
         }
@@ -45,9 +53,9 @@
         <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/60 z-40 transition-opacity duration-300 opacity-0 pointer-events-none md:hidden"></div>
 
         <!-- SIDEBAR (Left) -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 max-w-[calc(100vw-3rem)] md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:fixed md:top-0 md:bottom-0 z-50 md:z-30">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 max-w-[calc(100vw-3rem)] md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:fixed md:top-0 md:bottom-0 z-50 md:z-30">
             <!-- Sidebar Header & Logo -->
-            <div class="p-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+            <div class="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                 <a href="{{ url('/') }}" class="flex items-center space-x-3">
                     <div class="bg-blue-600 p-2 rounded-xl text-white">
                         <!-- Briefcase/Bag Icon -->
@@ -67,7 +75,7 @@
 
             <!-- Profile Widget -->
             @if(Auth::check())
-                <a href="{{ route('profile.edit') }}" class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-205">
+                <a href="{{ route('profile.edit') }}" class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition duration-205">
                     <div class="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-blue-500/20 flex-shrink-0">
                         {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                     </div>
@@ -81,7 +89,7 @@
                     </div>
                 </a>
             @else
-                <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
+                <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center space-x-4">
                     <div class="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-lg flex-shrink-0">
                         G
                     </div>
@@ -97,7 +105,7 @@
             @endif
 
             <!-- Sidebar Nav Items -->
-            <div id="sidebarMenu" class="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+            <div id="sidebarMenu" class="flex-1 overflow-y-auto px-3 py-5 space-y-6">
                 <!-- BELANJA -->
                 <div>
                     <span class="px-3 text-xs font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Belanja</span>
@@ -176,10 +184,10 @@
         </aside>
 
         <!-- MAIN CONTENT CONTAINER -->
-        <div class="flex-1 md:ml-80 flex flex-col min-h-screen">
+        <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
             
             <!-- TOP NAVBAR -->
-            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-20 px-6 md:px-10 flex items-center justify-between sticky top-0 z-20 transition-all duration-200">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-16 px-5 md:px-8 flex items-center justify-between sticky top-0 z-20 transition-all duration-200">
                 <div class="flex items-center space-x-4">
                     <!-- Sidebar Toggle for Mobile -->
                     <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
@@ -216,7 +224,7 @@
             </header>
 
             <!-- PAGE CONTENT -->
-            <main class="flex-1 p-4 sm:p-6 md:p-10">
+            <main class="flex-1 p-3 sm:p-5 md:p-8">
                 @if(session('success'))
                     <div class="mb-6 p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-400 rounded-2xl flex items-center space-x-3">
                         <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -228,7 +236,7 @@
             </main>
 
             <!-- FOOTER -->
-            <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 px-10 text-center text-sm text-slate-400 dark:text-slate-500 transition-all duration-200">
+            <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-5 px-8 text-center text-sm text-slate-400 dark:text-slate-500 transition-all duration-200">
                 &copy; {{ date('Y') }} RZK Platform. Built for premium performance & security.
             </footer>
         </div>

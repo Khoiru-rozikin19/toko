@@ -32,25 +32,25 @@
 
     <!-- Orders Table -->
     <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto hidden md:block">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                        <th class="py-4.5 px-6">ID Order</th>
-                        <th class="py-4.5 px-6">Produk</th>
-                        <th class="py-4.5 px-6">Total Bayar</th>
-                        <th class="py-4.5 px-6">Status</th>
-                        <th class="py-4.5 px-6">Tanggal</th>
-                        <th class="py-4.5 px-6 text-center">Aksi</th>
+                        <th class="py-3.5 px-4">ID Order</th>
+                        <th class="py-3.5 px-4">Produk</th>
+                        <th class="py-3.5 px-4">Total Bayar</th>
+                        <th class="py-3.5 px-4">Status</th>
+                        <th class="py-3.5 px-4">Tanggal</th>
+                        <th class="py-3.5 px-4 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300">
                     @forelse($orders as $order)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150">
-                            <td class="py-4.5 px-6 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
+                            <td class="py-3.5 px-4 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">
                                 {{ $order->id }}
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3.5 px-4">
                                 <div class="font-bold text-slate-800 dark:text-slate-200">
                                     {{ $order->product->name ?? 'Produk Dihapus' }}
                                 </div>
@@ -66,10 +66,10 @@
                                     </div>
                                 @endif
                             </td>
-                            <td class="py-4.5 px-6 font-extrabold text-slate-800 dark:text-slate-100">
+                            <td class="py-3.5 px-4 font-extrabold text-slate-800 dark:text-slate-100">
                                 Rp {{ number_format($order->total_amount, 0, ',', '.') }}
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3.5 px-4">
                                 @if(in_array($order->status, ['success', 'paid', 'sukses']))
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
                                         Sukses
@@ -96,10 +96,10 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-4.5 px-6 text-xs text-slate-400">
+                            <td class="py-3.5 px-4 text-xs text-slate-400">
                                 {{ $order->created_at->format('d/m/Y H:i') }}
                             </td>
-                            <td class="py-4.5 px-6 text-center">
+                            <td class="py-3.5 px-4 text-center">
                                 @if(in_array($order->status, ['success', 'paid', 'proses', 'sukses']) || in_array($order->status, ['pending', 'pending_manual']))
                                     @php
                                         $complaint = $order->complaints->first();
@@ -200,6 +200,113 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile View (Cards) -->
+        <div class="space-y-4 md:hidden p-4">
+            @forelse($orders as $order)
+                <div class="bg-slate-50 dark:bg-slate-900/60 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-2xs">
+                    <div class="flex items-center justify-between">
+                        <span class="font-mono text-xs text-blue-600 dark:text-blue-400 font-bold">#{{ $order->id }}</span>
+                        <span class="text-xs text-slate-400">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+                    </div>
+                    
+                    <div class="border-t border-slate-200/60 dark:border-slate-800/60 my-1"></div>
+                    
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                                {{ $order->product->name ?? 'Produk Dihapus' }}
+                            </div>
+                            @if($order->target_phone)
+                                <div class="text-xs text-slate-450 dark:text-slate-400 mt-0.5">Tujuan: {{ $order->target_phone }}</div>
+                            @endif
+                            @if($order->sn)
+                                <div class="mt-1.5 flex items-center space-x-1.5">
+                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-150 dark:border-slate-700 font-mono select-all">SN: {{ $order->sn }}</span>
+                                    <button onclick="copyText('{{ $order->sn }}', 'Serial Number')" class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 7.5V6.108c0-1.135.845-2.098 1.976-2.192.373-.03.748-.057 1.123-.08M15.75 18H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08M15.75 18.75v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5A3.375 3.375 0 006.375 7.5H5.25m11.9-3.664A2.251 2.251 0 0015 2.25h-1.5a2.251 2.251 0 00-2.15 1.586m5.8 0c.065.21.1.433.1.664v.75h-6V4.5c0-.231.035-.454.1-.664M6.75 7.5H4.875c-.621 0-1.125.504-1.125 1.125v12c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V16.5a9 9 0 00-9-9z"></path></svg>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                        <div class="text-right">
+                            <div class="font-extrabold text-slate-800 dark:text-slate-100 text-sm">
+                                Rp {{ number_format($order->total_amount, 0, ',', '.') }}
+                            </div>
+                            <div class="mt-1">
+                                @if(in_array($order->status, ['success', 'paid', 'sukses']))
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
+                                        Sukses
+                                    </span>
+                                @elseif($order->status === 'proses')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400">
+                                        Proses
+                                    </span>
+                                @elseif(in_array($order->status, ['pending', 'pending_manual']))
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 animate-pulse">
+                                        Pending
+                                    </span>
+                                @elseif(in_array($order->status, ['rejected', 'ditolak']))
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400">
+                                        Ditolak
+                                    </span>
+                                @elseif($order->status === 'expired')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-400">
+                                        Expired
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-400">
+                                        {{ ucfirst($order->status) }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions for mobile -->
+                    @if(in_array($order->status, ['success', 'paid', 'proses', 'sukses']) || in_array($order->status, ['pending', 'pending_manual']))
+                        <div class="border-t border-slate-100 dark:border-slate-800/60 pt-2 flex items-center justify-end space-x-2">
+                            @if(in_array($order->status, ['pending', 'pending_manual']))
+                                <button onclick="openPaymentModal('{{ $order->id }}', '{{ $order->total_amount }}', '{{ $order->qris_payload }}', '{{ $order->expired_at ? $order->expired_at->toIso8601String() : '' }}')" class="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 rounded-xl text-xs font-bold transition-all duration-150">
+                                    Bayar / Detail
+                                </button>
+                            @endif
+                            
+                            @if(in_array($order->status, ['success', 'paid', 'proses', 'sukses']))
+                                @if($hasVpn)
+                                    @if($isViewableAccount)
+                                        <button data-config="{{ $order->vpn_config }}" data-instruction="{{ $order->product->success_instruction ?? '' }}" onclick="openAccountModal('{{ $order->id }}', this.getAttribute('data-config'), this.getAttribute('data-instruction'))" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 rounded-xl text-xs font-bold transition-all duration-150">
+                                            Lihat Akun
+                                        </button>
+                                    @else
+                                        <a href="{{ route('order.download', $order->id) }}" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 rounded-xl text-xs font-bold transition-all duration-150">
+                                            Unduh Config
+                                        </a>
+                                    @endif
+                                @endif
+
+                                @if(!$complaint)
+                                    <button onclick="openComplaintModal('{{ $order->id }}')" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450 border border-rose-200 dark:border-rose-900/30 rounded-xl text-xs font-bold transition-all duration-150">
+                                        Komplain
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">Komplain: 
+                                        @if($complaint->status === 'pending') Pending
+                                        @elseif($complaint->status === 'resolved') Refunded
+                                        @elseif($complaint->status === 'rejected') Ditolak
+                                        @endif
+                                    </span>
+                                @endif
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            @empty
+                <div class="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 text-sm">
+                    Belum ada riwayat transaksi pembelian.
+                </div>
+            @endforelse
         </div>
         
         <!-- Pagination -->

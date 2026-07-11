@@ -57,29 +57,30 @@
     </div>
 
     <!-- Products Table Card -->
-    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+    <!-- Products Table Card -->
+    <div class="hidden md:block bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                        <th class="py-4.5 px-6">ID</th>
-                        <th class="py-4.5 px-6">Nama Produk</th>
+                        <th class="py-3 px-4">ID</th>
+                        <th class="py-3 px-4">Nama Produk</th>
                         @if(auth()->user()->role === 'admin')
-                            <th class="py-4.5 px-6">Seller</th>
+                            <th class="py-3 px-4">Seller</th>
                         @endif
-                        <th class="py-4.5 px-6">Harga</th>
-                        <th class="py-4.5 px-6">Masa Aktif</th>
-                        <th class="py-4.5 px-6">Stok</th>
-                        <th class="py-4.5 px-6">Visibilitas</th>
-                        <th class="py-4.5 px-6">Konfigurasi</th>
-                        <th class="py-4.5 px-6 text-center">Aksi</th>
+                        <th class="py-3 px-4">Harga</th>
+                        <th class="py-3 px-4">Masa Aktif</th>
+                        <th class="py-3 px-4">Stok</th>
+                        <th class="py-3 px-4">Visibilitas</th>
+                        <th class="py-3 px-4">Konfigurasi</th>
+                        <th class="py-3 px-4 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="productsTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 text-sm font-medium text-slate-700 dark:text-slate-350">
                     @forelse($products as $product)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-150 product-row" data-category-id="{{ $product->category_id ?? 'uncategorized' }}" data-stock="{{ $product->stock }}">
-                            <td class="py-4.5 px-6 font-mono text-xs text-slate-400">#{{ $product->id }}</td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3 px-4 font-mono text-xs text-slate-400">#{{ $product->id }}</td>
+                            <td class="py-3 px-4">
                                 <div class="flex items-center space-x-3">
                                     @if($product->image_path)
                                         <div class="w-10 h-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
@@ -107,17 +108,17 @@
                                 </div>
                             </td>
                             @if(auth()->user()->role === 'admin')
-                                <td class="py-4.5 px-6 text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                                <td class="py-3 px-4 text-slate-600 dark:text-slate-400 text-xs font-semibold">
                                     {{ $product->seller ? $product->seller->name : 'Admin Utama' }}
                                 </td>
                             @endif
-                            <td class="py-4.5 px-6 text-blue-600 dark:text-blue-400 font-bold">
+                            <td class="py-3 px-4 text-blue-600 dark:text-blue-400 font-bold">
                                 Rp {{ number_format($product->price, 0, ',', '.') }}
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3 px-4">
                                 {{ $product->duration_days }} Hari
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3 px-4">
                                 @if($product->stock > 0)
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
                                         {{ $product->stock }} ready
@@ -128,7 +129,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3 px-4">
                                 @php
                                     $vis = $product->visibility ?? 'all';
                                     $visLabel = ['all' => 'Semua', 'admin_seller' => 'Admin & Seller', 'admin_only' => 'Admin'];
@@ -138,7 +139,7 @@
                                     {{ $visLabel[$vis] ?? 'Semua' }}
                                 </span>
                             </td>
-                            <td class="py-4.5 px-6">
+                            <td class="py-3 px-4">
                                 @if($product->vpsServer)
                                     <span class="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 font-mono" title="{{ $product->vps_command_template }}">
                                         VPS: {{ $product->vpsServer->name }}
@@ -149,13 +150,13 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-4.5 px-6 text-center">
+                            <td class="py-3 px-4 text-center">
                                 <div class="flex items-center justify-center space-x-2">
                                     <!-- Edit Button -->
                                     <button onclick="openEditModal({{ json_encode($product) }})" class="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/20 text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-xl transition-all duration-200" title="Edit Produk">
                                         <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                     </button>
-
+ 
                                     <!-- Delete Form -->
                                     <form action="{{ route('admin.products.delete', $product->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini? Semua data pesanan terkait akan terhapus.')" class="inline">
                                         @csrf
@@ -175,6 +176,84 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Mobile View (Cards) -->
+    <div id="productsMobileList" class="space-y-4 md:hidden">
+        @forelse($products as $product)
+            <div class="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-2xs product-mobile-card" data-category-id="{{ $product->category_id ?? 'uncategorized' }}" data-stock="{{ $product->stock }}">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-xs text-slate-400">#{{ $product->id }}</span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold {{ $product->stock > 0 ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400' }}">
+                        Stok: {{ $product->stock }}
+                    </span>
+                </div>
+                
+                <div class="flex items-start space-x-3">
+                    @if($product->image_path)
+                        <div class="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 flex-shrink-0 bg-slate-50 dark:bg-slate-950/20 flex items-center justify-center">
+                            <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->name }}" class="max-w-full max-h-full object-contain">
+                        </div>
+                    @endif
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-slate-850 dark:text-slate-200 text-sm truncate">{{ $product->name }}</h4>
+                        @if($product->description)
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{{ $product->description }}</p>
+                        @endif
+                        @if($product->orderkuota_product_code)
+                            <div class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                                Supplier: <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded text-blue-600 dark:text-blue-400 font-mono font-semibold">{{ $product->orderkuota_product_code }}</code>
+                                <span class="inline-flex items-center px-1 rounded text-[9px] font-bold {{ ($product->status ?? 'open') === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }} ml-1">
+                                    {{ strtoupper($product->status ?? 'open') }}
+                                </span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 dark:border-slate-800/60 my-2"></div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Harga</span>
+                        <span class="font-extrabold text-slate-800 dark:text-slate-100">Rp {{ number_format($product->price, 0, ',', '.') }}</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Masa Aktif</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-350">{{ $product->duration_days }} Hari</span>
+                    </div>
+                    <div class="mt-1">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Visibilitas</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-650 dark:text-slate-400 font-semibold text-[10px]">
+                            {{ $product->visibility ?? 'all' }}
+                        </span>
+                    </div>
+                    <div class="mt-1">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">VPS Server</span>
+                        <span class="font-semibold text-slate-700 dark:text-slate-350 font-mono text-[10px] truncate block">{{ $product->vpsServer ? $product->vpsServer->name : 'H2H Supplier' }}</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-100 dark:border-slate-800/60 pt-2 flex items-center justify-end space-x-2">
+                    <button onclick="openEditModal({{ json_encode($product) }})" class="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 rounded-xl text-xs font-bold transition-all duration-155">
+                        Edit
+                    </button>
+                    <form action="{{ route('admin.products.delete', $product->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus produk ini? Semua data pesanan terkait akan terhapus.')" class="inline">
+                        @csrf
+                        <button type="submit" class="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450 border border-rose-200 dark:border-rose-900/30 rounded-xl text-xs font-bold transition-all duration-155">
+                            Hapus
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @empty
+            <div class="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 text-sm">
+                Belum ada data produk.
+            </div>
+        @endforelse
+        <div id="productsMobileEmpty" class="hidden bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 text-sm">
+            Tidak ada produk untuk kategori ini.
         </div>
     </div>
 </div>
@@ -542,6 +621,7 @@
 
         // Filter table rows
         const rows = document.querySelectorAll('.product-row');
+        const mobileCards = document.querySelectorAll('.product-mobile-card');
         let visibleCount = 0;
         let visibleStock = 0;
 
@@ -565,6 +645,22 @@
             }
         });
 
+        // Sync mobile cards
+        mobileCards.forEach(card => {
+            const cardCatId = card.dataset.categoryId;
+            let show = false;
+
+            if (categoryId === 'all') {
+                show = true;
+            } else if (categoryId === 'uncategorized') {
+                show = (cardCatId === 'uncategorized' || cardCatId === '' || cardCatId === 'null');
+            } else {
+                show = (cardCatId === categoryId);
+            }
+
+            card.style.display = show ? '' : 'none';
+        });
+
         // Update stats
         document.getElementById('statTotalProducts').textContent = visibleCount;
         document.getElementById('statTotalStock').textContent = visibleStock;
@@ -573,6 +669,13 @@
         const emptyRow = document.getElementById('emptyRow');
         if (emptyRow) {
             emptyRow.style.display = visibleCount === 0 ? '' : 'none';
+        }
+
+        const mobileEmpty = document.getElementById('productsMobileEmpty');
+        if (mobileEmpty) {
+            // Show mobile empty category message if category is filtered to 0 visible,
+            // but only if there are actually products in the array (so we don't duplicate the empty array message)
+            mobileEmpty.style.display = (visibleCount === 0 && mobileCards.length > 0) ? 'block' : 'none';
         }
     }
 
