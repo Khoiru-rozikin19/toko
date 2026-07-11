@@ -159,6 +159,33 @@ test('api callback notification returns unauthorized for invalid api keys', func
              ]);
 });
 
+test('api callback notification handles ping test and notifies telegram', function () {
+    Http::fake([
+        'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 12345]], 200),
+    ]);
+    putenv('TELEGRAM_BOT_TOKEN=mock-token');
+    putenv('TELEGRAM_ADMIN_ID=987654321');
+
+    $response = $this->postJson(route('api.payment.callback'), [
+        'raw_text' => 'PING_TEST',
+        'amount' => 0,
+        'secret_key' => 'rahasiahappy123',
+    ]);
+
+    $response->assertStatus(200)
+             ->assertJson([
+                 'success' => true,
+                 'status' => 'success',
+                 'message' => 'Ping received',
+             ]);
+
+    Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+        return str_contains($request->url(), 'sendMessage') &&
+            $request['chat_id'] === '987654321' &&
+            str_contains($request['text'], 'test ping app callback berhasil');
+    });
+});
+
 test('admin can manage supplier settings', function () {
     $admin = User::create([
         'name' => 'Admin User',

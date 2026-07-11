@@ -44,6 +44,28 @@ class PaymentCallbackController extends Controller
         $amount = (int) preg_replace('/[^0-9]/', '', $request->amount);
         $rawText = $request->raw_text;
 
+        // Check if this is a ping test notification
+        if ($rawText === 'PING_TEST') {
+            Log::info("PaymentCallback: Ping test callback received.");
+            try {
+                $telegramService = app(\App\Services\TelegramService::class);
+                $adminId = env('TELEGRAM_ADMIN_ID');
+                if ($adminId) {
+                    $telegramService->sendMessage($adminId, "test ping app callback berhasil ✅");
+                } else {
+                    Log::warning("PaymentCallback: TELEGRAM_ADMIN_ID is not configured in .env for ping test.");
+                }
+            } catch (\Exception $e) {
+                Log::error("PaymentCallback: Failed to send Telegram ping notification: " . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'status' => 'success',
+                'message' => 'Ping received',
+            ], 200);
+        }
+
         // Filter out Telegram order notifications to prevent self-trigger loop
         if (str_contains($rawText, 'Notifikasi Transaksi Baru') || 
             str_contains($rawText, 'ID Order') || 
