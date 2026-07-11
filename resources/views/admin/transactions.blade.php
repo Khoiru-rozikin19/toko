@@ -6,8 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Daftar Transaksi</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Riwayat pesanan pelanggan dan log mutasi masuk</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Riwayat pesanan pelanggan dan log mutasi masuk</p>
         </div>
         
         <!-- Filters -->

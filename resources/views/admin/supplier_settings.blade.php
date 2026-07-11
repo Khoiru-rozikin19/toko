@@ -5,8 +5,7 @@
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-855 dark:text-slate-100 tracking-tight">Pengaturan API Supplier</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Konfigurasikan kredensial H2H Orderkuota.com Anda untuk otomatisasi produk</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Konfigurasikan kredensial H2H Orderkuota.com Anda untuk otomatisasi produk</p>
     </div>
 
     <!-- Configuration Form -->

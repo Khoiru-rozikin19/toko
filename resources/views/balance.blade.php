@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.app', ['title' => 'Saldo Akun'])
 
 @section('content')
 <div class="space-y-8">
@@ -6,8 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Saldo Akun</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola dan isi ulang saldo untuk berbelanja produk</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Kelola dan isi ulang saldo untuk berbelanja produk</p>
         </div>
     </div>
 

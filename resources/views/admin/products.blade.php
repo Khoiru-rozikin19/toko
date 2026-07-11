@@ -6,8 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Manajemen Produk</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola stok unit produk digital VPN Anda</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Kelola stok unit produk digital VPN Anda</p>
         </div>
         <div class="mt-4 sm:mt-0 flex items-center space-x-3">
             @if(auth()->user()->role === 'admin')

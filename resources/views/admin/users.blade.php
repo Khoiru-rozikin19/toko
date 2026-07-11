@@ -5,8 +5,7 @@
     
     <!-- Header -->
     <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Manajemen Pengguna</h2>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Kelola persetujuan verifikasi akun baru, permohonan upgrade Seller, serta kelola peran dan status akun seluruh pengguna.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Kelola persetujuan verifikasi akun baru, permohonan upgrade Seller, serta kelola peran dan status akun seluruh pengguna.</p>
     </div>
 
     <!-- Tab Buttons -->

@@ -10,8 +10,7 @@
                 XL
             </div>
             <div>
-                <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Cek & Reset Kuota XL</h2>
-                <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">
+                <p class="text-sm text-slate-400 dark:text-slate-500">
                     Porting Fitur Premium Client MyXL dari <code class="bg-slate-100 dark:bg-slate-850 px-1.5 py-0.5 rounded font-mono text-xs">me-cli-sunset</code>.
                 </p>
             </div>

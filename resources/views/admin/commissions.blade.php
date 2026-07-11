@@ -6,8 +6,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Komisi Seller</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Atur komisi/cashback per-produk untuk seller tertentu. Komisi otomatis masuk ke saldo dompet seller saat transaksi berhasil.</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Atur komisi/cashback per-produk untuk seller tertentu. Komisi otomatis masuk ke saldo dompet seller saat transaksi berhasil.</p>
         </div>
         <button onclick="toggleCreateModal(true)" class="mt-4 sm:mt-0 flex items-center space-x-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200">
             <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path></svg>
