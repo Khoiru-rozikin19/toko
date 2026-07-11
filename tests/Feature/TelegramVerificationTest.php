@@ -567,3 +567,129 @@ test('automated payment callback for topup updates status and edits Telegram mes
         return true;
     });
 });
+
+test('registration dispatches telegram admin notification', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $response = $this->post(route('register'), [
+        'name' => 'New User Telegram',
+        'phone' => '08129999999',
+        'email' => 'newuser@tele.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ]);
+
+    $response->assertRedirect(route('login'));
+
+    $user = User::where('email', 'newuser@tele.com')->first();
+    expect($user)->not->toBeNull();
+    expect($user->is_verified)->toBeFalse();
+
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        return str_contains($url, 'sendMessage') &&
+               $data['chat_id'] === '987654321' &&
+               str_contains($data['text'], 'Pendaftaran Akun Baru') &&
+               str_contains($data['text'], 'New User Telegram') &&
+               isset($data['reply_markup']['inline_keyboard']);
+    });
+});
+
+test('telegram webhook processes user approval callback', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::create([
+        'name' => 'User Approve Test',
+        'phone' => '0812888888',
+        'email' => 'approveme@tele.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => false,
+    ]);
+
+    $response = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb-user-approve',
+            'from' => ['id' => 987654321], // matching TELEGRAM_ADMIN_ID
+            'data' => "user_approve:{$user->id}",
+            'message' => [
+                'message_id' => 998877,
+                'chat' => ['id' => 987654321],
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('success', true);
+
+    $user->refresh();
+    expect($user->is_verified)->toBeTrue();
+
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === '987654321' &&
+                   $data['message_id'] === 998877 &&
+                   str_contains($data['text'], 'Pendaftaran Akun Disetujui') &&
+                   str_contains($data['text'], 'User Approve Test');
+        }
+
+        return true;
+    });
+});
+
+test('telegram webhook processes user rejection callback', function () {
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true], 200),
+    ]);
+
+    $user = User::create([
+        'name' => 'User Reject Test',
+        'phone' => '0812777777',
+        'email' => 'rejectme@tele.com',
+        'password' => Hash::make('password'),
+        'role' => 'buyer',
+        'is_verified' => false,
+    ]);
+
+    $response = $this->postJson(route('webhook.telegram'), [
+        'callback_query' => [
+            'id' => 'cb-user-reject',
+            'from' => ['id' => 987654321], // matching TELEGRAM_ADMIN_ID
+            'data' => "user_reject:{$user->id}",
+            'message' => [
+                'message_id' => 998878,
+                'chat' => ['id' => 987654321],
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('success', true);
+
+    // Verify user is deleted from database
+    $exists = User::where('id', $user->id)->exists();
+    expect($exists)->toBeFalse();
+
+    Http::assertSent(function ($request) {
+        $url = $request->url();
+        $data = $request->data();
+
+        if (str_contains($url, 'editMessageText')) {
+            return $data['chat_id'] === '987654321' &&
+                   $data['message_id'] === 998878 &&
+                   str_contains($data['text'], 'Pendaftaran Akun Ditolak') &&
+                   str_contains($data['text'], 'User Reject Test');
+        }
+
+        return true;
+    });
+});

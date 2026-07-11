@@ -279,6 +279,38 @@ class TelegramService
     }
 
     /**
+     * Send user registration notification to Telegram Admin.
+     *
+     * @param \App\Models\User $user
+     * @return bool
+     */
+    public function sendUserRegistrationNotification($user)
+    {
+        if (empty($this->token) || empty($this->adminId)) {
+            Log::warning('TelegramService: Token atau Admin ID belum diset di .env');
+            return false;
+        }
+
+        $text = "🔔 *Pendaftaran Akun Baru*\n\n"
+              . "👤 *Nama:* {$user->name}\n"
+              . "📧 *Email:* {$user->email}\n"
+              . "📱 *WhatsApp:* `{$user->phone}`\n\n"
+              . "Silakan pilih tindakan untuk pendaftaran ini:";
+
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '✅ Terima', 'callback_data' => "user_approve:{$user->id}"],
+                    ['text' => '❌ Tolak', 'callback_data' => "user_reject:{$user->id}"]
+                ]
+            ]
+        ];
+
+        $response = $this->sendMessage($this->adminId, $text, $keyboard);
+        return $response && isset($response['ok']) && $response['ok'];
+    }
+
+    /**
      * Edit text of an existing message in Telegram.
      *
      * @param string $chatId

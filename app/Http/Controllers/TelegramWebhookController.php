@@ -50,7 +50,7 @@ class TelegramWebhookController extends Controller
             ], 400);
         }
 
-        list($action, $orderId) = explode(':', $data, 2);
+        list($action, $targetId) = explode(':', $data, 2);
 
         // Switch to the correct bot token dynamically depending on the action type
         if (in_array($action, ['seller_accept', 'seller_reject'])) {
@@ -59,6 +59,72 @@ class TelegramWebhookController extends Controller
             $this->telegramService->useAdminToken();
         }
 
+        $adminId = env('TELEGRAM_ADMIN_ID');
+
+        // Intercept user registration actions
+        if (in_array($action, ['user_approve', 'user_reject'])) {
+            // Security check
+            if ((string)$senderId !== (string)$adminId) {
+                Log::warning("Telegram Webhook Unauthorized User Action: Sender ID {$senderId} does not match Admin ID {$adminId}");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Admin.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized admin action.',
+                ], 403);
+            }
+
+            $user = \App\Models\User::find($targetId);
+            if (!$user) {
+                Log::warning("Telegram Webhook Warning: User ID {$targetId} not found.");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "User tidak ditemukan.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found.',
+                ], 404);
+            }
+
+            if ($action === 'user_approve') {
+                $user->update(['is_verified' => true]);
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akun {$user->name} disetujui!");
+                }
+                if ($chatId && $messageId) {
+                    $updatedText = "✅ *Pendaftaran Akun Disetujui*\n\n"
+                                 . "👤 *Nama:* {$user->name}\n"
+                                 . "📧 *Email:* {$user->email}\n"
+                                 . "📱 *WhatsApp:* `{$user->phone}`\n\n"
+                                 . "Akun ini telah diaktifkan dan disetujui.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+            } else {
+                $userName = $user->name;
+                $userEmail = $user->email;
+                $userPhone = $user->phone;
+                $user->delete();
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pendaftaran akun {$userName} ditolak!");
+                }
+                if ($chatId && $messageId) {
+                    $updatedText = "❌ *Pendaftaran Akun Ditolak*\n\n"
+                                 . "👤 *Nama:* {$userName}\n"
+                                 . "📧 *Email:* {$userEmail}\n"
+                                 . "📱 *WhatsApp:* `{$userPhone}`\n\n"
+                                 . "Pendaftaran akun ini telah ditolak dan datanya dihapus.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User registration action processed successfully.',
+            ]);
+        }
+
+        $orderId = $targetId;
         $order = Order::with('product.seller')->find($orderId);
         if (!$order) {
             Log::warning("Telegram Webhook Warning: Order ID {$orderId} not found.");

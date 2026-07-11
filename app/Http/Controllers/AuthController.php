@@ -71,7 +71,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $request->name,
             'phone' => $request->phone,
             'email' => $request->email,
@@ -80,6 +80,13 @@ class AuthController extends Controller
             'is_verified' => false, // Default dinonaktifkan
             'seller_request' => 'none',
         ]);
+
+        // Send Telegram Notification to Admin
+        try {
+            app(\App\Services\TelegramService::class)->sendUserRegistrationNotification($user);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send Telegram user registration notification: " . $e->getMessage());
+        }
 
         return redirect()->route('login')->with('success', 'Pendaftaran berhasil! Akun Anda sedang menunggu persetujuan verifikasi dari Admin Utama.');
     }
