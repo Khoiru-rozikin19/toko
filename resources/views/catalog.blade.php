@@ -25,19 +25,15 @@
 </style>
 <div class="space-y-8">
     
-    <!-- Catalog Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ $products->count() }} produk tersedia</p>
-        </div>
-        
-        @if(!$qris_configured)
-        <div class="mt-4 md:mt-0 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-800 dark:text-amber-400 text-xs flex items-center space-x-2">
+    <!-- Catalog Header (Only shown if QRIS is not configured) -->
+    @if(!$qris_configured)
+    <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div class="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl text-amber-800 dark:text-amber-400 text-xs flex items-center space-x-2">
             <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
             <span><strong>Catatan:</strong> QRIS Statis belum dikonfigurasi oleh admin. Checkout tidak dapat diproses.</span>
         </div>
-        @endif
     </div>
+    @endif
  
     <!-- Categories Filter -->
     <div class="flex items-center space-x-2 overflow-x-auto pb-3 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -143,10 +139,21 @@
                 </div>
             </div>
         @empty
-            <div class="col-span-full py-12 text-center">
-                <svg class="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                <h3 class="text-lg font-bold text-slate-600 dark:text-slate-400">Tidak ada produk tersedia</h3>
-                <p class="text-sm text-slate-400 dark:text-slate-600 mt-1">Silakan tambahkan produk di dashboard admin.</p>
+            <div class="col-span-full py-16 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-sm">
+                <div class="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">
+                    {{ request()->filled('category_id') ? 'Tidak Ada Produk Di Kategori Ini' : 'Katalog Produk Kosong' }}
+                </h3>
+                <p class="text-xs text-slate-450 dark:text-slate-500 mt-1 max-w-sm mx-auto">
+                    {{ request()->filled('category_id') ? 'Silakan pilih kategori produk lain atau kembali ke katalog semua.' : 'Belum ada produk aktif yang tersedia untuk saat ini.' }}
+                </p>
+                @if(request()->filled('category_id'))
+                    <a href="{{ route('catalog') }}" class="inline-flex items-center space-x-2 px-4 py-2 mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all duration-200">
+                        <span>Lihat Semua Produk</span>
+                    </a>
+                @endif
             </div>
         @endforelse
     </div>
