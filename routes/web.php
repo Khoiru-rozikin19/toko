@@ -40,6 +40,7 @@ Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     
     // User Frontend Routes
     Route::post('/buy', [CatalogController::class, 'buy'])->name('buy');
+    Route::post('/tournaments/{id}/register', [App\Http\Controllers\TournamentController::class, 'register'])->name('tournaments.register');
     Route::get('/orders', [CatalogController::class, 'history'])->name('orders.history');
     Route::get('/orders/{id}/status', [CatalogController::class, 'checkStatus'])->name('order.status');
     Route::get('/orders/{id}/download', [CatalogController::class, 'download'])->name('order.download');

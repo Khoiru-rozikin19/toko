@@ -1,3 +1,29 @@
+@php
+    $userRegistration = null;
+    $hasPendingOrApproved = false;
+    $isCaptain = false;
+
+    if (Auth::check()) {
+        // Fetch active registration for this user (either captain or participant)
+        $userRegistration = \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)
+            ->where(function($q) {
+                $q->where('captain_id', Auth::id())
+                  ->orWhereHas('participants', function($pq) {
+                      $pq->where('user_id', Auth::id());
+                  });
+            })
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($userRegistration) {
+            $isCaptain = $userRegistration->captain_id === Auth::id();
+            if (in_array($userRegistration->status, ['pending', 'approved'])) {
+                $hasPendingOrApproved = true;
+            }
+        }
+    }
+@endphp
+
 @extends('layouts.app')
 
 @section('content')
@@ -14,6 +40,16 @@
             </li>
         </ol>
     </nav>
+
+    <!-- Error/Validation Alert -->
+    @if($errors->any())
+        <div class="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl text-red-600 dark:text-red-400 text-xs sm:text-sm font-semibold flex items-center space-x-2">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{{ $errors->first() }}</span>
+        </div>
+    @endif
 
     <!-- Main Detail Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -141,54 +177,185 @@
                     </li>
                 </ul>
             </div>
+
+            <!-- REGISTRATION FORM CARD (Left Side, Bottom) -->
+            @if(Auth::check() && $tournament->status === 'registration' && !$hasPendingOrApproved && (!$tournament->max_slots || $approvedTeams->count() < $tournament->max_slots))
+                <div id="registration-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
+                    <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-850 pb-4">
+                        <span class="text-2xl">🛡️</span>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100">Formulir Pendaftaran Skuad</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Pastikan data yang Anda input sudah valid sebelum mengirimkan.</p>
+                        </div>
+                    </div>
+
+                    <form action="{{ route('tournaments.register', $tournament->id) }}" method="POST" class="space-y-6">
+                        @csrf
+                        
+                        <!-- Nama Tim -->
+                        <div class="space-y-2">
+                            <label for="team_name" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Tim (Squad)</label>
+                            <input type="text" id="team_name" name="team_name" placeholder="Contoh: RZK Gaming Team" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200" required>
+                        </div>
+
+                        <!-- Grid Player (4 Baris) -->
+                        <div class="space-y-6">
+                            <!-- Player 1 (Kapten) -->
+                            <div class="p-4 bg-slate-50 dark:bg-slate-950/25 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl space-y-3">
+                                <div class="flex items-center justify-between border-b border-slate-200/40 dark:border-slate-800/40 pb-2">
+                                    <span class="text-xs font-black text-orange-500 uppercase tracking-wider">Player 1: Kapten Skuad</span>
+                                    <span class="text-[10px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Akun Anda</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div class="space-y-1 sm:col-span-1">
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Akun Website</span>
+                                        <p class="text-xs font-extrabold text-slate-700 dark:text-slate-300 py-2.5 truncate">{{ Auth::user()->email }}</p>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Nickname FF</label>
+                                        <input type="text" name="player_nickname[]" placeholder="Nickname Game" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Character ID FF</label>
+                                        <input type="text" name="player_game_id[]" placeholder="ID Angka" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Players 2, 3, 4 -->
+                            @for($i = 2; $i <= 4; $i++)
+                                <div class="p-4 bg-slate-50/50 dark:bg-slate-950/10 border border-slate-200/30 dark:border-slate-800/30 rounded-2xl space-y-3">
+                                    <div class="flex items-center justify-between border-b border-slate-200/40 dark:border-slate-800/40 pb-2">
+                                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Player {{ $i }}: Anggota Skuad</span>
+                                        <span class="text-[10px] text-red-500 font-bold uppercase tracking-wider">Wajib Akun Web</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Email/Username Website</label>
+                                            <input type="text" name="player_email[]" placeholder="Email / Username terdaftar" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Nickname FF</label>
+                                            <input type="text" name="player_nickname[]" placeholder="Nickname Game" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Character ID FF</label>
+                                            <input type="text" name="player_game_id[]" placeholder="ID Angka" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endfor
+                        </div>
+
+                        <!-- Button Submit -->
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                *Dengan mendaftar, saldo Kapten akan langsung dipotong sebesar biaya pendaftaran turnamen (jika berbayar).
+                            </p>
+                            
+                            <button type="submit" class="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-extrabold px-8 py-3.5 rounded-xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition duration-200 text-sm">
+                                @if($tournament->registration_fee > 0)
+                                    Daftar & Bayar Rp {{ number_format($tournament->registration_fee, 0, ',', '.') }}
+                                @else
+                                    Kirim Pendaftaran (GRATIS)
+                                @endif
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            @endif
         </div>
 
         <!-- Right Side: Action Box & Registered Teams List -->
         <div class="space-y-8">
             
-            <!-- Registration CTA Card -->
+            <!-- Registration Status / CTA Card -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm relative overflow-hidden">
                 <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-orange-500 to-red-600"></div>
                 
                 <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base mb-3 flex items-center space-x-2">
-                    <span>📝 Pendaftaran Tim</span>
+                    <span>📝 Status Keikutsertaan</span>
                 </h4>
                 
-                @if($tournament->status === 'registration')
+                @if($hasPendingOrApproved)
+                    <!-- Registered Status Badge -->
                     <div class="space-y-4">
-                        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                            Pendaftaran sedang dibuka! Amankan slot tim Anda sekarang dengan mendaftarkan squad terbaikmu.
-                        </p>
-                        
-                        @if($tournament->max_slots && $approvedTeams->count() >= $tournament->max_slots)
-                            <div class="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl text-center text-xs font-bold">
-                                🚫 Slot Tim Sudah Penuh!
+                        <div class="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Nama Tim:</span>
+                                <span class="text-sm font-extrabold text-slate-800 dark:text-slate-200">{{ $userRegistration->team_name }}</span>
                             </div>
-                        @else
-                            @if(Auth::check())
-                                <!-- Link or trigger registration form (which we will build in Phase 3) -->
-                                <a href="#" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
-                                    <span>🏆 Daftar Skuad Sekarang</span>
-                                </a>
-                                <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-                                    Membayar Menggunakan Saldo Akun Anda
-                                </p>
-                            @else
-                                <a href="{{ route('login') }}" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
-                                    <span>🔑 Login untuk Mendaftar</span>
-                                </a>
-                                <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-                                    Wajib login untuk berpartisipasi
-                                </p>
-                            @endif
-                        @endif
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Peran Anda:</span>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                    {{ $isCaptain ? '🛡️ Kapten Skuad' : '👤 Anggota Skuad' }}
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-850">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Status:</span>
+                                @if($userRegistration->status === 'approved')
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 shadow-xs">
+                                        Disetujui ✅
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/60 animate-pulse">
+                                        Menunggu ACC ⏳
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/10 text-slate-600 dark:text-slate-350 rounded-2xl text-[11px] font-semibold text-center border border-emerald-500/10">
+                            Status pendaftaran tim Anda sedang dikunci. Silakan pantau halaman ini untuk melihat bagan jika sudah disetujui.
+                        </div>
                     </div>
                 @else
-                    <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 p-4 rounded-2xl text-center">
-                        <span class="text-xl">🔒</span>
-                        <h5 class="font-bold text-slate-800 dark:text-slate-200 text-xs mt-1">Pendaftaran Ditutup</h5>
-                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Turnamen sedang berjalan atau telah selesai.</p>
-                    </div>
+                    <!-- Eligible to Register / Register CTA -->
+                    @if($tournament->status === 'registration')
+                        <div class="space-y-4">
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                Anda belum terdaftar dalam turnamen ini.
+                            </p>
+                            
+                            @if($tournament->max_slots && $approvedTeams->count() >= $tournament->max_slots)
+                                <div class="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl text-center text-xs font-bold">
+                                    🚫 Slot Tim Sudah Penuh!
+                                </div>
+                            @else
+                                @if(Auth::check())
+                                    <!-- Anchor link down to registration form card -->
+                                    <a href="#registration-form" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
+                                        <span>🏆 Isi Form Pendaftaran</span>
+                                    </a>
+                                    
+                                    @if($userRegistration && $userRegistration->status === 'rejected')
+                                        <div class="bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 border border-red-200/40 p-3 rounded-2xl text-xs space-y-1">
+                                            <p class="font-extrabold text-[11px] uppercase">❌ PENDAFTARAN SEBELUMNYA DITOLAK:</p>
+                                            <p class="italic text-[10px] font-medium">"{{ $userRegistration->rejection_reason ?? 'Tidak ada alasan diberikan.' }}"</p>
+                                            <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold pt-1 uppercase">Saldo pendaftaran sebelumnya telah di-refund otomatis. Silakan submit ulang.</p>
+                                        </div>
+                                    @else
+                                        <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                            Potong Saldo: {{ $tournament->registration_fee > 0 ? 'Rp ' . number_format($tournament->registration_fee, 0, ',', '.') : 'GRATIS' }}
+                                        </p>
+                                    @endif
+                                @else
+                                    <a href="{{ route('login') }}" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
+                                        <span>🔑 Login untuk Mendaftar</span>
+                                    </a>
+                                    <p class="text-[10px] text-center text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                        Wajib login untuk berpartisipasi
+                                    </p>
+                                @endif
+                            @endif
+                        </div>
+                    @else
+                        <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 p-4 rounded-2xl text-center">
+                            <span class="text-xl">🔒</span>
+                            <h5 class="font-bold text-slate-800 dark:text-slate-200 text-xs mt-1">Pendaftaran Ditutup</h5>
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Turnamen sedang berjalan atau telah selesai.</p>
+                        </div>
+                    @endif
                 @endif
             </div>
 
@@ -208,14 +375,14 @@
                         @foreach($approvedTeams as $team)
                             <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 p-3.5 rounded-2xl space-y-2">
                                 <div class="flex items-center justify-between">
-                                    <h5 class="font-extrabold text-slate-800 dark:text-slate-200 text-sm">
+                                    <h5 class="font-extrabold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[120px]">
                                         🛡️ {{ $team->team_name }}
                                     </h5>
-                                    <span class="text-[10px] font-bold text-slate-400">
+                                    <span class="text-[10px] font-bold text-slate-450 dark:text-slate-500 truncate max-w-[90px]">
                                         Kapten: {{ $team->captain->name }}
                                     </span>
                                 </div>
-                                <div class="grid grid-cols-2 gap-2 text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-200/50 dark:border-slate-800/50 pt-2">
+                                <div class="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-250/20 dark:border-slate-800/40 pt-2">
                                     @foreach($team->participants as $p)
                                         <div class="truncate">
                                             • {{ $p->nickname }}
