@@ -11,12 +11,20 @@
     </div>
 
     <!-- Tabs Navigation -->
-    <div class="flex border-b border-slate-200 dark:border-slate-800 text-sm font-semibold">
+    <div class="flex border-b border-slate-200 dark:border-slate-800 text-sm font-semibold overflow-x-auto whitespace-nowrap">
         <button @click="activeTab = 'pending'" :class="activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2">
             <span>📩 Pendaftaran Masuk</span>
             @if($pendingRegistrations->count() > 0)
                 <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
                     {{ $pendingRegistrations->count() }}
+                </span>
+            @endif
+        </button>
+        <button @click="activeTab = 'matches'" :class="activeTab === 'matches' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2">
+            <span>🎯 Kelola Pertandingan</span>
+            @if($ongoingMatches->count() > 0)
+                <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    {{ $ongoingMatches->count() }}
                 </span>
             @endif
         </button>
@@ -89,13 +97,11 @@
                                     </button>
                                 </form>
 
-                                <!-- Reject Button Trigger (Inline simple reject form to avoid complex alpine modal if unnecessary, or we can use target rejection form) -->
                                 <div class="flex-1" x-data="{ showReject: false }">
                                     <button @click="showReject = !showReject" class="w-full bg-red-650 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs transition duration-150">
                                         ❌ Tolak
                                     </button>
                                     
-                                    <!-- Reject Form Slide Down -->
                                     <template x-if="showReject">
                                         <div class="fixed inset-0 bg-slate-900/60 dark:bg-slate-950/80 z-50 flex items-center justify-center p-4">
                                             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
@@ -125,7 +131,96 @@
             @endif
         </div>
 
-        <!-- Tab 2: Tournament Lists -->
+        <!-- Tab 2: Kelola Pertandingan -->
+        <div x-show="activeTab === 'matches'" class="space-y-6">
+            @if($ongoingMatches->isEmpty())
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-10 text-center shadow-xs">
+                    <span class="text-3xl">🏁</span>
+                    <h4 class="font-extrabold text-slate-800 dark:text-slate-200 text-base mt-2">Tidak Ada Pertandingan Aktif</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Saat ini tidak ada turnamen yang sedang berjalan (status ongoing).</p>
+                </div>
+            @else
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    @foreach($ongoingMatches->groupBy('tournament.name') as $tournamentName => $matches)
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-xs space-y-4">
+                            <h4 class="font-black text-slate-800 dark:text-slate-100 text-sm border-b border-slate-100 dark:border-slate-850 pb-3 flex items-center justify-between">
+                                <span>🏆 Event: {{ $tournamentName }}</span>
+                                <span class="bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full border border-blue-200/50">ONGOING</span>
+                            </h4>
+                            
+                            <div class="space-y-4 divide-y divide-slate-100 dark:divide-slate-850">
+                                @foreach($matches as $m)
+                                    <div class="pt-4 first:pt-0 space-y-3">
+                                        <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                            <span>Ronde {{ $m->round_number }} - Match {{ $m->match_number }}</span>
+                                            @if($m->status === 'completed')
+                                                <span class="text-emerald-500 font-extrabold">Selesai</span>
+                                            @else
+                                                <span class="text-amber-500 font-extrabold">Menunggu</span>
+                                            @endif
+                                        </div>
+                                        
+                                        <!-- Teams Matchup Card -->
+                                        <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 rounded-2xl p-4 flex items-center justify-between gap-4">
+                                            <!-- Team 1 -->
+                                            <div class="flex-1 text-center space-y-1">
+                                                <span class="font-extrabold text-sm block truncate {{ $m->winner_id === $m->team1_id ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-700 dark:text-slate-300' }}">
+                                                    🛡️ {{ $m->team1 ? $m->team1->team_name : 'Belum Lolos' }}
+                                                </span>
+                                                @if($m->status === 'completed')
+                                                    <span class="text-2xl font-black block text-slate-800 dark:text-slate-200">
+                                                        {{ $m->team1_score }}
+                                                    </span>
+                                                @endif
+                                            </div>
+
+                                            <!-- VS Separator -->
+                                            <div class="text-center font-black text-slate-400 text-xs px-2">
+                                                VS
+                                            </div>
+
+                                            <!-- Team 2 -->
+                                            <div class="flex-1 text-center space-y-1">
+                                                <span class="font-extrabold text-sm block truncate {{ $m->winner_id === $m->team2_id ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-700 dark:text-slate-300' }}">
+                                                    🛡️ {{ $m->team2 ? $m->team2->team_name : 'Belum Lolos' }}
+                                                </span>
+                                                @if($m->status === 'completed')
+                                                    <span class="text-2xl font-black block text-slate-800 dark:text-slate-200">
+                                                        {{ $m->team2_score }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <!-- Score Input Form -->
+                                        @if($m->status === 'pending' && $m->team1_id && $m->team2_id)
+                                            <form action="{{ route('admin.tournaments.update_match_score', $m->id) }}" method="POST" class="bg-blue-50/20 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/30 rounded-2xl p-4 space-y-3">
+                                                @csrf
+                                                <div class="flex items-center gap-3">
+                                                    <div class="flex-1 space-y-1">
+                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 1</label>
+                                                        <input type="number" name="team1_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
+                                                    </div>
+                                                    <div class="flex-1 space-y-1">
+                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 2</label>
+                                                        <input type="number" name="team2_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
+                                                    </div>
+                                                </div>
+                                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs transition duration-150">
+                                                    💾 Simpan & Loloskan Pemenang
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <!-- Tab 3: Tournament Lists -->
         <div x-show="activeTab === 'list'" class="space-y-6">
             @if($tournaments->isEmpty())
                 <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">Belum ada turnamen yang dibuat.</p>
@@ -165,7 +260,6 @@
                                         {{ $t->max_slots ?? 'Tanpa Batas' }}
                                     </td>
                                     <td class="p-4">
-                                        <!-- Status Badge -->
                                         @if($t->status === 'draft')
                                             <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">DRAFT</span>
                                         @elseif($t->status === 'registration')
@@ -177,7 +271,6 @@
                                         @endif
                                     </td>
                                     <td class="p-4 text-right">
-                                        <!-- Status Update Dropdown Form -->
                                         <form action="{{ route('admin.tournaments.update_status', $t->id) }}" method="POST" class="inline-flex items-center space-x-1.5">
                                             @csrf
                                             <select name="status" class="px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold focus:outline-none">
@@ -199,7 +292,7 @@
             @endif
         </div>
 
-        <!-- Tab 3: Create New Event -->
+        <!-- Tab 4: Create New Event -->
         <div x-show="activeTab === 'create'" class="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs">
             <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base border-b border-slate-100 dark:border-slate-850 pb-4 mb-6">Form Pembuatan Turnamen Baru</h4>
             

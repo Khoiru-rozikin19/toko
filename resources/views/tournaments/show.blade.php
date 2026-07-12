@@ -178,6 +178,70 @@
                 </ul>
             </div>
 
+            <!-- BRACKET BAGAN CLASH SQUAD (Only when ongoing or completed) -->
+            @if(in_array($tournament->status, ['ongoing', 'completed']) && $tournament->type === 'clash_squad' && !$matches->isEmpty())
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 overflow-x-auto">
+                    <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2 border-b border-slate-100 dark:border-slate-850 pb-4">
+                        <span>📊 Bagan Pertandingan (Bracket)</span>
+                    </h4>
+                    
+                    <!-- Bracket Tree Layout -->
+                    <div class="flex gap-8 justify-around min-w-[700px] pt-4">
+                        @foreach($matches->groupBy('round_number') as $roundNumber => $roundMatches)
+                            <!-- Round Column -->
+                            <div class="flex flex-col justify-around space-y-8 flex-1">
+                                <div class="text-center">
+                                    <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-250/20 dark:border-slate-800">
+                                        @if($roundNumber == 1)
+                                            Babak Awal
+                                        @elseif($loop->last)
+                                            Final
+                                        @else
+                                            Semifinal
+                                        @endif
+                                    </span>
+                                </div>
+                                
+                                <div class="space-y-6 flex-1 flex flex-col justify-center">
+                                    @foreach($roundMatches as $m)
+                                        <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-xs relative space-y-2">
+                                            <!-- Team 1 -->
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
+                                                    <span>🛡️</span>
+                                                    <span>{{ $m->team1 ? $m->team1->team_name : 'BYE / Belum Lolos' }}</span>
+                                                </span>
+                                                @if($m->status === 'completed')
+                                                    <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : '' }}">
+                                                        {{ $m->team1_score }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            
+                                            <!-- VS Separator Line -->
+                                            <div class="border-t border-slate-200/50 dark:border-slate-800/50 my-1"></div>
+                                            
+                                            <!-- Team 2 -->
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
+                                                    <span>🛡️</span>
+                                                    <span>{{ $m->team2 ? $m->team2->team_name : 'BYE / Belum Lolos' }}</span>
+                                                </span>
+                                                @if($m->status === 'completed')
+                                                    <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : '' }}">
+                                                        {{ $m->team2_score }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <!-- REGISTRATION FORM CARD (Left Side, Bottom) -->
             @if(Auth::check() && $tournament->status === 'registration' && !$hasPendingOrApproved && (!$tournament->max_slots || $approvedTeams->count() < $tournament->max_slots))
                 <div id="registration-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">

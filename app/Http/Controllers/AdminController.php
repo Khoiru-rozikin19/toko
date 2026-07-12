@@ -1198,10 +1198,19 @@ class AdminController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
+        $ongoingMatches = \App\Models\TournamentMatch::whereHas('tournament', function ($query) {
+                $query->where('status', 'ongoing');
+            })
+            ->with(['tournament', 'team1', 'team2'])
+            ->orderBy('round_number', 'asc')
+            ->orderBy('match_number', 'asc')
+            ->get();
+
         return view('admin.tournaments', [
             'title' => 'Manajemen Turnamen',
             'tournaments' => $tournaments,
             'pendingRegistrations' => $pendingRegistrations,
+            'ongoingMatches' => $ongoingMatches,
         ]);
     }
 
@@ -1238,6 +1247,9 @@ class AdminController extends Controller
     /**
      * Update the status of a tournament.
      */
+    /**
+     * Update the status of a tournament.
+     */
     public function updateTournamentStatus(Request $request, $id)
     {
         $request->validate([
@@ -1245,9 +1257,222 @@ class AdminController extends Controller
         ]);
 
         $tournament = \App\Models\Tournament::findOrFail($id);
-        $tournament->update(['status' => $request->status]);
+        $oldStatus = $tournament->status;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($tournament, $request, $oldStatus) {
+            $tournament->update(['status' => $request->status]);
+
+            // Jika status dipindahkan ke 'ongoing' dan belum ada bracket yang dibuat
+            if ($request->status === 'ongoing' && $oldStatus !== 'ongoing' && $tournament->type === 'clash_squad') {
+                $hasMatches = \App\Models\TournamentMatch::where('tournament_id', $tournament->id)->exists();
+                if (!$hasMatches) {
+                    $approvedTeams = \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)
+                        ->where('status', 'approved')
+                        ->get();
+
+                    $teamCount = $approvedTeams->count();
+                    
+                    // Kita buat bracket jika tim mencukupi (minimal 2 tim)
+                    if ($teamCount >= 2) {
+                        // Tentukan power of 2 yang sesuai (misal: 2, 4, 8, 16, 32)
+                        $pow = 2;
+                        while ($pow < $teamCount) {
+                            $pow *= 2;
+                        }
+                        
+                        // Shuffle approved teams to make seeding random and fair
+                        $teams = $approvedTeams->shuffle()->values();
+
+                        $totalRounds = log($pow, 2);
+                        $matchesInRound1 = $pow / 2;
+                        
+                        // Buat semua matches untuk setiap ronde
+                        for ($round = 1; $round <= $totalRounds; $round++) {
+                            // Jumlah pertandingan di ronde ini
+                            $matchesInRound = $pow / pow(2, $round);
+                            
+                            for ($matchNum = 1; $matchNum <= $matchesInRound; $matchNum++) {
+                                $team1Id = null;
+                                $team2Id = null;
+
+                                // Hanya isi tim di Ronde 1
+                                if ($round === 1) {
+                                    $idx1 = $matchNum - 1;
+                                    if (isset($teams[$idx1])) {
+                                        $team1Id = $teams[$idx1]->id;
+                                    }
+                                    
+                                    $idx2 = $matchesInRound1 + $matchNum - 1;
+                                    if (isset($teams[$idx2])) {
+                                        $team2Id = $teams[$idx2]->id;
+                                    }
+                                }
+
+                                \App\Models\TournamentMatch::create([
+                                    'tournament_id' => $tournament->id,
+                                    'round_number' => $round,
+                                    'match_number' => $matchNum,
+                                    'team1_id' => $team1Id,
+                                    'team2_id' => $team2Id,
+                                    'status' => 'pending',
+                                ]);
+                            }
+                        }
+
+                        // Jika ada match di ronde 1 yang salah satu timnya null (BYE) karena jumlah tim bukan power of 2, 
+                        // kita otomatis loloskan tim yang ada ke ronde berikutnya!
+                        $round1Matches = \App\Models\TournamentMatch::where('tournament_id', $tournament->id)
+                            ->where('round_number', 1)
+                            ->get();
+
+                        foreach ($round1Matches as $m) {
+                            if ($m->team1_id === null && $m->team2_id !== null) {
+                                $m->update([
+                                    'winner_id' => $m->team2_id,
+                                    'status' => 'completed',
+                                    'team1_score' => 0,
+                                    'team2_score' => 7,
+                                ]);
+                                $this->advanceWinner($m, $m->team2_id);
+                            } elseif ($m->team1_id !== null && $m->team2_id === null) {
+                                $m->update([
+                                    'winner_id' => $m->team1_id,
+                                    'status' => 'completed',
+                                    'team1_score' => 7,
+                                    'team2_score' => 0,
+                                ]);
+                                $this->advanceWinner($m, $m->team1_id);
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         return redirect()->back()->with('success', 'Status turnamen berhasil diperbarui!');
+    }
+
+    /**
+     * Helper to advance match winner to the next round match.
+     */
+    private function advanceWinner($match, $winnerId)
+    {
+        $nextRound = $match->round_number + 1;
+        $nextMatchNumber = (int) ceil($match->match_number / 2);
+
+        $nextMatch = \App\Models\TournamentMatch::where('tournament_id', $match->tournament_id)
+            ->where('round_number', $nextRound)
+            ->where('match_number', $nextMatchNumber)
+            ->first();
+
+        if ($nextMatch) {
+            if ($match->match_number % 2 !== 0) {
+                $nextMatch->update(['team1_id' => $winnerId]);
+            } else {
+                $nextMatch->update(['team2_id' => $winnerId]);
+            }
+        }
+    }
+
+    /**
+     * Update match score and advance the winner.
+     */
+    public function updateMatchScore(Request $request, $id)
+    {
+        $request->validate([
+            'team1_score' => 'required|integer|min:0',
+            'team2_score' => 'required|integer|min:0|different:team1_score',
+        ]);
+
+        $match = \App\Models\TournamentMatch::findOrFail($id);
+        
+        if ($match->status === 'completed') {
+            return redirect()->back()->with('error', 'Pertandingan ini sudah selesai dinilai.');
+        }
+
+        if ($match->team1_id === null || $match->team2_id === null) {
+            return redirect()->back()->with('error', 'Tim belum lengkap, tidak bisa mengisi skor.');
+        }
+
+        $winnerId = ($request->team1_score > $request->team2_score) ? $match->team1_id : $match->team2_id;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($match, $request, $winnerId) {
+            $match->update([
+                'team1_score' => $request->team1_score,
+                'team2_score' => $request->team2_score,
+                'winner_id' => $winnerId,
+                'status' => 'completed',
+            ]);
+
+            // Advance winner
+            $nextRound = $match->round_number + 1;
+            $nextMatchNumber = (int) ceil($match->match_number / 2);
+
+            $nextMatch = \App\Models\TournamentMatch::where('tournament_id', $match->tournament_id)
+                ->where('round_number', $nextRound)
+                ->where('match_number', $nextMatchNumber)
+                ->first();
+
+            if ($nextMatch) {
+                if ($match->match_number % 2 !== 0) {
+                    $nextMatch->update(['team1_id' => $winnerId]);
+                } else {
+                    $nextMatch->update(['team2_id' => $winnerId]);
+                }
+            } else {
+                // Ini adalah final match! Update turnamen menjadi selesai.
+                $tournament = $match->tournament;
+                $tournament->update(['status' => 'completed']);
+
+                // Bagikan poin leaderboard ke user:
+                // Juara 1: Semua player di tim pemenang (+100 poin)
+                $winnerReg = \App\Models\TournamentRegistration::with('participants')->find($winnerId);
+                if ($winnerReg) {
+                    foreach ($winnerReg->participants as $p) {
+                        \App\Models\TournamentPointsHistory::create([
+                            'user_id' => $p->user_id,
+                            'tournament_id' => $tournament->id,
+                            'points' => 100,
+                            'reason' => "Juara 1 Turnamen: " . $tournament->name,
+                        ]);
+                    }
+                }
+
+                // Juara 2: Semua player di tim runner-up (+50 poin)
+                $runnerUpId = ($winnerId === $match->team1_id) ? $match->team2_id : $match->team1_id;
+                $runnerUpReg = \App\Models\TournamentRegistration::with('participants')->find($runnerUpId);
+                if ($runnerUpReg) {
+                    foreach ($runnerUpReg->participants as $p) {
+                        \App\Models\TournamentPointsHistory::create([
+                            'user_id' => $p->user_id,
+                            'tournament_id' => $tournament->id,
+                            'points' => 50,
+                            'reason' => "Juara 2 Turnamen: " . $tournament->name,
+                        ]);
+                    }
+                }
+
+                // Partisipasi: Semua player di tim terdaftar & disetujui yang lain (+10 poin)
+                $allApprovedRegs = \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)
+                    ->where('status', 'approved')
+                    ->whereNotIn('id', [$winnerId, $runnerUpId])
+                    ->with('participants')
+                    ->get();
+
+                foreach ($allApprovedRegs as $reg) {
+                    foreach ($reg->participants as $p) {
+                        \App\Models\TournamentPointsHistory::create([
+                            'user_id' => $p->user_id,
+                            'tournament_id' => $tournament->id,
+                            'points' => 10,
+                            'reason' => "Partisipasi Turnamen: " . $tournament->name,
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return redirect()->back()->with('success', 'Skor berhasil diperbarui dan pemenang telah lolos!');
     }
 
     /**

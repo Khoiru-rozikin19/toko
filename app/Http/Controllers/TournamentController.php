@@ -54,10 +54,21 @@ class TournamentController extends Controller
             ->with(['captain', 'participants.user'])
             ->get();
 
+        // Get matches if ongoing or completed
+        $matches = collect();
+        if (in_array($tournament->status, ['ongoing', 'completed'])) {
+            $matches = \App\Models\TournamentMatch::where('tournament_id', $tournament->id)
+                ->with(['team1', 'team2'])
+                ->orderBy('round_number', 'asc')
+                ->orderBy('match_number', 'asc')
+                ->get();
+        }
+
         return view('tournaments.show', [
             'title' => $tournament->name,
             'tournament' => $tournament,
             'approvedTeams' => $approvedTeams,
+            'matches' => $matches,
         ]);
     }
 

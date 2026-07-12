@@ -352,4 +352,55 @@ class TelegramService
             return false;
         }
     }
+
+    /**
+     * Send tournament registration notification to Telegram Admin.
+     */
+    public function sendTournamentNotification($registration)
+    {
+        if (empty($this->token) || empty($this->adminId)) {
+            Log::warning('TelegramService: Token atau Admin ID belum diset di .env');
+            return false;
+        }
+
+        $tournament = $registration->tournament;
+        $captain = $registration->captain;
+        $formattedFee = number_format($tournament->registration_fee, 0, ',', '.');
+
+        $text = "🏆 *Pendaftaran Turnamen Baru*\n\n"
+              . "📌 *Event:* {$tournament->name}\n"
+              . "🛡️ *Nama Tim:* `{$registration->team_name}`\n"
+              . "👤 *Kapten:* {$captain->name} ({$captain->email})\n"
+              . "💰 *Biaya:* Rp {$formattedFee} (Terbayar)\n\n"
+              . "👥 *Daftar Pemain:*\n";
+
+        foreach ($registration->participants as $index => $p) {
+            $text .= " - P" . ($index + 1) . ": {$p->nickname} (ID: `{$p->game_id}`)\n";
+        }
+
+        $text .= "\nSilakan verifikasi pendaftaran tim di bawah ini:";
+
+        $keyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '✅ ACC Skuad', 'callback_data' => "t_approve:{$registration->id}"],
+                    ['text' => '❌ Tolak Skuad', 'callback_data' => "t_reject:{$registration->id}"]
+                ]
+            ]
+        ];
+
+        $this->useAdminToken();
+        $response = $this->sendMessage($this->adminId, $text, $keyboard);
+        
+        if ($response && isset($response['ok']) && $response['ok']) {
+            $messageId = $response['result']['message_id'] ?? null;
+            if ($messageId) {
+                $registration->update([
+                    'telegram_message_id' => $messageId
+                ]);
+            }
+            return true;
+        }
+        return false;
+    }
 }

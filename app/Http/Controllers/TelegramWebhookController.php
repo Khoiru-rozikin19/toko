@@ -124,6 +124,113 @@ class TelegramWebhookController extends Controller
             ]);
         }
 
+        // Intercept tournament registrations
+        if (in_array($action, ['t_approve', 't_reject'])) {
+            // Security check
+            if ((string)$senderId !== (string)$adminId) {
+                Log::warning("Telegram Webhook Unauthorized Tournament Action: Sender ID {$senderId} does not match Admin ID {$adminId}");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Akses Ditolak: Anda bukan Admin.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized admin action.',
+                ], 403);
+            }
+
+            $registration = \App\Models\TournamentRegistration::with(['tournament', 'captain'])->find($targetId);
+            if (!$registration) {
+                Log::warning("Telegram Webhook Warning: Tournament Registration ID {$targetId} not found.");
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pendaftaran tidak ditemukan.");
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration not found.',
+                ], 404);
+            }
+
+            if ($registration->status !== 'pending') {
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Pendaftaran sudah diproses sebelumnya.");
+                }
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Registration already processed.',
+                ]);
+            }
+
+            if ($action === 't_approve') {
+                $registration->update(['status' => 'approved']);
+                
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Tim {$registration->team_name} disetujui!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "✅ *Pendaftaran Skuad Disetujui*\n\n"
+                                 . "📌 *Event:* {$registration->tournament->name}\n"
+                                 . "🛡️ *Nama Tim:* `{$registration->team_name}`\n"
+                                 . "👤 *Kapten:* {$registration->captain->name}\n\n"
+                                 . "Pendaftaran tim ini telah disetujui secara resmi.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+            } else {
+                $rejectionReason = "Ditolak oleh Admin via Telegram Bot.";
+                
+                \Illuminate\Support\Facades\DB::transaction(function() use ($registration, $rejectionReason) {
+                    $registration->update([
+                        'status' => 'rejected',
+                        'rejection_reason' => $rejectionReason
+                    ]);
+
+                    $fee = (float) $registration->tournament->registration_fee;
+                    if ($fee > 0) {
+                        $captain = $registration->captain;
+                        $balanceRecord = \App\Models\UserBalance::where('user_id', $captain->id)->lockForUpdate()->first();
+                        
+                        if (!$balanceRecord) {
+                            $balanceRecord = $captain->getOrCreateBalance();
+                            $balanceRecord = \App\Models\UserBalance::where('user_id', $captain->id)->lockForUpdate()->first();
+                        }
+
+                        $balanceBefore = $balanceRecord->balance;
+                        $balanceRecord->increment('balance', $fee);
+                        $balanceRecord->refresh();
+
+                        \App\Models\BalanceTransaction::create([
+                            'user_id' => $captain->id,
+                            'type' => 'topup',
+                            'amount' => $fee,
+                            'balance_before' => $balanceBefore,
+                            'balance_after' => $balanceRecord->balance,
+                            'description' => 'Refund pendaftaran turnamen ditolak via Telegram: ' . $registration->tournament->name,
+                            'reference_id' => $registration->id,
+                            'status' => 'success',
+                        ]);
+                    }
+                });
+
+                if ($callbackQueryId) {
+                    $this->telegramService->answerCallbackQuery($callbackQueryId, "Tim {$registration->team_name} ditolak!");
+                }
+
+                if ($chatId && $messageId) {
+                    $updatedText = "❌ *Pendaftaran Skuad Ditolak*\n\n"
+                                 . "📌 *Event:* {$registration->tournament->name}\n"
+                                 . "🛡️ *Nama Tim:* `{$registration->team_name}`\n"
+                                 . "👤 *Kapten:* {$registration->captain->name}\n\n"
+                                 . "Pendaftaran tim ini ditolak dan saldo telah di-refund otomatis.";
+                    $this->telegramService->editMessageText($chatId, $messageId, $updatedText);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tournament registration processed successfully.',
+            ]);
+        }
+
         $orderId = $targetId;
         $order = Order::with('product.seller')->find($orderId);
         if (!$order) {
