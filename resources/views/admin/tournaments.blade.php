@@ -271,18 +271,26 @@
                                         @endif
                                     </td>
                                     <td class="p-4 text-right">
-                                        <form action="{{ route('admin.tournaments.update_status', $t->id) }}" method="POST" class="inline-flex items-center space-x-1.5">
-                                            @csrf
-                                            <select name="status" class="px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold focus:outline-none">
-                                                <option value="draft" {{ $t->status === 'draft' ? 'selected' : '' }}>Draft</option>
-                                                <option value="registration" {{ $t->status === 'registration' ? 'selected' : '' }}>Registrasi</option>
-                                                <option value="ongoing" {{ $t->status === 'ongoing' ? 'selected' : '' }}>Berjalan</option>
-                                                <option value="completed" {{ $t->status === 'completed' ? 'selected' : '' }}>Selesai</option>
-                                            </select>
-                                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition">
-                                                Simpan
-                                            </button>
-                                        </form>
+                                        <div class="inline-flex items-center space-x-2 justify-end">
+                                            <form action="{{ route('admin.tournaments.update_status', $t->id) }}" method="POST" class="inline-flex items-center space-x-1.5">
+                                                @csrf
+                                                <select name="status" class="px-2 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold focus:outline-none">
+                                                    <option value="draft" {{ $t->status === 'draft' ? 'selected' : '' }}>Draft</option>
+                                                    <option value="registration" {{ $t->status === 'registration' ? 'selected' : '' }}>Registrasi</option>
+                                                    <option value="ongoing" {{ $t->status === 'ongoing' ? 'selected' : '' }}>Berjalan</option>
+                                                    <option value="completed" {{ $t->status === 'completed' ? 'selected' : '' }}>Selesai</option>
+                                                </select>
+                                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition">
+                                                    Simpan
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('admin.tournaments.delete', $t->id) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus turnamen &quot;{{ $t->name }}&quot; beserta seluruh data terkait? Tindakan ini tidak dapat dibatalkan.');">
+                                                @csrf
+                                                <button type="submit" class="bg-red-650 hover:bg-red-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition">
+                                                    Hapus
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

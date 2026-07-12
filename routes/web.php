@@ -125,6 +125,7 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/tournaments/registrations/{id}/approve', [AdminController::class, 'approveRegistration'])->name('tournaments.approve_registration');
         Route::post('/tournaments/registrations/{id}/reject', [AdminController::class, 'rejectRegistration'])->name('tournaments.reject_registration');
         Route::post('/tournaments/matches/{id}/score', [AdminController::class, 'updateMatchScore'])->name('tournaments.update_match_score');
+        Route::post('/tournaments/{id}/delete', [AdminController::class, 'deleteTournament'])->name('tournaments.delete');
 
         // Admin Tools - Cek & Reset Kuota XL
         Route::prefix('tools/xl')->name('tools.xl.')->group(function () {

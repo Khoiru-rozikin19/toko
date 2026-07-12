@@ -1546,5 +1546,34 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'Pendaftaran tim "' . $registration->team_name . '" ditolak. Biaya saldo telah di-refund otomatis.');
     }
+
+    /**
+     * Delete a tournament and all its associated matches, registrations, and participants.
+     */
+    public function deleteTournament($id)
+    {
+        $tournament = \App\Models\Tournament::findOrFail($id);
+
+        \Illuminate\Support\Facades\DB::transaction(function() use ($tournament, $id) {
+            // 1. Delete points history
+            \App\Models\TournamentPointsHistory::where('tournament_id', $tournament->id)->delete();
+
+            // 2. Delete matches
+            \App\Models\TournamentMatch::where('tournament_id', $tournament->id)->delete();
+
+            // 3. Delete participants
+            \App\Models\TournamentParticipant::whereHas('registration', function($query) use ($id) {
+                $query->where('tournament_id', $id);
+            })->delete();
+
+            // 4. Delete registrations
+            \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)->delete();
+
+            // 5. Delete tournament itself
+            $tournament->delete();
+        });
+
+        return redirect()->back()->with('success', 'Turnamen "' . $tournament->name . '" beserta seluruh data terkait berhasil dihapus!');
+    }
 }
 
