@@ -44,6 +44,27 @@
         .group:hover .group-hover\:animate-shine {
             animation: shine 0.8s ease-in-out;
         }
+        .header-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 105px;
+        }
+        @media (min-width: 375px) {
+            .header-title {
+                max-width: 140px;
+            }
+        }
+        @media (min-width: 480px) {
+            .header-title {
+                max-width: 220px;
+            }
+        }
+        @media (min-width: 640px) {
+            .header-title {
+                max-width: none;
+            }
+        }
     </style>
     <script>
         // Inline script to prevent theme flash
@@ -215,22 +236,23 @@
                     <button id="mobileMenuOpen" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                     </button>
-                    <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ $title ?? 'Dashboard' }}</h1>
+                    <h1 class="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 header-title" title="{{ $title ?? 'Dashboard' }}">{{ $title ?? 'Dashboard' }}</h1>
                 </div>
 
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 sm:space-x-4">
                     <!-- Header Event Button -->
-                    <a href="{{ route('tournaments.index') }}" class="relative group bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center space-x-1.5 shadow-md shadow-orange-500/20 hover:scale-[1.03] active:scale-95 transition-all duration-250 text-xs sm:text-sm font-bold overflow-hidden">
+                    <a href="{{ route('tournaments.index') }}" class="relative group bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-2 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center space-x-1 shadow-md shadow-orange-500/20 hover:scale-[1.03] active:scale-95 transition-all duration-250 text-xs sm:text-sm font-bold overflow-hidden" title="Event Turnamen">
                         <span class="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:animate-shine"></span>
                         <!-- Trophy Icon -->
                         <svg class="w-4 h-4 text-amber-300 animate-bounce" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                         </svg>
-                        <span>EVENT 🏆</span>
+                        <span class="hidden sm:inline">EVENT 🏆</span>
+                        <span class="sm:hidden">🏆</span>
                     </a>
 
                     <!-- Light / Dark Mode Toggle -->
-                    <button id="themeToggle" class="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200">
+                    <button id="themeToggle" class="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200">
                         <!-- Dark Mode Icon (Moon) -->
                         <svg id="themeToggleDarkIcon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                         <!-- Light Mode Icon (Sun) -->
@@ -241,15 +263,15 @@
                     @if(Auth::check())
                         <form action="{{ route('logout') }}" method="POST" class="inline">
                             @csrf
-                            <button type="submit" class="flex items-center space-x-2 px-4 py-2 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold transition-all duration-200">
+                            <button type="submit" class="flex items-center space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2 border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200" title="Logout">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                                <span>Logout</span>
+                                <span class="hidden sm:inline">Logout</span>
                             </button>
                         </form>
                     @else
-                        <a href="{{ route('login') }}" class="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-md shadow-emerald-500/10">
+                        <a href="{{ route('login') }}" class="flex items-center space-x-1.5 px-2.5 py-2 sm:px-4 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-md shadow-emerald-500/10" title="Login">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
-                            <span>Login</span>
+                            <span class="hidden sm:inline">Login</span>
                         </a>
                     @endif
                 </div>
