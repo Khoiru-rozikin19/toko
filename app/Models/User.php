@@ -64,4 +64,36 @@ class User extends Authenticatable
         $this->setRelation('balance', $balance);
         return $balance;
     }
+
+    /**
+     * Get the teams registered by this user as captain.
+     */
+    public function tournamentRegistrations()
+    {
+        return $this->hasMany(TournamentRegistration::class, 'captain_id');
+    }
+
+    /**
+     * Get the user's participations as a team member/captain.
+     */
+    public function tournamentParticipations()
+    {
+        return $this->hasMany(TournamentParticipant::class);
+    }
+
+    /**
+     * Get the user's tournament points history.
+     */
+    public function tournamentPoints()
+    {
+        return $this->hasMany(TournamentPointsHistory::class);
+    }
+
+    /**
+     * Helper to get total tournament points for leaderboard.
+     */
+    public function totalTournamentPoints(): int
+    {
+        return (int) $this->tournamentPoints()->sum('points');
+    }
 }
