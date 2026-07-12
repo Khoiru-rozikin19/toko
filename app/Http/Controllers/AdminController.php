@@ -1189,28 +1189,49 @@ class AdminController extends Controller
     /**
      * Display a listing of tournaments and pending team registrations in admin panel.
      */
-    public function tournaments()
+    public function tournaments(Request $request)
     {
-        $tournaments = \App\Models\Tournament::orderBy('created_at', 'desc')->get();
-        
-        $pendingRegistrations = \App\Models\TournamentRegistration::where('status', 'pending')
-            ->with(['tournament', 'captain', 'participants.user'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $tab = $request->query('tab', 'pending');
+        if (!in_array($tab, ['pending', 'matches', 'list', 'create'])) {
+            $tab = 'pending';
+        }
 
-        $ongoingMatches = \App\Models\TournamentMatch::whereHas('tournament', function ($query) {
+        // Lightweight count queries for badge counts
+        $pendingRegistrationsCount = \App\Models\TournamentRegistration::where('status', 'pending')->count();
+        $ongoingMatchesCount = \App\Models\TournamentMatch::whereHas('tournament', function ($query) {
                 $query->where('status', 'ongoing');
             })
-            ->with(['tournament', 'team1', 'team2'])
-            ->orderBy('round_number', 'asc')
-            ->orderBy('match_number', 'asc')
-            ->get();
+            ->count();
+
+        $tournaments = collect();
+        $pendingRegistrations = collect();
+        $ongoingMatches = collect();
+
+        if ($tab === 'pending') {
+            $pendingRegistrations = \App\Models\TournamentRegistration::where('status', 'pending')
+                ->with(['tournament', 'captain', 'participants.user'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } elseif ($tab === 'matches') {
+            $ongoingMatches = \App\Models\TournamentMatch::whereHas('tournament', function ($query) {
+                    $query->where('status', 'ongoing');
+                })
+                ->with(['tournament', 'team1', 'team2'])
+                ->orderBy('round_number', 'asc')
+                ->orderBy('match_number', 'asc')
+                ->get();
+        } elseif ($tab === 'list') {
+            $tournaments = \App\Models\Tournament::orderBy('created_at', 'desc')->get();
+        }
 
         return view('admin.tournaments', [
             'title' => 'Manajemen Turnamen',
+            'activeTab' => $tab,
             'tournaments' => $tournaments,
             'pendingRegistrations' => $pendingRegistrations,
             'ongoingMatches' => $ongoingMatches,
+            'pendingRegistrationsCount' => $pendingRegistrationsCount,
+            'ongoingMatchesCount' => $ongoingMatchesCount,
         ]);
     }
 
@@ -1241,7 +1262,7 @@ class AdminController extends Controller
             'start_date' => $request->start_date,
         ]);
 
-        return redirect()->back()->with('success', 'Turnamen berhasil dibuat!');
+        return redirect()->route('admin.tournaments', ['tab' => 'list'])->with('success', 'Turnamen berhasil dibuat!');
     }
 
     /**

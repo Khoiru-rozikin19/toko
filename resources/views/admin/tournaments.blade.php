@@ -1,7 +1,7 @@
 @extends('layouts.app', ['title' => 'Manajemen Turnamen'])
 
 @section('content')
-<div class="space-y-6 sm:space-y-8" x-data="{ activeTab: 'pending' }">
+<div class="space-y-6 sm:space-y-8">
     
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-5 gap-4">
@@ -12,35 +12,36 @@
 
     <!-- Tabs Navigation -->
     <div class="flex border-b border-slate-200 dark:border-slate-800 text-sm font-semibold overflow-x-auto whitespace-nowrap">
-        <button @click="activeTab = 'pending'" :class="activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2">
+        <a href="{{ route('admin.tournaments', ['tab' => 'pending']) }}" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2 {{ $activeTab === 'pending' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700' }}">
             <span>📩 Pendaftaran Masuk</span>
-            @if($pendingRegistrations->count() > 0)
+            @if($pendingRegistrationsCount > 0)
                 <span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">
-                    {{ $pendingRegistrations->count() }}
+                    {{ $pendingRegistrationsCount }}
                 </span>
             @endif
-        </button>
-        <button @click="activeTab = 'matches'" :class="activeTab === 'matches' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2">
+        </a>
+        <a href="{{ route('admin.tournaments', ['tab' => 'matches']) }}" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2 {{ $activeTab === 'matches' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700' }}">
             <span>🎯 Kelola Pertandingan</span>
-            @if($ongoingMatches->count() > 0)
+            @if($ongoingMatchesCount > 0)
                 <span class="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    {{ $ongoingMatches->count() }}
+                    {{ $ongoingMatchesCount }}
                 </span>
             @endif
-        </button>
-        <button @click="activeTab = 'list'" :class="activeTab === 'list' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none">
+        </a>
+        <a href="{{ route('admin.tournaments', ['tab' => 'list']) }}" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2 {{ $activeTab === 'list' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700' }}">
             🏆 Daftar Event
-        </button>
-        <button @click="activeTab = 'create'" :class="activeTab === 'create' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700'" class="px-5 py-3 transition duration-150 focus:outline-none">
+        </a>
+        <a href="{{ route('admin.tournaments', ['tab' => 'create']) }}" class="px-5 py-3 transition duration-150 focus:outline-none flex items-center space-x-2 {{ $activeTab === 'create' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-450 hover:text-slate-700' }}">
             ✨ Buat Event Baru
-        </button>
+        </a>
     </div>
 
     <!-- Tab Contents -->
     <div class="mt-6">
 
         <!-- Tab 1: Pending Registrations -->
-        <div x-show="activeTab === 'pending'" class="space-y-6">
+        @if($activeTab === 'pending')
+        <div class="space-y-6">
             @if($pendingRegistrations->isEmpty())
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-10 text-center shadow-xs">
                     <span class="text-3xl">☕</span>
@@ -130,9 +131,11 @@
                 </div>
             @endif
         </div>
+        @endif
 
         <!-- Tab 2: Kelola Pertandingan -->
-        <div x-show="activeTab === 'matches'" class="space-y-6">
+        @if($activeTab === 'matches')
+        <div class="space-y-6">
             @if($ongoingMatches->isEmpty())
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-10 text-center shadow-xs">
                     <span class="text-3xl">🏁</span>
@@ -219,9 +222,11 @@
                 </div>
             @endif
         </div>
+        @endif
 
         <!-- Tab 3: Tournament Lists -->
-        <div x-show="activeTab === 'list'" class="space-y-6">
+        @if($activeTab === 'list')
+        <div class="space-y-6">
             @if($tournaments->isEmpty())
                 <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">Belum ada turnamen yang dibuat.</p>
             @else
@@ -299,9 +304,11 @@
                 </div>
             @endif
         </div>
+        @endif
 
         <!-- Tab 4: Create New Event -->
-        <div x-show="activeTab === 'create'" class="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs">
+        @if($activeTab === 'create')
+        <div class="max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs">
             <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base border-b border-slate-100 dark:border-slate-850 pb-4 mb-6">Form Pembuatan Turnamen Baru</h4>
             
             <form action="{{ route('admin.tournaments.store') }}" method="POST" class="space-y-5">
@@ -367,6 +374,7 @@
                 </div>
             </form>
         </div>
+        @endif
 
     </div>
 </div>
