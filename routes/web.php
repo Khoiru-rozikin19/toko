@@ -30,6 +30,11 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::get('/', [CatalogController::class, 'index'])->name('catalog');
 Route::get('/catalog', [CatalogController::class, 'index']);
 
+// Public Tournament Event Routes
+Route::get('/tournaments', [App\Http\Controllers\TournamentController::class, 'index'])->name('tournaments.index');
+Route::get('/tournaments/{id}', [App\Http\Controllers\TournamentController::class, 'show'])->name('tournaments.show');
+
+
 // Rute Terkunci (Wajib Login & Terverifikasi - Semua Peran)
 Route::middleware(['auth', 'role:buyer,seller,admin'])->group(function () {
     
