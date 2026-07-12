@@ -273,7 +273,7 @@
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div class="space-y-1 sm:col-span-1">
                                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Akun Website</span>
-                                        <p class="text-xs font-extrabold text-slate-700 dark:text-slate-300 py-2.5 truncate">{{ Auth::user()->email }}</p>
+                                        <p class="text-xs font-extrabold text-slate-700 dark:text-slate-300 py-2.5 truncate">{{ Auth::user()->getWebsiteId() }}</p>
                                     </div>
                                     <div class="space-y-1">
                                         <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Nickname FF</label>
@@ -295,8 +295,8 @@
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div class="space-y-1">
-                                            <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Email/Username Website</label>
-                                            <input type="text" name="player_email[]" placeholder="Email / Username terdaftar" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                            <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">ID Akun Website</label>
+                                            <input type="text" name="player_website_id[]" placeholder="Contoh: RZK-00024" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
                                         </div>
                                         <div class="space-y-1">
                                             <label class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Nickname FF</label>

@@ -14,6 +14,9 @@
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400">
                     Role: {{ ucfirst($user->role) }}
                 </span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-350 font-mono">
+                    ID Akun: {{ $user->getWebsiteId() }}
+                </span>
                 @if(Auth::user()->is_verified)
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400">
                         Terverifikasi

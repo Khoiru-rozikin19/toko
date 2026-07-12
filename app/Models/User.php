@@ -96,4 +96,21 @@ class User extends Authenticatable
     {
         return (int) $this->tournamentPoints()->sum('points');
     }
+
+    /**
+     * Get unique website ID for profile and registration.
+     */
+    public function getWebsiteId()
+    {
+        return 'RZK-' . str_pad($this->id, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Find user by website ID format (e.g. RZK-00012).
+     */
+    public static function findByWebsiteId($websiteId)
+    {
+        $cleanId = (int) str_replace('RZK-', '', $websiteId);
+        return self::find($cleanId);
+    }
 }

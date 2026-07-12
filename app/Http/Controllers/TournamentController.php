@@ -91,8 +91,8 @@ class TournamentController extends Controller
             'player_nickname.*' => 'required|string|max:255',
             'player_game_id' => 'required|array|size:4',
             'player_game_id.*' => 'required|string|max:255',
-            'player_email' => 'required|array|size:3',
-            'player_email.*' => 'required|string|max:255',
+            'player_website_id' => 'required|array|size:3',
+            'player_website_id.*' => 'required|string|max:255',
         ]);
 
         $user = auth()->user();
@@ -132,19 +132,17 @@ class TournamentController extends Controller
         // Map player index to request array index
         for ($i = 0; $i < 3; $i++) {
             $playerNum = $i + 2;
-            $identifier = trim($request->player_email[$i]);
+            $identifier = trim($request->player_website_id[$i]);
 
             // Prevent self-registration as member
-            if (strtolower($identifier) === strtolower($user->email) || strtolower($identifier) === strtolower($user->name)) {
+            if (strtolower($identifier) === strtolower($user->getWebsiteId())) {
                 return back()->withErrors(['message' => "Player {$playerNum} tidak boleh berupa akun Anda sendiri (Anda sudah terdaftar otomatis sebagai Kapten)."]);
             }
 
-            $memberUser = \App\Models\User::where('email', $identifier)
-                ->orWhere('name', $identifier)
-                ->first();
+            $memberUser = \App\Models\User::findByWebsiteId($identifier);
 
             if (!$memberUser) {
-                return back()->withErrors(['message' => "Player {$playerNum} (Email/Name: '{$identifier}') tidak terdaftar di website ini. Silakan minta dia mendaftar terlebih dahulu!"]);
+                return back()->withErrors(['message' => "Player {$playerNum} (ID Akun Website: '{$identifier}') tidak terdaftar di website ini. Silakan periksa kembali!"]);
             }
 
             // Check if member is already registered in another team in this tournament
