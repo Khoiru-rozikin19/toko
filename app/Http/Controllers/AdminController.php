@@ -1185,4 +1185,141 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'Komplain ditolak. Saldo penjualan telah dilepaskan ke dompet Anda.');
     }
+
+    /**
+     * Display a listing of tournaments and pending team registrations in admin panel.
+     */
+    public function tournaments()
+    {
+        $tournaments = \App\Models\Tournament::orderBy('created_at', 'desc')->get();
+        
+        $pendingRegistrations = \App\Models\TournamentRegistration::where('status', 'pending')
+            ->with(['tournament', 'captain', 'participants.user'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return view('admin.tournaments', [
+            'title' => 'Manajemen Turnamen',
+            'tournaments' => $tournaments,
+            'pendingRegistrations' => $pendingRegistrations,
+        ]);
+    }
+
+    /**
+     * Store a newly created tournament in database.
+     */
+    public function storeTournament(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'type' => 'required|string|in:clash_squad,battle_royale',
+            'status' => 'required|string|in:draft,registration,ongoing,completed',
+            'registration_fee' => 'required|numeric|min:0',
+            'prize_pool' => 'required|string|max:255',
+            'max_slots' => 'nullable|integer|min:2',
+            'start_date' => 'nullable|date',
+        ]);
+
+        \App\Models\Tournament::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'type' => $request->type,
+            'status' => $request->status,
+            'registration_fee' => $request->registration_fee,
+            'prize_pool' => $request->prize_pool,
+            'max_slots' => $request->max_slots,
+            'start_date' => $request->start_date,
+        ]);
+
+        return redirect()->back()->with('success', 'Turnamen berhasil dibuat!');
+    }
+
+    /**
+     * Update the status of a tournament.
+     */
+    public function updateTournamentStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:draft,registration,ongoing,completed',
+        ]);
+
+        $tournament = \App\Models\Tournament::findOrFail($id);
+        $tournament->update(['status' => $request->status]);
+
+        return redirect()->back()->with('success', 'Status turnamen berhasil diperbarui!');
+    }
+
+    /**
+     * Approve a pending tournament registration.
+     */
+    public function approveRegistration(Request $request, $id)
+    {
+        $registration = \App\Models\TournamentRegistration::findOrFail($id);
+        
+        if ($registration->status !== 'pending') {
+            return redirect()->back()->with('error', 'Pendaftaran tim ini sudah diproses.');
+        }
+
+        $registration->update(['status' => 'approved']);
+
+        return redirect()->back()->with('success', 'Pendaftaran tim "' . $registration->team_name . '" disetujui!');
+    }
+
+    /**
+     * Reject a pending tournament registration and refund the captain's fee.
+     */
+    public function rejectRegistration(Request $request, $id)
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        $registration = \App\Models\TournamentRegistration::findOrFail($id);
+
+        if ($registration->status !== 'pending') {
+            return redirect()->back()->with('error', 'Pendaftaran tim ini sudah diproses.');
+        }
+
+        $tournament = $registration->tournament;
+        $fee = (float) $tournament->registration_fee;
+
+        DB::transaction(function() use ($registration, $fee, $request, $tournament) {
+            // 1. Update status to rejected
+            $registration->update([
+                'status' => 'rejected',
+                'rejection_reason' => $request->rejection_reason,
+            ]);
+
+            // 2. Refund fee if fee > 0
+            if ($fee > 0) {
+                $captain = $registration->captain;
+                $balanceRecord = \App\Models\UserBalance::where('user_id', $captain->id)->lockForUpdate()->first();
+                
+                if (!$balanceRecord) {
+                    $balanceRecord = $captain->getOrCreateBalance();
+                    $balanceRecord = \App\Models\UserBalance::where('user_id', $captain->id)->lockForUpdate()->first();
+                }
+
+                $balanceBefore = $balanceRecord->balance;
+                $balanceRecord->increment('balance', $fee);
+                $balanceRecord->refresh();
+
+                // Record transaction log
+                \App\Models\BalanceTransaction::create([
+                    'user_id' => $captain->id,
+                    'type' => 'topup',
+                    'amount' => $fee,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceRecord->balance,
+                    'description' => 'Refund pendaftaran turnamen ditolak: ' . $tournament->name . ' (Alasan: ' . $request->rejection_reason . ')',
+                    'reference_id' => $registration->id,
+                    'status' => 'success',
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Pendaftaran tim "' . $registration->team_name . '" ditolak. Biaya saldo telah di-refund otomatis.');
+    }
 }
+

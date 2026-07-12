@@ -118,6 +118,13 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::post('/commissions/{id}/delete', [AdminController::class, 'deleteCommission'])->name('commissions.delete');
         Route::post('/commissions/{id}/toggle', [AdminController::class, 'toggleCommission'])->name('commissions.toggle');
 
+        // Kelola Turnamen Event
+        Route::get('/tournaments', [AdminController::class, 'tournaments'])->name('tournaments');
+        Route::post('/tournaments', [AdminController::class, 'storeTournament'])->name('tournaments.store');
+        Route::post('/tournaments/{id}/update-status', [AdminController::class, 'updateTournamentStatus'])->name('tournaments.update_status');
+        Route::post('/tournaments/registrations/{id}/approve', [AdminController::class, 'approveRegistration'])->name('tournaments.approve_registration');
+        Route::post('/tournaments/registrations/{id}/reject', [AdminController::class, 'rejectRegistration'])->name('tournaments.reject_registration');
+
         // Admin Tools - Cek & Reset Kuota XL
         Route::prefix('tools/xl')->name('tools.xl.')->group(function () {
             Route::get('/', [XlToolController::class, 'index'])->name('index');
