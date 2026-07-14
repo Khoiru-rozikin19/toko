@@ -32,6 +32,11 @@ fi
 
 cd "$PROJECT_DIR" || { echo -e "\e[31m[ERROR] Gagal masuk ke direktori project: $PROJECT_DIR\e[0m"; exit 1; }
 
+# Tambahkan project dir ke safe.directory git untuk mencegah error ownership saat dijalankan sebagai root
+if command -v git &>/dev/null; then
+    git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+fi
+
 # =====================================================================
 #  2. Definisi Warna ANSI untuk Tampilan Premium (Aesthetics)
 # =====================================================================
