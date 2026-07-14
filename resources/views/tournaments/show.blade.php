@@ -482,9 +482,15 @@
                             </div>
                         </div>
 
-                        <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/10 text-slate-600 dark:text-slate-350 rounded-2xl text-[11px] font-semibold text-center border border-emerald-500/10">
-                            Status pendaftaran tim Anda sedang dikunci. Silakan pantau halaman ini untuk melihat bagan jika sudah disetujui.
-                        </div>
+                        @if($userRegistration->status !== 'approved')
+                            <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/10 text-slate-600 dark:text-slate-350 rounded-2xl text-[11px] font-semibold text-center border border-emerald-500/10">
+                                @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                                    Status pendaftaran Anda sedang dikunci. Silakan pantau halaman ini untuk melihat bagan jika sudah disetujui.
+                                @else
+                                    Status pendaftaran tim Anda sedang dikunci. Silakan pantau halaman ini untuk melihat bagan jika sudah disetujui.
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 @else
                     <!-- Eligible to Register / Register CTA -->
