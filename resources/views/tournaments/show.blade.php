@@ -65,7 +65,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         <!-- Left Side: Detail Event, Brackets, Rules -->
-        <div class="lg:col-span-2 space-y-8">
+        <div class="lg:col-span-2 space-y-8 order-2 lg:order-1">
             
             <!-- Tournament General Card -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs relative overflow-hidden">
@@ -133,33 +133,119 @@
                 </div>
             </div>
 
-            <!-- Bracket / Standings Section -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
-                <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
-                    <span>📊 Bagan Pertandingan</span>
-                </h4>
-                
+            <!-- Tabs Navigation -->
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+                <button onclick="switchDetailTab('bagan')" id="detail-tab-button-bagan" class="detail-tab-btn bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-orange-500/10 transition duration-150">
+                    📊 Bagan & Klasemen
+                </button>
+                <button onclick="switchDetailTab('rules')" id="detail-tab-button-rules" class="detail-tab-btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-355 font-bold px-4 py-2.5 rounded-xl text-xs transition duration-150">
+                    📜 Syarat & Ketentuan
+                </button>
+                <button onclick="switchDetailTab('teams')" id="detail-tab-button-teams" class="detail-tab-btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 font-bold px-4 py-2.5 rounded-xl text-xs transition duration-150">
+                    👥 Tim Terverifikasi
+                </button>
+                @if(Auth::check() && $tournament->status === 'registration' && !$hasPendingOrApproved && (!$tournament->max_slots || $approvedTeams->count() < $tournament->max_slots))
+                    <button onclick="switchDetailTab('register')" id="detail-tab-button-register" class="detail-tab-btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-650 dark:text-slate-350 font-bold px-4 py-2.5 rounded-xl text-xs transition duration-150">
+                        🏆 Form Pendaftaran
+                    </button>
+                @endif
+            </div>
+
+            <!-- Tab: Bagan / Klasemen -->
+            <div id="detail-tab-content-bagan" class="detail-tab-content">
                 @if($tournament->type === 'clash_squad')
-                    <div class="p-6 bg-slate-50 dark:bg-slate-950/20 rounded-2xl text-center border border-slate-150 dark:border-slate-800/60">
-                        <span class="text-2xl">🌱</span>
-                        <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm mt-2">Bagan Sedang Disusun</h5>
-                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
-                            Bagan pertandingan Clash Squad otomatis dibentuk setelah pendaftaran ditutup oleh Admin.
-                        </p>
-                    </div>
+                    @if(in_array($tournament->status, ['ongoing', 'completed']) && !$matches->isEmpty())
+                        <!-- Actual Bracket -->
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 overflow-x-auto">
+                            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2 border-b border-slate-100 dark:border-slate-850 pb-4">
+                                <span>📊 Bagan Pertandingan (Bracket)</span>
+                            </h4>
+                            
+                            <div class="flex gap-8 justify-around min-w-[700px] pt-4">
+                                @foreach($matches->groupBy('round_number') as $roundNumber => $roundMatches)
+                                    <div class="flex flex-col justify-around space-y-8 flex-1">
+                                        <div class="text-center">
+                                            <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-250/20 dark:border-slate-800">
+                                                @if($roundNumber == 1)
+                                                    Babak Awal
+                                                @elseif($loop->last)
+                                                    Final
+                                                @else
+                                                    Semifinal
+                                                @endif
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="space-y-6 flex-1 flex flex-col justify-center">
+                                            @foreach($roundMatches as $m)
+                                                <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-xs relative space-y-2">
+                                                    <div class="flex items-center justify-between text-xs">
+                                                        <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
+                                                            <span>🛡️</span>
+                                                            <span>{{ $m->team1 ? $m->team1->team_name : 'BYE / Belum Lolos' }}</span>
+                                                        </span>
+                                                        @if($m->status === 'completed')
+                                                            <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : '' }}">
+                                                                {{ $m->team1_score }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    
+                                                    <div class="border-t border-slate-200/50 dark:border-slate-800/50 my-1"></div>
+                                                    
+                                                    <div class="flex items-center justify-between text-xs">
+                                                        <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
+                                                            <span>🛡️</span>
+                                                            <span>{{ $m->team2 ? $m->team2->team_name : 'BYE / Belum Lolos' }}</span>
+                                                        </span>
+                                                        @if($m->status === 'completed')
+                                                            <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : '' }}">
+                                                                {{ $m->team2_score }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @else
+                        <!-- Bagan Sedang Disusun -->
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+                            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                                <span>📊 Bagan Pertandingan</span>
+                            </h4>
+                            <div class="p-6 bg-slate-50 dark:bg-slate-950/20 rounded-2xl text-center border border-slate-150 dark:border-slate-800/60">
+                                <span class="text-2xl">🌱</span>
+                                <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm mt-2">Bagan Sedang Disusun</h5>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
+                                    Bagan pertandingan Clash Squad otomatis dibentuk setelah pendaftaran ditutup oleh Admin.
+                                </p>
+                            </div>
+                        </div>
+                    @endif
                 @else
-                    <div class="p-6 bg-slate-50 dark:bg-slate-950/20 rounded-2xl text-center border border-slate-150 dark:border-slate-800/60">
-                        <span class="text-2xl">🏆</span>
-                        <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm mt-2">Format Battle Royale</h5>
-                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
-                            Leaderboard poin Battle Royale akan diperbarui secara langsung oleh Admin setiap kali pertandingan selesai!
-                        </p>
+                    <!-- Format Battle Royale -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+                        <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                            <span>📊 Klasemen Pertandingan</span>
+                        </h4>
+                        <div class="p-6 bg-slate-50 dark:bg-slate-950/20 rounded-2xl text-center border border-slate-150 dark:border-slate-800/60">
+                            <span class="text-2xl">🏆</span>
+                            <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm mt-2">Format Battle Royale</h5>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm mx-auto">
+                                Leaderboard poin Battle Royale akan diperbarui secara langsung oleh Admin setiap kali pertandingan selesai!
+                            </p>
+                        </div>
                     </div>
                 @endif
             </div>
 
-            <!-- Rules / Peraturan Section -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+            <!-- Tab: Syarat & Ketentuan -->
+            <div id="detail-tab-content-rules" class="detail-tab-content hidden">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
                 <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
                     <span>📜 Syarat & Ketentuan Turnamen</span>
                 </h4>
@@ -199,73 +285,11 @@
                     </li>
                 </ul>
             </div>
+            </div>
 
-            <!-- BRACKET BAGAN CLASH SQUAD (Only when ongoing or completed) -->
-            @if(in_array($tournament->status, ['ongoing', 'completed']) && $tournament->type === 'clash_squad' && !$matches->isEmpty())
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 overflow-x-auto">
-                    <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2 border-b border-slate-100 dark:border-slate-850 pb-4">
-                        <span>📊 Bagan Pertandingan (Bracket)</span>
-                    </h4>
-                    
-                    <!-- Bracket Tree Layout -->
-                    <div class="flex gap-8 justify-around min-w-[700px] pt-4">
-                        @foreach($matches->groupBy('round_number') as $roundNumber => $roundMatches)
-                            <!-- Round Column -->
-                            <div class="flex flex-col justify-around space-y-8 flex-1">
-                                <div class="text-center">
-                                    <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-250/20 dark:border-slate-800">
-                                        @if($roundNumber == 1)
-                                            Babak Awal
-                                        @elseif($loop->last)
-                                            Final
-                                        @else
-                                            Semifinal
-                                        @endif
-                                    </span>
-                                </div>
-                                
-                                <div class="space-y-6 flex-1 flex flex-col justify-center">
-                                    @foreach($roundMatches as $m)
-                                        <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-xs relative space-y-2">
-                                            <!-- Team 1 -->
-                                            <div class="flex items-center justify-between text-xs">
-                                                <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
-                                                    <span>🛡️</span>
-                                                    <span>{{ $m->team1 ? $m->team1->team_name : 'BYE / Belum Lolos' }}</span>
-                                                </span>
-                                                @if($m->status === 'completed')
-                                                    <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team1_id ? 'text-emerald-500 font-extrabold' : '' }}">
-                                                        {{ $m->team1_score }}
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            
-                                            <!-- VS Separator Line -->
-                                            <div class="border-t border-slate-200/50 dark:border-slate-800/50 my-1"></div>
-                                            
-                                            <!-- Team 2 -->
-                                            <div class="flex items-center justify-between text-xs">
-                                                <span class="truncate max-w-[120px] font-bold flex items-center space-x-1.5 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : 'text-slate-600 dark:text-slate-400' }}">
-                                                    <span>🛡️</span>
-                                                    <span>{{ $m->team2 ? $m->team2->team_name : 'BYE / Belum Lolos' }}</span>
-                                                </span>
-                                                @if($m->status === 'completed')
-                                                    <span class="font-black text-slate-800 dark:text-slate-200 {{ $m->winner_id && $m->winner_id === $m->team2_id ? 'text-emerald-500 font-extrabold' : '' }}">
-                                                        {{ $m->team2_score }}
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-
-            <!-- REGISTRATION FORM CARD (Left Side, Bottom) -->
+            <!-- Tab: Form Pendaftaran -->
             @if(Auth::check() && $tournament->status === 'registration' && !$hasPendingOrApproved && (!$tournament->max_slots || $approvedTeams->count() < $tournament->max_slots))
+                <div id="detail-tab-content-register" class="detail-tab-content hidden">
                 <div id="registration-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
                     <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-850 pb-4">
                         <span class="text-2xl">🛡️</span>
@@ -371,11 +395,52 @@
                         </div>
                     </form>
                 </div>
+            </div>
             @endif
+
+            <!-- Tab: Tim Terverifikasi -->
+            <div id="detail-tab-content-teams" class="detail-tab-content hidden">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
+                    <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-lg flex items-center justify-between border-b border-slate-100 dark:border-slate-850 pb-4">
+                        <span>👥 Daftar Peserta / Tim Terverifikasi</span>
+                        <span class="bg-orange-50 dark:bg-orange-950/20 text-orange-500 text-xs px-3 py-1 rounded-full font-bold">
+                            {{ $approvedTeams->count() }} {{ ($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo') ? 'Peserta' : 'Tim' }}
+                        </span>
+                    </h4>
+                    
+                    @if($approvedTeams->isEmpty())
+                        <p class="text-xs text-slate-400 dark:text-slate-500 font-medium italic py-4">Belum ada peserta yang disetujui (ACC) oleh Admin.</p>
+                    @else
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach($approvedTeams as $team)
+                                <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 p-4 rounded-2xl space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <h5 class="font-extrabold text-slate-800 dark:text-slate-200 text-sm truncate">
+                                            🛡️ {{ $team->team_name }}
+                                        </h5>
+                                        <span class="text-[10px] font-bold text-slate-450 dark:text-slate-500 truncate bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                                            Pendaftar: {{ $team->captain->name }}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-200/50 dark:border-slate-800/40 pt-2.5">
+                                        @foreach($team->participants as $p)
+                                            <div class="truncate bg-white dark:bg-slate-900 border border-slate-200/30 dark:border-slate-800/30 p-2 rounded-xl">
+                                                <span class="block text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">Nickname FF</span>
+                                                <span class="text-slate-700 dark:text-slate-350 font-bold block truncate">{{ $p->nickname }}</span>
+                                                <span class="text-[9px] text-slate-450 block mt-0.5">ID: {{ $p->game_id }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
 
-        <!-- Right Side: Action Box & Registered Teams List -->
-        <div class="space-y-8">
+        <!-- Right Side: Action Box -->
+        <div class="space-y-8 order-1 lg:order-2">
             
             <!-- Registration Status / CTA Card -->
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-sm relative overflow-hidden">
@@ -430,18 +495,18 @@
                             </p>
                             
                             @if($tournament->max_slots && $approvedTeams->count() >= $tournament->max_slots)
-                                <div class="bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 p-4 rounded-2xl text-center text-xs font-bold">
+                                <div class="bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 border border-red-200/40 p-4 rounded-2xl text-center text-xs font-bold">
                                     🚫 Slot Tim Sudah Penuh!
                                 </div>
                             @else
                                 @if(Auth::check())
-                                    <!-- Anchor link down to registration form card -->
-                                    <a href="#registration-form" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-extrabold py-3.5 rounded-2xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
+                                    <!-- Button to switch tab to registration form -->
+                                    <button onclick="switchDetailTab('register'); document.getElementById('registration-form').scrollIntoView({behavior: 'smooth'});" class="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-extrabold py-3.5 rounded-xl shadow-lg shadow-orange-500/20 flex items-center justify-center space-x-2 transition duration-200 hover:scale-[1.02] text-sm">
                                         <span>🏆 Isi Form Pendaftaran</span>
-                                    </a>
+                                    </button>
                                     
                                     @if($userRegistration && $userRegistration->status === 'rejected')
-                                        <div class="bg-red-50 dark:bg-red-950/20 text-red-650 dark:text-red-400 border border-red-200/40 p-3 rounded-2xl text-xs space-y-1">
+                                        <div class="bg-red-50 dark:bg-red-950/20 text-red-655 dark:text-red-400 border border-red-200/40 p-3 rounded-2xl text-xs space-y-1">
                                             <p class="font-extrabold text-[11px] uppercase">❌ PENDAFTARAN SEBELUMNYA DITOLAK:</p>
                                             <p class="italic text-[10px] font-medium">"{{ $userRegistration->rejection_reason ?? 'Tidak ada alasan diberikan.' }}"</p>
                                             <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold pt-1 uppercase">Saldo pendaftaran sebelumnya telah di-refund otomatis. Silakan submit ulang.</p>
@@ -470,44 +535,43 @@
                     @endif
                 @endif
             </div>
-
-            <!-- Registered Teams List -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 shadow-xs space-y-4">
-                <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base flex items-center justify-between">
-                    <span>👥 Tim Terverifikasi</span>
-                    <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                        {{ $approvedTeams->count() }} Tim
-                    </span>
-                </h4>
-                
-                @if($approvedTeams->isEmpty())
-                    <p class="text-xs text-slate-400 dark:text-slate-500 font-medium italic">Belum ada tim yang disetujui (ACC) oleh Admin.</p>
-                @else
-                    <div class="space-y-4 max-h-[350px] overflow-y-auto pr-1">
-                        @foreach($approvedTeams as $team)
-                            <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 p-3.5 rounded-2xl space-y-2">
-                                <div class="flex items-center justify-between">
-                                    <h5 class="font-extrabold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[120px]">
-                                        🛡️ {{ $team->team_name }}
-                                    </h5>
-                                    <span class="text-[10px] font-bold text-slate-450 dark:text-slate-500 truncate max-w-[90px]">
-                                        Kapten: {{ $team->captain->name }}
-                                    </span>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-250/20 dark:border-slate-800/40 pt-2">
-                                    @foreach($team->participants as $p)
-                                        <div class="truncate">
-                                            • {{ $p->nickname }}
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
         </div>
 
     </div>
 </div>
+
+<script>
+function switchDetailTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.detail-tab-content').forEach(el => {
+        el.classList.add('hidden');
+    });
+
+    // Reset button styles to inactive
+    document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+        btn.className = "detail-tab-btn bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-655 dark:text-slate-350 font-bold px-4 py-2.5 rounded-xl text-xs transition duration-150";
+    });
+
+    // Show selected content
+    const activeContent = document.getElementById('detail-tab-content-' + tabName);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+    }
+
+    // Set active button styles
+    const activeBtn = document.getElementById('detail-tab-button-' + tabName);
+    if (activeBtn) {
+        activeBtn.className = "detail-tab-btn bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-md shadow-orange-500/10 transition duration-150";
+    }
+    
+    // Store current tab in localStorage
+    localStorage.setItem('tournament_detail_active_tab_{{ $tournament->id }}', tabName);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Read tab from localStorage if exists, default to 'bagan'
+    const savedTab = localStorage.getItem('tournament_detail_active_tab_{{ $tournament->id }}') || 'bagan';
+    switchDetailTab(savedTab);
+});
+</script>
 @endsection
