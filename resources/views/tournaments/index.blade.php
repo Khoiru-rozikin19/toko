@@ -15,28 +15,28 @@
             <p class="text-sm sm:text-base text-slate-300 font-medium leading-relaxed">
                 Tunjukkan kehebatan skuadmu, menangkan turnamen mingguan, kumpulkan poin kejuaraan, dan jadilah yang terbaik di Papan Peringkat Global!
             </p>
-            <div class="flex items-center space-x-4 pt-2">
-                <a href="#active-tournaments" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-orange-500/25 transition-all duration-200 hover:scale-[1.02]">
-                    Lihat Event Aktif
-                </a>
-                <a href="#global-leaderboard" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:scale-[1.02]">
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+                <button onclick="switchTab('active')" id="tab-button-active" class="tab-btn bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-orange-500/25 transition-all duration-200 hover:scale-[1.02]">
+                    Event Aktif
+                </button>
+                <button onclick="switchTab('leaderboard')" id="tab-button-leaderboard" class="tab-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:scale-[1.02]">
                     Papan Peringkat
-                </a>
+                </button>
+                <button onclick="switchTab('archive')" id="tab-button-archive" class="tab-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:scale-[1.02]">
+                    Arsip
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Main Content Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Left Side: Active and Past Tournaments -->
-        <div class="lg:col-span-2 space-y-8">
-            
-            <!-- Active Tournaments Section -->
+    <div class="space-y-8">
+        <!-- Active Tournaments Tab Section -->
+        <div id="tab-content-active" class="tab-content">
             <section id="active-tournaments" class="space-y-4">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
-                        <span>🔥 Turnamen Berlangsung</span>
+                        <span>🔥 Turnamen Berlangsung (Event Aktif)</span>
                     </h3>
                 </div>
 
@@ -117,10 +117,84 @@
                     </div>
                 @endif
             </section>
+        </div>
 
-            <!-- Past/Archive Tournaments Section -->
+        <!-- Leaderboard Tab Section -->
+        <div id="tab-content-leaderboard" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto">
+                <section id="global-leaderboard" class="space-y-4">
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2 justify-center">
+                        <span>👑 Papan Peringkat Global</span>
+                    </h3>
+
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs relative overflow-hidden">
+                        <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
+                        
+                        <div class="text-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-widest">Hall of Fame</span>
+                            <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base mt-0.5">Top 10 Player Terbaik</h4>
+                            <p class="text-[10px] text-slate-400 dark:text-slate-500">Poin keaktifan & kemenangan turnamen</p>
+                        </div>
+
+                        @if($leaderboard->isEmpty())
+                            <div class="text-center py-6">
+                                <span class="text-3xl">⚔️</span>
+                                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">Belum ada poin dibagikan. Jadilah yang pertama!</p>
+                            </div>
+                        @else
+                            <div class="space-y-3.5">
+                                @foreach($leaderboard as $index => $record)
+                                    <div class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30 transition duration-150">
+                                        <div class="flex items-center space-x-3">
+                                            <!-- Rank Badge -->
+                                            @if($index === 0)
+                                                <div class="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-md shadow-yellow-400/20">
+                                                    🥇
+                                                </div>
+                                            @elseif($index === 1)
+                                                <div class="w-6 h-6 rounded-full bg-slate-350 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-md shadow-slate-300/20">
+                                                    🥈
+                                                </div>
+                                            @elseif($index === 2)
+                                                <div class="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md shadow-amber-600/20">
+                                                    🥉
+                                                </div>
+                                            @else
+                                                <div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-xs">
+                                                    {{ $index + 1 }}
+                                                </div>
+                                            @endif
+                                            
+                                            <div class="overflow-hidden">
+                                                <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[120px]">
+                                                    {{ $record->user ? $record->user->name : 'Unknown Player' }}
+                                                </h5>
+                                                <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                                                    {{ $record->user ? ucfirst($record->user->role) : 'Guest' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-right">
+                                            <span class="bg-amber-50 dark:bg-amber-950/20 border border-amber-250/20 text-amber-600 dark:text-amber-400 text-xs font-black px-2.5 py-1 rounded-lg">
+                                                {{ $record->total_points }} Pts
+                                            </span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Archive Tab Section -->
+        <div id="tab-content-archive" class="tab-content hidden">
             <section id="past-tournaments" class="space-y-4">
-                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100">🏆 Turnamen Selesai (Arsip)</h3>
+                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+                    <span>🏆 Turnamen Selesai (Arsip)</span>
+                </h3>
 
                 @if($pastTournaments->isEmpty())
                     <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">Belum ada turnamen terdahulu yang diselesaikan.</p>
@@ -155,74 +229,41 @@
             </section>
         </div>
 
-        <!-- Right Side: Global Leaderboard (Hall of Fame) -->
-        <div class="space-y-8">
-            <section id="global-leaderboard" class="space-y-4">
-                <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
-                    <span>👑 Papan Peringkat Global</span>
-                </h3>
-
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs relative overflow-hidden">
-                    <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-yellow-400 to-amber-500"></div>
-                    
-                    <div class="text-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800/80">
-                        <span class="text-xs font-bold text-amber-500 uppercase tracking-widest">Hall of Fame</span>
-                        <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-base mt-0.5">Top 10 Player Terbaik</h4>
-                        <p class="text-[10px] text-slate-400 dark:text-slate-500">Poin keaktifan & kemenangan turnamen</p>
-                    </div>
-
-                    @if($leaderboard->isEmpty())
-                        <div class="text-center py-6">
-                            <span class="text-3xl">⚔️</span>
-                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium">Belum ada poin dibagikan. Jadilah yang pertama!</p>
-                        </div>
-                    @else
-                        <div class="space-y-3.5">
-                            @foreach($leaderboard as $index => $record)
-                                <div class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/30 transition duration-150">
-                                    <div class="flex items-center space-x-3">
-                                        <!-- Rank Badge -->
-                                        @if($index === 0)
-                                            <div class="w-6 h-6 rounded-full bg-yellow-400 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-md shadow-yellow-400/20">
-                                                🥇
-                                            </div>
-                                        @elseif($index === 1)
-                                            <div class="w-6 h-6 rounded-full bg-slate-350 flex items-center justify-center text-slate-900 font-extrabold text-xs shadow-md shadow-slate-300/20">
-                                                🥈
-                                            </div>
-                                        @elseif($index === 2)
-                                            <div class="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md shadow-amber-600/20">
-                                                🥉
-                                            </div>
-                                        @else
-                                            <div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-xs">
-                                                {{ $index + 1 }}
-                                            </div>
-                                        @endif
-                                        
-                                        <div class="overflow-hidden">
-                                            <h5 class="font-bold text-slate-800 dark:text-slate-200 text-sm truncate max-w-[120px]">
-                                                {{ $record->user ? $record->user->name : 'Unknown Player' }}
-                                            </h5>
-                                            <p class="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-                                                {{ $record->user ? ucfirst($record->user->role) : 'Guest' }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="text-right">
-                                        <span class="bg-amber-50 dark:bg-amber-950/20 border border-amber-250/20 text-amber-600 dark:text-amber-400 text-xs font-black px-2.5 py-1 rounded-lg">
-                                            {{ $record->total_points }} Pts
-                                        </span>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-            </section>
-        </div>
-
     </div>
 </div>
+
+<script>
+function switchTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.add('hidden');
+    });
+
+    // Remove active styles from all tab buttons, and restore inactive styles
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = "tab-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-200 hover:scale-[1.02]";
+    });
+
+    // Show selected tab content
+    const activeContent = document.getElementById('tab-content-' + tabName);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+    }
+
+    // Set active style for selected button
+    const activeBtn = document.getElementById('tab-button-' + tabName);
+    if (activeBtn) {
+        activeBtn.className = "tab-btn bg-orange-500 hover:bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-lg shadow-orange-500/25 transition-all duration-200 hover:scale-[1.02]";
+    }
+    
+    // Store current tab in localStorage so it persists on reload
+    localStorage.setItem('tournament_active_tab', tabName);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Read tab from localStorage if exists, default to 'active'
+    const savedTab = localStorage.getItem('tournament_active_tab') || 'active';
+    switchTab(savedTab);
+});
+</script>
 @endsection
