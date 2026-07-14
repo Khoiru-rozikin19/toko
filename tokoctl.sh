@@ -219,9 +219,10 @@ show_dashboard() {
     echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
     echo -e "    [9] 📊  Kelola Riwayat Transaksi"
+    echo -e "    [10] ❌  Uninstall Website (Hapus Total Website)"
     echo -e "    [0] 🚪  Keluar dari Panel"
     print_border
-    echo -n "Pilih menu [0-9]: "
+    echo -n "Pilih menu [0-10]: "
 }
 
 # =====================================================================
@@ -1064,6 +1065,12 @@ view_access_log() {
 backup_website() {
     echo -e "${BOLD}${BLUE}=== BUAT CADANGAN (BACKUP) BARU ===${NC}"
     
+    # Pre-checks: pastikan tar terinstal
+    if ! command -v tar &>/dev/null; then
+        print_error "Perintah 'tar' tidak ditemukan di sistem! Silakan pasang 'tar' terlebih dahulu."
+        return 1
+    fi
+    
     # Ambil konfigurasi database dari .env
     local db_conn="sqlite"
     local db_name="database/database.sqlite"
@@ -1093,22 +1100,31 @@ backup_website() {
     # Export DB sesuai tipe koneksi
     if [ "$db_conn" = "mysql" ]; then
         print_info "Mengekspor basis data MySQL..."
+        
+        if ! command -v mysqldump &>/dev/null; then
+            print_warning "Perintah 'mysqldump' tidak ditemukan!"
+            print_info "Mencoba memasang client database secara otomatis..."
+            apt-get update && apt-get install -y mysql-client mariadb-client-core || true
+        fi
+        
         local dump_status=1
         
-        if mysqldump "${db_name:-toko}" > "$db_temp_file" 2>/dev/null; then
-            dump_status=0
-        else
-            print_warning "Ekspor root lokal gagal. Mencoba menggunakan kredensial .env..."
-            if [ -n "$db_pass" ]; then
-                export MYSQL_PWD="$db_pass"
+        if command -v mysqldump &>/dev/null; then
+            if mysqldump "${db_name:-toko}" > "$db_temp_file" 2>/dev/null; then
+                dump_status=0
+            else
+                print_warning "Ekspor root lokal gagal. Mencoba menggunakan kredensial .env..."
+                if [ -n "$db_pass" ]; then
+                    export MYSQL_PWD="$db_pass"
+                fi
+                mysqldump -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" > "$db_temp_file" 2>/dev/null
+                dump_status=$?
+                unset MYSQL_PWD
             fi
-            mysqldump -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" > "$db_temp_file" 2>/dev/null
-            dump_status=$?
-            unset MYSQL_PWD
         fi
 
         if [ $dump_status -ne 0 ]; then
-            print_error "Gagal mengekspor database MySQL! Pastikan kredensial di .env valid."
+            print_error "Gagal mengekspor database MySQL! Pastikan kredensial di .env valid dan mysql-client terpasang."
             rm -f "$db_temp_file"
             return 1
         fi
@@ -1119,7 +1135,11 @@ backup_website() {
             sqlite_path="database/database.sqlite"
         fi
         if [ -f "$sqlite_path" ]; then
-            cp "$sqlite_path" "$db_temp_file"
+            if command -v sqlite3 &>/dev/null; then
+                sqlite3 "$sqlite_path" ".backup '$db_temp_file'"
+            else
+                cp "$sqlite_path" "$db_temp_file"
+            fi
         else
             print_error "File SQLite tidak ditemukan di: $sqlite_path"
             return 1
@@ -1299,6 +1319,12 @@ restore_website() {
         return 1
     fi
 
+    # Pre-flight check: pastikan php terinstal
+    if ! command -v php &>/dev/null; then
+        print_error "Perintah 'php' tidak terdeteksi! Silakan pasang PHP terlebih dahulu."
+        return 1
+    fi
+
     # 0. Hentikan service sementara
     print_info "Menghentikan service sementara untuk menghindari lock database..."
     detect_php_service
@@ -1324,6 +1350,18 @@ restore_website() {
     # 2. Sinkronisasikan kredensial database dan domain
     if [ -f "$temp_env" ] && [ -f ".env" ]; then
         print_info "Menyelaraskan konfigurasi database & domain (.env)..."
+        
+        update_env_value() {
+            local key="$1"
+            local value="$2"
+            if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${value}|g" .env
+            else
+                echo "${key}=${value}" >> .env
+            fi
+        }
+
+        local new_db_conn=$(grep "^DB_CONNECTION=" "$temp_env" | cut -d'=' -f2-)
         local new_db_host=$(grep "^DB_HOST=" "$temp_env" | cut -d'=' -f2-)
         local new_db_port=$(grep "^DB_PORT=" "$temp_env" | cut -d'=' -f2-)
         local new_db_name=$(grep "^DB_DATABASE=" "$temp_env" | cut -d'=' -f2-)
@@ -1331,12 +1369,13 @@ restore_website() {
         local new_db_pass=$(grep "^DB_PASSWORD=" "$temp_env" | cut -d'=' -f2-)
         local new_app_url=$(grep "^APP_URL=" "$temp_env" | cut -d'=' -f2-)
 
-        [ -n "$new_db_host" ] && sed -i "s|^DB_HOST=.*|DB_HOST=$new_db_host|g" .env
-        [ -n "$new_db_port" ] && sed -i "s|^DB_PORT=.*|DB_PORT=$new_db_port|g" .env
-        [ -n "$new_db_name" ] && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=$new_db_name|g" .env
-        [ -n "$new_db_user" ] && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=$new_db_user|g" .env
-        [ -n "$new_db_pass" ] && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$new_db_pass|g" .env
-        [ -n "$new_app_url" ] && sed -i "s|^APP_URL=.*|APP_URL=$new_app_url|g" .env
+        [ -n "$new_db_conn" ] && update_env_value "DB_CONNECTION" "$new_db_conn"
+        [ -n "$new_db_host" ] && update_env_value "DB_HOST" "$new_db_host"
+        [ -n "$new_db_port" ] && update_env_value "DB_PORT" "$new_db_port"
+        [ -n "$new_db_name" ] && update_env_value "DB_DATABASE" "$new_db_name"
+        [ -n "$new_db_user" ] && update_env_value "DB_USERNAME" "$new_db_user"
+        [ -n "$new_db_pass" ] && update_env_value "DB_PASSWORD" "$new_db_pass"
+        [ -n "$new_app_url" ] && update_env_value "APP_URL" "$new_app_url"
         
         rm -f "$temp_env"
     fi
@@ -1363,20 +1402,29 @@ restore_website() {
 
         if [ "$db_conn" = "mysql" ]; then
             print_info "Memulihkan database MySQL..."
-            local mysql_status=1
             
-            if mysql -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" &>/dev/null; then
-                mysql "${db_name:-toko}" < "$db_temp_file" &>/dev/null
-                mysql_status=$?
-            else
-                print_warning "Koneksi root lokal dibatasi atau gagal. Mencoba menggunakan kredensial dari file .env..."
-                if [ -n "$db_pass" ]; then
-                    export MYSQL_PWD="$db_pass"
+            # Pasang mysql-client jika hilang
+            if ! command -v mysql &>/dev/null; then
+                print_warning "Perintah 'mysql' tidak ditemukan di sistem!"
+                print_info "Mencoba memasang client MySQL secara otomatis..."
+                apt-get update && apt-get install -y mysql-client mariadb-client-core || true
+            fi
+            
+            local mysql_status=1
+            if command -v mysql &>/dev/null; then
+                if mysql -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" &>/dev/null; then
+                    mysql "${db_name:-toko}" < "$db_temp_file" &>/dev/null
+                    mysql_status=$?
+                else
+                    print_warning "Koneksi root lokal dibatasi atau gagal. Mencoba menggunakan kredensial dari file .env..."
+                    if [ -n "$db_pass" ]; then
+                        export MYSQL_PWD="$db_pass"
+                    fi
+                    mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" 2>/dev/null
+                    mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" < "$db_temp_file" 2>/dev/null
+                    mysql_status=$?
+                    unset MYSQL_PWD
                 fi
-                mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" -e "CREATE DATABASE IF NOT EXISTS \`${db_name:-toko}\`;" 2>/dev/null
-                mysql -h "${db_host:-127.0.0.1}" -P "${db_port:-3306}" -u "${db_user:-root}" "${db_name:-toko}" < "$db_temp_file" 2>/dev/null
-                mysql_status=$?
-                unset MYSQL_PWD
             fi
             
             if [ $mysql_status -eq 0 ]; then
@@ -1398,12 +1446,45 @@ restore_website() {
 
     # Pembuatan ulang cache & pemasangan dependensi
     print_info "Menginstal ulang dependensi & membangun aset frontend..."
-    composer install --no-dev --optimize-autoloader --ignore-platform-reqs || true
+    
+    local COMPOSER_EXEC=""
+    if command -v composer &> /dev/null; then
+        COMPOSER_EXEC="composer"
+    elif [ -f "composer.phar" ]; then
+        COMPOSER_EXEC="php -d memory_limit=-1 composer.phar"
+    else
+        print_info "Composer tidak terpasang secara global. Mengunduh secara otomatis..."
+        if curl -sS https://getcomposer.org/installer | php &>/dev/null; then
+            print_success "composer.phar berhasil diunduh."
+            COMPOSER_EXEC="php -d memory_limit=-1 composer.phar"
+        else
+            print_warning "Gagal mengunduh composer.phar. Silakan pasang Composer secara manual."
+        fi
+    fi
+
+    if [ -n "$COMPOSER_EXEC" ]; then
+        if $COMPOSER_EXEC install --no-dev --optimize-autoloader --ignore-platform-reqs; then
+            print_success "Composer dependensi berhasil dipasang."
+        else
+            print_warning "Composer install gagal. Mencoba dengan --no-scripts..."
+            $COMPOSER_EXEC install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts || true
+        fi
+    fi
+
     if [ -f "package.json" ]; then
-        npm install --no-audit --no-fund || true
-        npm run build || npx vite build || true
+        if command -v npm &>/dev/null; then
+            npm install --no-audit --no-fund || true
+            npm run build || npx vite build || true
+        else
+            print_warning "npm tidak ditemukan. Aset frontend tidak dapat di-build."
+        fi
     fi
     
+    # Bangun ulang symbolic link storage agar tidak error (pointing ke path lama)
+    print_info "Membangun ulang symbolic link storage Laravel..."
+    rm -rf public/storage
+    php artisan storage:link || true
+
     # Bersihkan Cache Laravel secara menyeluruh
     print_info "Mengosongkan & memproses ulang cache Laravel..."
     php artisan optimize:clear || true
@@ -1420,6 +1501,14 @@ restore_website() {
     chmod +x artisan *.sh 2>/dev/null || true
     chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
+    # Berikan izin execute (+x) pada seluruh path direktori induk agar Nginx/PHP-FPM bisa menjangkaunya
+    print_info "Mengatur hak akses traversal direktori induk..."
+    local dir_path="$PWD"
+    while [ "$dir_path" != "/" ] && [ -n "$dir_path" ]; do
+        chmod +x "$dir_path" 2>/dev/null || true
+        dir_path=$(dirname "$dir_path")
+    done
+
     # Perbaikan jika folder berada di /root
     if [[ "$PWD" == "/root"* ]]; then
         print_warning "Proyek berada di dalam direktori /root. Membuka akses masuk direktori untuk Nginx..."
@@ -1429,21 +1518,43 @@ restore_website() {
     # Auto-adjust Nginx root path
     local current_root="$PWD/public"
     local app_url=$(grep "^APP_URL=" .env | cut -d'=' -f2- | sed 's/https\?:\/\///' | sed 's/\/$//' | tr -d '\r')
+    local nginx_found=false
     if [ -n "$app_url" ]; then
         for conf in /etc/nginx/sites-available/*; do
             if [ -f "$conf" ] && (grep -q "server_name.*$app_url" "$conf" || grep -q "server_name.*${app_url//\./\\.}" "$conf"); then
                 print_info "Menyesuaikan root directory Nginx di $conf menjadi $current_root..."
                 sed -i "s|root .*/public;|root $current_root;|g" "$conf"
                 nginx -t &>/dev/null && systemctl reload nginx
+                nginx_found=true
             fi
         done
+    fi
+    if [ "$nginx_found" = false ] && [ -n "$app_url" ]; then
+        print_warning "Konfigurasi Nginx untuk domain '$app_url' tidak ditemukan di /etc/nginx/sites-available/*."
+        print_info "Jika ini VPS baru, pastikan Anda membuat virtual host Nginx untuk '$app_url' dengan root menuju: $current_root"
+    fi
+
+    # Membuka port yang dibutuhkan (80 & 443) jika belum terbuka
+    print_info "Memastikan port 80 & 443 terbuka di Firewall..."
+    if command -v iptables &>/dev/null; then
+        iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT 2>/dev/null || true
+        iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT 2>/dev/null || true
+        if command -v netfilter-persistent &>/dev/null; then
+            netfilter-persistent save 2>/dev/null || true
+        fi
+    fi
+
+    if command -v ufw &>/dev/null; then
+        ufw allow 80/tcp 2>/dev/null || true
+        ufw allow 443/tcp 2>/dev/null || true
+        ufw reload 2>/dev/null || true
     fi
 
     # Restart FastCGI & Nginx
     detect_php_service
     print_info "Memuat ulang layanan PHP ($php_service) & Web Server (Nginx)..."
     systemctl restart "$php_service" || service "$php_service" restart || true
-    systemctl reload nginx || service nginx reload || true
+    systemctl restart nginx || service nginx restart || true
 
     # Restart PM2 Queue Worker
     if command -v pm2 &>/dev/null; then
@@ -2387,6 +2498,125 @@ manage_transaction_history() {
     done
 }
 
+uninstall_website() {
+    clear
+    print_border
+    echo -e "      ${BOLD}${RED}🚨   UNINSTALL & HAPUS TOTAL WEBSITE LARAVEL   🚨${NC}"
+    print_border
+    echo -e "  ${YELLOW}${BOLD}PERINGATAN KERAS! Tindakan ini bersifat DESTRUKTIF & TIDAK BISA DIBATALKAN!${NC}"
+    echo -e "  Skrip ini akan menghapus seluruh data berikut secara permanen:"
+    echo -e "    1. Database MySQL / SQLite beserta User database terkait."
+    echo -e "    2. Konfigurasi Nginx Server Block & Symlink domain."
+    echo -e "    3. Sertifikat SSL Certbot (Let's Encrypt)."
+    echo -e "    4. Antrean Queue Worker PM2."
+    echo -e "    5. Alias perintah cepat 'set' global."
+    echo -e "    6. ${RED}${BOLD}SELURUH FOLDER PROJECT LARAVEL INI ($PROJECT_DIR)${NC}"
+    print_border
+    echo ""
+    echo -ne "  Ketik ${RED}${BOLD}UNINSTALL-TOTAL${NC} untuk mengonfirmasi: "
+    read -r konfirmasi
+
+    if [ "$konfirmasi" != "UNINSTALL-TOTAL" ]; then
+        print_warning "Uninstall dibatalkan oleh pengguna."
+        return 1
+    fi
+
+    echo -ne "  ${YELLOW}Apakah Anda benar-benar yakin? Ini kesempatan terakhir untuk membatalkan! (y/n): ${NC}"
+    read -r konfirmasi_final
+    if [[ ! "$konfirmasi_final" =~ ^[Yy]$ ]]; then
+        print_warning "Uninstall dibatalkan oleh pengguna."
+        return 1
+    fi
+
+    print_info "Memulai proses penghapusan total..."
+
+    # Ambil konfigurasi sebelum menghapus
+    local db_conn=""
+    local db_name=""
+    local db_user=""
+    local app_url=""
+    
+    if [ -f ".env" ]; then
+        db_conn=$(grep "^DB_CONNECTION=" .env | cut -d'=' -f2- | tr -d '\r')
+        db_name=$(grep "^DB_DATABASE=" .env | cut -d'=' -f2- | tr -d '\r')
+        db_user=$(grep "^DB_USERNAME=" .env | cut -d'=' -f2- | tr -d '\r')
+        app_url=$(grep "^APP_URL=" .env | cut -d'=' -f2- | sed -E 's|https?://||' | sed 's|/$||' | tr -d '\r')
+    fi
+
+    # 1. Hapus Database & User (jika MySQL)
+    if [ "$db_conn" = "mysql" ] && [ -n "$db_name" ]; then
+        print_info "Menghapus Database MySQL: $db_name dan User: $db_user..."
+        local db_pass=$(grep "^DB_PASSWORD=" .env | cut -d'=' -f2- | tr -d '\r')
+        local db_host=$(grep "^DB_HOST=" .env | cut -d'=' -f2- | tr -d '\r')
+        local db_port=$(grep "^DB_PORT=" .env | cut -d'=' -f2- | tr -d '\r')
+        [ -z "$db_host" ] && db_host="127.0.0.1"
+        [ -z "$db_port" ] && db_port="3306"
+
+        local mysql_opts="-h $db_host -P $db_port"
+        if mysql $mysql_opts -u root -e "DROP DATABASE IF EXISTS \`$db_name\`;" 2>/dev/null; then
+            mysql $mysql_opts -u root -e "DROP USER IF EXISTS '$db_user'@'localhost';" 2>/dev/null
+            mysql $mysql_opts -u root -e "DROP USER IF EXISTS '$db_user'@'127.0.0.1';" 2>/dev/null
+            mysql $mysql_opts -u root -e "FLUSH PRIVILEGES;" 2>/dev/null
+            print_success "Database & User MySQL berhasil dihapus."
+        else
+            # Fallback menggunakan kredensial .env
+            if [ -n "$db_pass" ]; then
+                export MYSQL_PWD="$db_pass"
+            fi
+            if mysql $mysql_opts -u "$db_user" -e "DROP DATABASE IF EXISTS \`$db_name\`;" 2>/dev/null; then
+                print_success "Database MySQL berhasil dihapus via kredensial lokal."
+            else
+                print_warning "Gagal menghapus database secara otomatis. Silakan hapus database '$db_name' secara manual jika diperlukan."
+            fi
+            unset MYSQL_PWD
+        fi
+    fi
+
+    # 2. Hapus PM2 Queue Worker
+    if command -v pm2 &>/dev/null; then
+        print_info "Menghentikan & menghapus PM2 Queue Worker..."
+        pm2 delete vpn-queue-worker 2>/dev/null || true
+        pm2 save --force 2>/dev/null || true
+    fi
+
+    # 3. Hapus Sertifikat SSL Certbot
+    if [ -n "$app_url" ] && command -v certbot &>/dev/null; then
+        print_info "Menghapus sertifikat SSL Certbot untuk domain: $app_url..."
+        certbot delete --cert-name "$app_url" --non-interactive 2>/dev/null || true
+        rm -rf "/etc/letsencrypt/live/$app_url" "/etc/letsencrypt/archive/$app_url" "/etc/letsencrypt/renewal/$app_url.conf" 2>/dev/null || true
+    fi
+
+    # 4. Hapus Konfigurasi Nginx Server Block
+    if [ -n "$app_url" ]; then
+        print_info "Menghapus konfigurasi Nginx untuk domain: $app_url..."
+        rm -f "/etc/nginx/sites-enabled/$app_url"
+        rm -f "/etc/nginx/sites-available/$app_url"
+        nginx -t &>/dev/null && systemctl restart nginx 2>/dev/null || true
+    fi
+
+    # 5. Hapus Alias Global 'set'
+    print_info "Menghapus alias 'set' global..."
+    rm -f /usr/local/bin/set
+    local files_to_clean=("/etc/bash.bashrc" "/etc/profile" "$HOME/.bashrc" "$HOME/.zshrc")
+    for file in "${files_to_clean[@]}"; do
+        if [ -f "$file" ]; then
+            sed -i '/# Alias untuk panel VPS toko/d' "$file" 2>/dev/null || true
+            sed -i '/alias set=/d' "$file" 2>/dev/null || true
+        fi
+    done
+
+    # 6. Hapus Seluruh Folder Project
+    print_info "Menghapus folder project website ($PROJECT_DIR)..."
+    if [ -n "$PROJECT_DIR" ] && [ "$PROJECT_DIR" != "/" ] && [ "$PROJECT_DIR" != "/home" ] && [ "$PROJECT_DIR" != "/var" ]; then
+        cd /
+        rm -rf "$PROJECT_DIR"
+    fi
+    
+    print_success "Uninstall selesai! VPS Anda sekarang bersih dari data website ini."
+    echo -e "${YELLOW}Koneksi SSH mungkin perlu dimuat ulang (atau restart terminal Anda) agar perubahan alias aktif.${NC}"
+    exit 0
+}
+
 manage_saldo() {
     # Inisialisasi koneksi database saat pertama kali masuk
     if ! duid_init_db; then
@@ -2468,12 +2698,15 @@ while true; do
         9)
             manage_transaction_history
             ;;
+        10)
+            uninstall_website
+            ;;
         0)
             print_info "Keluar dari panel pengelola VPS. Sampai jumpa!"
             exit 0
             ;;
         *)
-            print_warning "Pilihan tidak valid. Silakan pilih menu [0-9]."
+            print_warning "Pilihan tidak valid. Silakan pilih menu [0-10]."
             ;;
     esac
     

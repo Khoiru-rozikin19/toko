@@ -80,6 +80,22 @@ sysctl -w net.ipv6.conf.default.disable_ipv6=1 &>/dev/null || true
 sysctl -w net.ipv6.conf.lo.disable_ipv6=1 &>/dev/null || true
 echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
 
+# Membuka port yang dibutuhkan (80 & 443) jika belum terbuka
+echo -e "${BIRU}Membuka port 80 & 443 di Firewall...${NC}"
+if command -v iptables &>/dev/null; then
+  iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+  iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
+  if command -v netfilter-persistent &>/dev/null; then
+    netfilter-persistent save
+  fi
+fi
+
+if command -v ufw &>/dev/null; then
+  ufw allow 80/tcp
+  ufw allow 443/tcp
+  ufw reload
+fi
+
 apt update --allow-releaseinfo-change && apt upgrade -y
 apt install -y software-properties-common curl git unzip nano gnupg2 ca-certificates lsb-release apt-transport-https
 
@@ -181,6 +197,14 @@ chown -R www-data:www-data "$APP_DIR/storage"
 chown -R www-data:www-data "$APP_DIR/bootstrap/cache"
 chmod -R 775 "$APP_DIR/storage"
 chmod -R 775 "$APP_DIR/bootstrap/cache"
+
+# Berikan izin execute (+x) pada seluruh path direktori induk agar Nginx/PHP-FPM bisa menjangkaunya
+echo -e "${BIRU}Mengatur hak akses traversal direktori induk...${NC}"
+DIR_PATH="$APP_DIR"
+while [ "$DIR_PATH" != "/" ] && [ -n "$DIR_PATH" ]; do
+  chmod +x "$DIR_PATH"
+  DIR_PATH=$(dirname "$DIR_PATH")
+done
 
 # 11. Build Aset Frontend (npm & vite dengan fallback tangguh)
 echo -e "\n${KUNING}Langkah 10: Memasang paket NPM dan melakukan Build Aset Vite...${NC}"
@@ -319,6 +343,11 @@ pm2 save
 
 # Mengaktifkan PM2 auto-startup
 env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root || true
+
+# Restart Nginx dan PHP-FPM di akhir untuk memastikan izin akses dan konfigurasi baru dimuat sepenuhnya
+echo -e "\n${KUNING}Langkah Akhir: Merestart Nginx & PHP-FPM...${NC}"
+systemctl restart nginx
+systemctl restart php8.3-fpm
 
 # Selesai
 echo -e "\n${HIJAU}======================================================================"
