@@ -310,19 +310,19 @@
                     <form action="{{ route('tournaments.register', $tournament->id) }}" method="POST" class="space-y-6">
                         @csrf
                         
-                        <!-- Nama Tim -->
-                        <div class="space-y-2">
-                            <label for="team_name" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
-                                    Nama Tim / Solo Nickname
-                                @elseif($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
-                                    Nama Tim (Duo)
-                                @else
-                                    Nama Tim (Squad)
-                                @endif
-                            </label>
-                            <input type="text" id="team_name" name="team_name" placeholder="Contoh: RZK Gaming Team" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200" required>
-                        </div>
+                        @if(!($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo'))
+                            <!-- Nama Tim -->
+                            <div class="space-y-2">
+                                <label for="team_name" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
+                                        Nama Tim (Duo)
+                                    @else
+                                        Nama Tim (Squad)
+                                    @endif
+                                </label>
+                                <input type="text" id="team_name" name="team_name" placeholder="Contoh: RZK Gaming Team" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200" required>
+                            </div>
+                        @endif
 
                         <!-- Grid Player -->
                         <div class="space-y-6">

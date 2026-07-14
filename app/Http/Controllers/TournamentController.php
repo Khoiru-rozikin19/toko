@@ -98,9 +98,11 @@ class TournamentController extends Controller
         
         $expectedMembersCount = $expectedPlayerCount - 1;
 
+        $isSoloBR = ($type === 'battle_royale' && $teamMode === 'solo');
+
         // Validate basic inputs
         $rules = [
-            'team_name' => 'required|string|max:255',
+            'team_name' => ($isSoloBR ? 'nullable' : 'required') . '|string|max:255',
             'player_nickname' => 'required|array|size:' . $expectedPlayerCount,
             'player_nickname.*' => 'required|string|max:255',
             'player_game_id' => 'required|array|size:' . $expectedPlayerCount,
@@ -115,6 +117,9 @@ class TournamentController extends Controller
         $request->validate($rules);
 
         $user = auth()->user();
+
+        // Fallback team name for Solo BR
+        $teamName = $request->team_name ?: $request->player_nickname[0];
 
         // 1. Check if Captain (current logged-in user) is already registered in this tournament
         $isRegisteredAsCaptain = \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)
@@ -133,11 +138,14 @@ class TournamentController extends Controller
 
         // 2. Check if Team Name is already taken in this tournament
         $isTeamNameTaken = \App\Models\TournamentRegistration::where('tournament_id', $tournament->id)
-            ->where('team_name', $request->team_name)
+            ->where('team_name', $teamName)
             ->exists();
 
         if ($isTeamNameTaken) {
-            return back()->withErrors(['message' => 'Nama tim "' . $request->team_name . '" sudah digunakan. Silakan pilih nama lain.']);
+            return back()->withErrors(['message' => $isSoloBR 
+                ? 'Nickname game "' . $teamName . '" sudah terdaftar dalam turnamen ini.' 
+                : 'Nama tim "' . $teamName . '" sudah digunakan. Silakan pilih nama lain.'
+            ]);
         }
 
         // 3. Check Slot Limit
@@ -184,7 +192,7 @@ class TournamentController extends Controller
 
         // 5. Balance transaction (wrap inside DB transaction for safety)
         try {
-            $registration = DB::transaction(function() use ($tournament, $request, $user, $memberUsers) {
+            $registration = DB::transaction(function() use ($tournament, $request, $user, $memberUsers, $teamName) {
                 $fee = (float) $tournament->registration_fee;
                 
                 if ($fee > 0) {
@@ -204,7 +212,7 @@ class TournamentController extends Controller
                     // Create registration record
                     $reg = \App\Models\TournamentRegistration::create([
                         'tournament_id' => $tournament->id,
-                        'team_name' => $request->team_name,
+                        'team_name' => $teamName,
                         'captain_id' => $user->id,
                         'status' => 'pending',
                     ]);
@@ -224,7 +232,7 @@ class TournamentController extends Controller
                     // Free tournament
                     $reg = \App\Models\TournamentRegistration::create([
                         'tournament_id' => $tournament->id,
-                        'team_name' => $request->team_name,
+                        'team_name' => $teamName,
                         'captain_id' => $user->id,
                         'status' => 'pending',
                     ]);
@@ -270,6 +278,10 @@ class TournamentController extends Controller
             \Illuminate\Support\Facades\Log::warning("Telegram Notification failed: " . $e->getMessage());
         }
 
-        return back()->with('success', 'Pendaftaran tim "' . $request->team_name . '" berhasil diajukan! Menunggu persetujuan Admin.');
+        $successMsg = $isSoloBR 
+            ? 'Pendaftaran Anda berhasil diajukan! Menunggu persetujuan Admin.' 
+            : 'Pendaftaran tim "' . $teamName . '" berhasil diajukan! Menunggu persetujuan Admin.';
+
+        return back()->with('success', $successMsg);
     }
 }
