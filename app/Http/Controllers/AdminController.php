@@ -1244,21 +1244,44 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|in:clash_squad,battle_royale',
+            'team_mode' => 'required_if:type,battle_royale|nullable|string|in:solo,duo,squad',
             'status' => 'required|string|in:draft,registration,ongoing,completed',
             'registration_fee' => 'required|numeric|min:0',
             'prize_pool' => 'required|string|max:255',
-            'max_slots' => 'nullable|integer|min:2',
+            'max_slots' => 'nullable|integer',
             'start_date' => 'nullable|date',
         ]);
+
+        $type = $request->type;
+        $teamMode = $type === 'battle_royale' ? $request->team_mode : null;
+        
+        // Auto-assign max_slots based on the rules:
+        // solo : 48 peserta, duo : 24 tim, squad : 12 tim
+        // clash squad : 8, 16, 32
+        $maxSlots = $request->max_slots;
+        if ($type === 'battle_royale') {
+            if ($teamMode === 'solo') {
+                $maxSlots = 48;
+            } elseif ($teamMode === 'duo') {
+                $maxSlots = 24;
+            } elseif ($teamMode === 'squad') {
+                $maxSlots = 12;
+            }
+        } else {
+            if (!in_array((int)$maxSlots, [8, 16, 32])) {
+                $maxSlots = 8; // fallback default
+            }
+        }
 
         \App\Models\Tournament::create([
             'name' => $request->name,
             'description' => $request->description,
-            'type' => $request->type,
+            'type' => $type,
+            'team_mode' => $teamMode,
             'status' => $request->status,
             'registration_fee' => $request->registration_fee,
             'prize_pool' => $request->prize_pool,
-            'max_slots' => $request->max_slots,
+            'max_slots' => $maxSlots,
             'start_date' => $request->start_date,
         ]);
 

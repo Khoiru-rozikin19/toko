@@ -22,6 +22,16 @@
             }
         }
     }
+
+    // Hitung jumlah anggota tim yang dibutuhkan (selain kapten)
+    $memberCount = 3; // Default Clash Squad / Squad BR
+    if ($tournament->type === 'battle_royale') {
+        if ($tournament->team_mode === 'solo') {
+            $memberCount = 0;
+        } elseif ($tournament->team_mode === 'duo') {
+            $memberCount = 1;
+        }
+    }
 @endphp
 
 @extends('layouts.app')
@@ -116,7 +126,7 @@
                         <div class="space-y-0.5">
                             <span class="text-slate-400 dark:text-slate-500 font-bold uppercase text-[9px] tracking-wider">Slot Terisi</span>
                             <p class="font-extrabold text-slate-800 dark:text-slate-200">
-                                {{ $approvedTeams->count() }} / {{ $tournament->max_slots ?? '∞' }} Tim
+                                {{ $approvedTeams->count() }} / {{ $tournament->max_slots ?? '∞' }} {{ ($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo') ? 'Peserta' : 'Tim' }}
                             </p>
                         </div>
                     </div>
@@ -157,23 +167,35 @@
                 <ul class="space-y-3.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
                     <li class="flex items-start space-x-2.5">
                         <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</span>
-                        <span>Seluruh anggota tim (4 pemain) **wajib memiliki akun terdaftar dan aktif** di website ini. Akun yang belum terdaftar tidak akan bisa ditambahkan ke dalam daftar tim.</span>
+                        @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                            <span>Pemain **wajib memiliki akun terdaftar dan aktif** di website ini.</span>
+                        @elseif($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
+                            <span>Seluruh anggota tim (2 pemain) **wajib memiliki akun terdaftar dan aktif** di website ini.</span>
+                        @else
+                            <span>Seluruh anggota tim (4 pemain) **wajib memiliki akun terdaftar dan aktif** di website ini. Akun yang belum terdaftar tidak akan bisa ditambahkan ke dalam daftar tim.</span>
+                        @endif
                     </li>
                     <li class="flex items-start space-x-2.5">
                         <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</span>
-                        <span>Biaya pendaftaran akan langsung dipotong dari **Saldo Akun Kapten** saat mendaftar. Kapten wajib mengisi saldo terlebih dahulu sebelum mendaftar.</span>
+                        <span>Biaya pendaftaran akan langsung dipotong dari **Saldo Akun Pendaftar/Kapten** saat mendaftar. Pendaftar wajib mengisi saldo terlebih dahulu sebelum mendaftar.</span>
                     </li>
                     <li class="flex items-start space-x-2.5">
                         <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</span>
-                        <span>Setiap tim harus diisi tepat 4 orang pemain yang valid (ID Free Fire dan Nickname harus persis seperti di game).</span>
+                        @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                            <span>Setiap pendaftar harus mengisi nickname Free Fire dan ID karakter yang valid.</span>
+                        @elseif($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
+                            <span>Setiap tim harus diisi tepat 2 orang pemain yang valid (ID Free Fire dan Nickname harus persis seperti di game).</span>
+                        @else
+                            <span>Setiap tim harus diisi tepat 4 orang pemain yang valid (ID Free Fire dan Nickname harus persis seperti di game).</span>
+                        @endif
                     </li>
                     <li class="flex items-start space-x-2.5">
                         <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</span>
-                        <span>Apabila pendaftaran Anda ditolak oleh Admin (karena data ID tidak valid/alasan lainnya), biaya pendaftaran akan **dikembalikan 100% (Refund Otomatis)** ke saldo akun Kapten.</span>
+                        <span>Apabila pendaftaran Anda ditolak oleh Admin (karena data tidak valid/alasan lainnya), biaya pendaftaran akan **dikembalikan 100% (Refund Otomatis)** ke saldo akun Kapten/Pendaftar.</span>
                     </li>
                     <li class="flex items-start space-x-2.5">
                         <span class="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">5</span>
-                        <span>Setiap akun hanya diperbolehkan bergabung dalam 1 tim pada turnamen yang sama. Dilarang melakukan kecurangan (*multi-account*).</span>
+                        <span>Setiap akun hanya diperbolehkan bergabung dalam 1 pendaftaran pada turnamen yang sama. Dilarang melakukan kecurangan (*multi-account*).</span>
                     </li>
                 </ul>
             </div>
@@ -238,17 +260,21 @@
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-                </div>
-            @endif
-
             <!-- REGISTRATION FORM CARD (Left Side, Bottom) -->
             @if(Auth::check() && $tournament->status === 'registration' && !$hasPendingOrApproved && (!$tournament->max_slots || $approvedTeams->count() < $tournament->max_slots))
                 <div id="registration-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
                     <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-850 pb-4">
                         <span class="text-2xl">🛡️</span>
                         <div>
-                            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100">Formulir Pendaftaran Skuad</h4>
+                            <h4 class="text-lg font-bold text-slate-800 dark:text-slate-100">
+                                @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                                    Formulir Pendaftaran Solo
+                                @elseif($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
+                                    Formulir Pendaftaran Duo
+                                @else
+                                    Formulir Pendaftaran Skuad
+                                @endif
+                            </h4>
                             <p class="text-xs text-slate-500 dark:text-slate-400">Pastikan data yang Anda input sudah valid sebelum mengirimkan.</p>
                         </div>
                     </div>
@@ -258,21 +284,35 @@
                         
                         <!-- Nama Tim -->
                         <div class="space-y-2">
-                            <label for="team_name" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nama Tim (Squad)</label>
+                            <label for="team_name" class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                                    Nama Tim / Solo Nickname
+                                @elseif($tournament->type === 'battle_royale' && $tournament->team_mode === 'duo')
+                                    Nama Tim (Duo)
+                                @else
+                                    Nama Tim (Squad)
+                                @endif
+                            </label>
                             <input type="text" id="team_name" name="team_name" placeholder="Contoh: RZK Gaming Team" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200" required>
                         </div>
 
-                        <!-- Grid Player (4 Baris) -->
+                        <!-- Grid Player -->
                         <div class="space-y-6">
-                            <!-- Player 1 (Kapten) -->
+                            <!-- Player 1 (Kapten / Solo) -->
                             <div class="p-4 bg-slate-50 dark:bg-slate-950/25 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl space-y-3">
                                 <div class="flex items-center justify-between border-b border-slate-200/40 dark:border-slate-800/40 pb-2">
-                                    <span class="text-xs font-black text-orange-500 uppercase tracking-wider">Player 1: Kapten Skuad</span>
+                                    <span class="text-xs font-black text-orange-500 uppercase tracking-wider">
+                                        @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                                            Data Pemain (Solo)
+                                        @else
+                                            Player 1: Kapten Skuad
+                                        @endif
+                                    </span>
                                     <span class="text-[10px] text-slate-400 font-bold bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">Akun Anda</span>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div class="space-y-1 sm:col-span-1">
-                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Akun Website</span>
+                                        <span class="text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Akun Website</span>
                                         <p class="text-xs font-extrabold text-slate-700 dark:text-slate-300 py-2.5 truncate">{{ Auth::user()->getWebsiteId() }}</p>
                                     </div>
                                     <div class="space-y-1">
@@ -286,11 +326,11 @@
                                 </div>
                             </div>
 
-                            <!-- Players 2, 3, 4 -->
-                            @for($i = 2; $i <= 4; $i++)
+                            <!-- Players 2 to $memberCount + 1 -->
+                            @for($i = 2; $i <= $memberCount + 1; $i++)
                                 <div class="p-4 bg-slate-50/50 dark:bg-slate-950/10 border border-slate-200/30 dark:border-slate-800/30 rounded-2xl space-y-3">
                                     <div class="flex items-center justify-between border-b border-slate-200/40 dark:border-slate-800/40 pb-2">
-                                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Player {{ $i }}: Anggota Skuad</span>
+                                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Player {{ $i }}: Anggota Tim</span>
                                         <span class="text-[10px] text-red-500 font-bold uppercase tracking-wider">Wajib Akun Web</span>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -350,9 +390,13 @@
                                 <span class="text-sm font-extrabold text-slate-800 dark:text-slate-200">{{ $userRegistration->team_name }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-slate-500 uppercase">Peran Anda:</span>
+                                <span class="text-xs font-bold text-slate-550 uppercase">Peran Anda:</span>
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                    {{ $isCaptain ? '🛡️ Kapten Skuad' : '👤 Anggota Skuad' }}
+                                    @if($tournament->type === 'battle_royale' && $tournament->team_mode === 'solo')
+                                        👤 Peserta Solo
+                                    @else
+                                        {{ $isCaptain ? '🛡️ Kapten Tim' : '👤 Anggota Tim' }}
+                                    @endif
                                 </span>
                             </div>
                             <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-850">

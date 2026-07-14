@@ -253,7 +253,11 @@
                                         </p>
                                     </td>
                                     <td class="p-4 text-slate-500 uppercase font-semibold text-xs">
-                                        {{ $t->type === 'clash_squad' ? 'Clash Squad 4v4' : 'Battle Royale' }}
+                                        @if($t->type === 'clash_squad')
+                                            Clash Squad 4v4
+                                        @else
+                                            Battle Royale ({{ ucfirst($t->team_mode ?? 'squad') }})
+                                        @endif
                                     </td>
                                     <td class="p-4 text-center font-bold text-slate-700 dark:text-slate-300">
                                         {{ $t->registration_fee > 0 ? 'Rp ' . number_format($t->registration_fee, 0, ',', '.') : 'Gratis' }}
@@ -328,6 +332,15 @@
                         </select>
                     </div>
 
+                    <div class="space-y-1.5" id="team-mode-container" style="display: none;">
+                        <label for="team_mode" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Mode Battle Royale</label>
+                        <select id="team_mode" name="team_mode" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm font-semibold transition-all duration-200">
+                            <option value="solo">Solo (48 Peserta)</option>
+                            <option value="duo">Duo (24 Tim)</option>
+                            <option value="squad" selected>Squad (12 Tim)</option>
+                        </select>
+                    </div>
+
                     <div class="space-y-1.5">
                         <label for="status" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Status Awal</label>
                         <select id="status" name="status" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm font-semibold transition-all duration-200" required>
@@ -347,9 +360,8 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="max_slots" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Batasan Slot Tim (Opsional)</label>
+                        <label for="max_slots" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Batasan Slot Tim</label>
                         <select id="max_slots" name="max_slots" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm font-semibold transition-all duration-200">
-                            <option value="">Tanpa Batasan</option>
                             <option value="8">8 Tim</option>
                             <option value="16">16 Tim</option>
                             <option value="32">32 Tim</option>
@@ -378,4 +390,58 @@
 
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const typeSelect = document.getElementById('type');
+    const teamModeContainer = document.getElementById('team-mode-container');
+    const teamModeSelect = document.getElementById('team_mode');
+    const maxSlotsSelect = document.getElementById('max_slots');
+
+    function updateFormState() {
+        const type = typeSelect.value;
+        if (type === 'battle_royale') {
+            teamModeContainer.style.display = 'block';
+            teamModeSelect.removeAttribute('disabled');
+            
+            const brMode = teamModeSelect.value;
+            let slotsText = "";
+            let slotsValue = "";
+            if (brMode === 'solo') {
+                slotsText = "48 Peserta (Solo)";
+                slotsValue = "48";
+            } else if (brMode === 'duo') {
+                slotsText = "24 Tim (Duo)";
+                slotsValue = "24";
+            } else if (brMode === 'squad') {
+                slotsText = "12 Tim (Squad)";
+                slotsValue = "12";
+            }
+            
+            maxSlotsSelect.innerHTML = `<option value="${slotsValue}" selected>${slotsText}</option>`;
+        } else {
+            teamModeContainer.style.display = 'none';
+            teamModeSelect.setAttribute('disabled', 'disabled');
+            
+            maxSlotsSelect.innerHTML = `
+                <option value="8" selected>8 Tim</option>
+                <option value="16">16 Tim</option>
+                <option value="32">32 Tim</option>
+            `;
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', updateFormState);
+    }
+    if (teamModeSelect) {
+        teamModeSelect.addEventListener('change', updateFormState);
+    }
+    
+    // Inisialisasi awal
+    if (typeSelect) {
+        updateFormState();
+    }
+});
+</script>
 @endsection

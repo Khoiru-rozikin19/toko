@@ -69,7 +69,11 @@
                                                 </span>
                                             @endif
                                             <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                                                {{ $t->type === 'clash_squad' ? 'Clash Squad 4v4' : 'Battle Royale' }}
+                                                @if($t->type === 'clash_squad')
+                                                    Clash Squad 4v4
+                                                @else
+                                                    Battle Royale ({{ ucfirst($t->team_mode ?? 'squad') }})
+                                                @endif
                                             </span>
                                         </div>
                                         <h4 class="font-extrabold text-slate-800 dark:text-slate-100 text-lg group-hover:text-orange-500 transition duration-200">
@@ -91,7 +95,7 @@
                                                 <span class="hidden sm:inline text-slate-300 dark:text-slate-800">•</span>
                                                 <span class="flex items-center space-x-1">
                                                     <span>📦 Slot:</span>
-                                                    <span class="text-slate-700 dark:text-slate-300 font-bold">Max {{ $t->max_slots }} Tim</span>
+                                                    <span class="text-slate-700 dark:text-slate-300 font-bold">Max {{ $t->max_slots }} {{ ($t->type === 'battle_royale' && $t->team_mode === 'solo') ? 'Peserta' : 'Tim' }}</span>
                                                 </span>
                                             @endif
                                         </div>
@@ -130,7 +134,11 @@
                                             Selesai
                                         </span>
                                         <span class="text-[10px] font-semibold text-slate-400">
-                                            {{ $t->type === 'clash_squad' ? 'Clash Squad 4v4' : 'Battle Royale' }}
+                                            @if($t->type === 'clash_squad')
+                                                Clash Squad 4v4
+                                            @else
+                                                Battle Royale ({{ ucfirst($t->team_mode ?? 'squad') }})
+                                            @endif
                                         </span>
                                     </div>
                                     <h4 class="font-bold text-slate-800 dark:text-slate-200 text-sm">

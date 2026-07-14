@@ -13,6 +13,7 @@ class Tournament extends Model
         'name',
         'description',
         'type', // clash_squad, battle_royale
+        'team_mode', // solo, duo, squad
         'status', // draft, registration, ongoing, completed
         'registration_fee',
         'prize_pool',

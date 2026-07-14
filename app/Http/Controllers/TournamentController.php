@@ -84,16 +84,35 @@ class TournamentController extends Controller
             return back()->withErrors(['message' => 'Pendaftaran untuk turnamen ini sudah ditutup.']);
         }
 
+        $type = $tournament->type;
+        $teamMode = $tournament->team_mode;
+        
+        $expectedPlayerCount = 4; // default squad
+        if ($type === 'battle_royale') {
+            if ($teamMode === 'solo') {
+                $expectedPlayerCount = 1;
+            } elseif ($teamMode === 'duo') {
+                $expectedPlayerCount = 2;
+            }
+        }
+        
+        $expectedMembersCount = $expectedPlayerCount - 1;
+
         // Validate basic inputs
-        $request->validate([
+        $rules = [
             'team_name' => 'required|string|max:255',
-            'player_nickname' => 'required|array|size:4',
+            'player_nickname' => 'required|array|size:' . $expectedPlayerCount,
             'player_nickname.*' => 'required|string|max:255',
-            'player_game_id' => 'required|array|size:4',
+            'player_game_id' => 'required|array|size:' . $expectedPlayerCount,
             'player_game_id.*' => 'required|string|max:255',
-            'player_website_id' => 'required|array|size:3',
-            'player_website_id.*' => 'required|string|max:255',
-        ]);
+        ];
+
+        if ($expectedMembersCount > 0) {
+            $rules['player_website_id'] = 'required|array|size:' . $expectedMembersCount;
+            $rules['player_website_id.*'] = 'required|string|max:255';
+        }
+
+        $request->validate($rules);
 
         $user = auth()->user();
 
@@ -127,10 +146,9 @@ class TournamentController extends Controller
             return back()->withErrors(['message' => 'Pendaftaran gagal. Slot turnamen sudah penuh!']);
         }
 
-        // 4. Validate and Find Website Users for Player 2, 3, 4
+        // 4. Validate and Find Website Users for Player 2, 3, etc.
         $memberUsers = [];
-        // Map player index to request array index
-        for ($i = 0; $i < 3; $i++) {
+        for ($i = 0; $i < $expectedMembersCount; $i++) {
             $playerNum = $i + 2;
             $identifier = trim($request->player_website_id[$i]);
 
@@ -222,8 +240,8 @@ class TournamentController extends Controller
                     'role' => 'captain',
                 ]);
 
-                // Players 2-4
-                for ($i = 0; $i < 3; $i++) {
+                // Players 2 and onwards
+                for ($i = 0; $i < $expectedMembersCount; $i++) {
                     $playerNum = $i + 2;
                     $memberUser = $memberUsers[$playerNum];
 
