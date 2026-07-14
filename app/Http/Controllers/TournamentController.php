@@ -192,7 +192,7 @@ class TournamentController extends Controller
 
         // 5. Balance transaction (wrap inside DB transaction for safety)
         try {
-            $registration = DB::transaction(function() use ($tournament, $request, $user, $memberUsers, $teamName) {
+            $registration = DB::transaction(function() use ($tournament, $request, $user, $memberUsers, $teamName, $expectedMembersCount) {
                 $fee = (float) $tournament->registration_fee;
                 
                 if ($fee > 0) {
