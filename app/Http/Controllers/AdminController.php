@@ -1268,7 +1268,7 @@ class AdminController extends Controller
                 $maxSlots = 12;
             }
         } else {
-            if (!in_array((int)$maxSlots, [8, 16, 32])) {
+            if (!in_array((int)$maxSlots, [2, 4, 8, 16, 32])) {
                 $maxSlots = 8; // fallback default
             }
         }
