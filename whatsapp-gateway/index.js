@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
 const express = require('express');
 const cors = require('cors');
 const pino = require('pino');
@@ -19,10 +19,16 @@ const authPath = path.join(__dirname, 'auth_info');
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState(authPath);
     
+    // Ambil versi whatsapp web terbaru untuk mencegah error 405
+    const { version } = await fetchLatestBaileysVersion().catch(() => ({
+        version: [2, 3000, 1017551065] // Fallback version
+    }));
+
     sock = makeWASocket({
+        version,
         auth: state,
-        printQRInTerminal: true,
         logger: pino({ level: 'silent' }),
+        browser: Browsers.ubuntu('Chrome'),
     });
     
     sock.ev.on('connection.update', async (update) => {
