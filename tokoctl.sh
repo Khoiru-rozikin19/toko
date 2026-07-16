@@ -225,9 +225,10 @@ show_dashboard() {
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
     echo -e "    [9] 📊  Kelola Riwayat Transaksi"
     echo -e "    [10] ❌  Uninstall Website (Hapus Total Website)"
+    echo -e "    [11] 🌐  Ganti Domain"
     echo -e "    [0] 🚪  Keluar dari Panel"
     print_border
-    echo -n "Pilih menu [0-10]: "
+    echo -n "Pilih menu [0-11]: "
 }
 
 # =====================================================================
@@ -2661,6 +2662,196 @@ manage_saldo() {
     done
 }
 
+change_domain() {
+    clear
+    print_border
+    echo -e "      ${BOLD}${GREEN}🌐   GANTI DOMAIN WEBSITE   🌐${NC}"
+    print_border
+
+    # 1. Dapatkan domain saat ini dari .env
+    local old_domain=""
+    if [ -f ".env" ]; then
+        old_domain=$(grep "^APP_URL=" .env | cut -d'=' -f2- | sed -E 's|https?://||' | sed 's|/$||' | tr -d '\r')
+    fi
+
+    if [ -n "$old_domain" ]; then
+        echo -e "  Domain saat ini: ${CYAN}$old_domain${NC}"
+    else
+        echo -e "  ${YELLOW}Domain saat ini tidak terdeteksi di .env.${NC}"
+    fi
+
+    # 2. Input domain baru
+    echo ""
+    echo -n "  Masukkan domain baru (contoh: domainbaru.com): "
+    read -r new_domain
+    new_domain=$(echo "$new_domain" | xargs) # trim spaces
+
+    # Hapus http:// atau https:// jika pengguna menyertakannya
+    new_domain=$(echo "$new_domain" | sed -E 's|https?://||' | sed 's|/$||' | tr -d '\r')
+
+    if [ -z "$new_domain" ]; then
+        print_error "Domain baru tidak boleh kosong!"
+        return 1
+    fi
+
+    if [ "$new_domain" = "$old_domain" ]; then
+        print_warning "Domain baru sama dengan domain saat ini."
+        return 1
+    fi
+
+    echo ""
+    echo -e "  Website akan dipindahkan ke domain baru:"
+    echo -e "  Dari : ${YELLOW}$old_domain${NC}"
+    echo -e "  Ke   : ${GREEN}$new_domain${NC}"
+    echo ""
+    echo -ne "  ${YELLOW}Apakah Anda yakin ingin melanjutkan? (y/n): ${NC}"
+    read -r konfirmasi
+    if [[ ! "$konfirmasi" =~ ^[Yy]$ ]]; then
+        print_info "Proses ganti domain dibatalkan."
+        return 1
+    fi
+
+    # 3. Perbarui APP_URL di file .env
+    print_info "Mengubah APP_URL di .env menjadi https://$new_domain..."
+    if grep -q "^APP_URL=" .env; then
+        sed -i "s|^APP_URL=.*|APP_URL=https://$new_domain|g" .env
+    else
+        echo "APP_URL=https://$new_domain" >> .env
+    fi
+
+    # 4. Bersihkan cache Laravel agar konfigurasi baru dimuat
+    print_info "Membersihkan cache Laravel..."
+    php artisan config:clear 2>/dev/null || true
+    php artisan route:clear 2>/dev/null || true
+    php artisan view:clear 2>/dev/null || true
+    php artisan cache:clear 2>/dev/null || true
+
+    # 5. Konfigurasi Nginx & SSL (jika Nginx terpasang di sistem)
+    if command -v nginx &>/dev/null; then
+        # Hapus Nginx server block lama jika old_domain valid dan bukan localhost
+        if [ -n "$old_domain" ] && [ "$old_domain" != "localhost" ] && [ "$old_domain" != "127.0.0.1" ]; then
+            print_info "Menghapus konfigurasi Nginx lama untuk domain: $old_domain..."
+            rm -f "/etc/nginx/sites-enabled/$old_domain"
+            rm -f "/etc/nginx/sites-available/$old_domain"
+            
+            # Hapus SSL Certbot lama jika terpasang
+            if command -v certbot &>/dev/null; then
+                print_info "Menghapus sertifikat SSL Certbot lama untuk domain: $old_domain..."
+                certbot delete --cert-name "$old_domain" --non-interactive 2>/dev/null || true
+                rm -rf "/etc/letsencrypt/live/$old_domain" "/etc/letsencrypt/archive/$old_domain" "/etc/letsencrypt/renewal/$old_domain.conf" 2>/dev/null || true
+            fi
+        fi
+
+        # Deteksi PHP service & socket path
+        detect_php_service
+        local php_ver=$(echo "$php_service" | grep -oE '[0-9]+\.[0-9]+')
+        local php_socket="/var/run/php/php${php_ver}-fpm.sock"
+        if [ ! -S "$php_socket" ]; then
+            # Cari file socket php fpm apa saja di /var/run/php/
+            local found_socket=$(find /var/run/php/ -name "php*-fpm.sock" 2>/dev/null | head -n 1)
+            if [ -n "$found_socket" ]; then
+                php_socket="$found_socket"
+            else
+                php_socket="/var/run/php/php8.3-fpm.sock"
+            fi
+        fi
+
+        # Buat virtual host Nginx baru (port 80)
+        print_info "Membuat konfigurasi Nginx baru di /etc/nginx/sites-available/$new_domain..."
+        local NGINX_CONF="/etc/nginx/sites-available/$new_domain"
+        cat <<EOT > "$NGINX_CONF"
+server {
+    listen 80;
+    server_name $new_domain;
+    root $PROJECT_DIR/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:$php_socket;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_hide_header X-Powered-By;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOT
+
+        # Aktifkan server block baru
+        ln -sf "$NGINX_CONF" "/etc/nginx/sites-enabled/"
+
+        # Test dan Reload Nginx agar port 80 aktif untuk validasi Certbot
+        print_info "Memeriksa dan memuat ulang Nginx..."
+        if nginx -t &>/dev/null; then
+            systemctl restart nginx 2>/dev/null || service nginx restart || true
+        else
+            print_error "Konfigurasi Nginx baru tidak valid! Berikut detail kesalahannya:"
+            nginx -t
+        fi
+
+        # 6. Pembuatan Sertifikat SSL Certbot
+        if command -v certbot &>/dev/null; then
+            print_info "Memasang sertifikat SSL Certbot untuk domain: $new_domain..."
+            if certbot --nginx -d "$new_domain" --non-interactive --agree-tos -m "admin@$new_domain" --redirect; then
+                print_success "Sertifikat SSL Certbot berhasil dipasang untuk $new_domain."
+            else
+                print_warning "Certbot gagal membuat sertifikat SSL otomatis."
+                print_info "Pastikan domain '$new_domain' sudah mengarah ke IP VPS ini (A Record)."
+                print_info "Anda bisa mencoba membuat SSL secara manual nanti dengan perintah:"
+                print_info "  certbot --nginx -d $new_domain"
+            fi
+        else
+            print_warning "Certbot tidak terpasang. Lewati pembuatan SSL otomatis."
+        fi
+
+        # Atur perizinan traversal folder
+        print_info "Mengatur perizinan folder..."
+        local dir_path="$PROJECT_DIR"
+        while [ "$dir_path" != "/" ] && [ -n "$dir_path" ]; do
+            chmod +x "$dir_path" 2>/dev/null || true
+            dir_path=$(dirname "$dir_path")
+        done
+
+        # Muat ulang php-fpm & Nginx
+        print_info "Memuat ulang layanan PHP ($php_service) & Web Server (Nginx)..."
+        systemctl restart "$php_service" 2>/dev/null || service "$php_service" restart || true
+        systemctl restart nginx 2>/dev/null || service nginx restart || true
+    else
+        print_warning "Layanan Nginx tidak ditemukan pada sistem ini. Setup web server dilewati."
+    fi
+
+    # 7. Restart PM2 Queue Worker
+    if command -v pm2 &>/dev/null; then
+        print_info "Merestart PM2 Queue Worker..."
+        pm2 restart vpn-queue-worker || pm2 start "php artisan queue:work --tries=3" --name vpn-queue-worker --cwd "$PROJECT_DIR"
+        pm2 save
+    fi
+
+    print_border
+    print_success "Domain berhasil diganti dengan sukses!"
+    echo -e "Website sekarang dapat diakses secara langsung di alamat domain baru:"
+    echo -e "🔗  ${BOLD}${GREEN}https://$new_domain${NC}"
+    print_border
+}
+
+
 # =====================================================================
 #  INISIALISASI & LOOP MENU UTAMA
 # =====================================================================
@@ -2706,12 +2897,15 @@ while true; do
         10)
             uninstall_website
             ;;
+        11)
+            change_domain
+            ;;
         0)
             print_info "Keluar dari panel pengelola VPS. Sampai jumpa!"
             exit 0
             ;;
         *)
-            print_warning "Pilihan tidak valid. Silakan pilih menu [0-10]."
+            print_warning "Pilihan tidak valid. Silakan pilih menu [0-11]."
             ;;
     esac
     
