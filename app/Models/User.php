@@ -99,18 +99,46 @@ class User extends Authenticatable
 
     /**
      * Get unique website ID for profile and registration.
+     * Returns a unique, obfuscated 8-digit string.
      */
     public function getWebsiteId()
     {
-        return 'RZK-' . str_pad($this->id, 5, '0', STR_PAD_LEFT);
+        $m = 100000000;
+        $p = 38249873;
+        $c = 12345678;
+        
+        $encoded = ($this->id * $p + $c) % $m;
+        return str_pad($encoded, 8, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Find user by website ID format (e.g. RZK-00012).
+     * Find user by website ID format (obfuscated 8-digit number).
      */
     public static function findByWebsiteId($websiteId)
     {
-        $cleanId = (int) str_replace('RZK-', '', $websiteId);
-        return self::find($cleanId);
+        // Hapus prefix RZK- jika pengguna secara tidak sengaja memasukkannya
+        $clean = str_replace('RZK-', '', $websiteId);
+        $clean = trim($clean);
+
+        if (!preg_match('/^\d{8}$/', $clean)) {
+            // Fallback jika berupa ID database biasa (untuk kompatibilitas cadangan)
+            if (is_numeric($clean)) {
+                return self::find((int) $clean);
+            }
+            return null;
+        }
+
+        $m = 100000000;
+        $inv = 54253937;
+        $c = 12345678;
+
+        $val = intval($clean, 10);
+        $val = $val - $c;
+        
+        // Tangani modulo negatif di PHP
+        $val = ($val % $m + $m) % $m;
+        
+        $userId = ($val * $inv) % $m;
+        return self::find($userId);
     }
 }

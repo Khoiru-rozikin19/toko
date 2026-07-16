@@ -304,7 +304,7 @@
                             </div>
                             <ul class="list-disc pl-4 space-y-1 text-slate-550 dark:text-slate-400 font-medium">
                                 <li>Pendaftaran diproses menggunakan saldo akun Anda (Kapten).</li>
-                                <li>Anggota tim wajib memiliki Akun RZK Store. Masukkan <strong>ID Akun Website</strong> mereka (misal: <code>RZK-00024</code>) yang dapat diperoleh di halaman Profil masing-masing anggota.</li>
+                                <li>Anggota tim wajib memiliki Akun RZK Store. Masukkan <strong>ID Akun Website</strong> mereka (misal: <code>50595551</code>) yang dapat diperoleh di halaman Profil masing-masing anggota.</li>
                                 <li>Tindakan curang berupa manipulasi ID Game atau multi-akun dapat didiskualifikasi secara permanen tanpa pengembalian biaya pendaftaran.</li>
                             </ul>
                         </div>
@@ -377,7 +377,7 @@
                                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                                 <div>
                                                     <label class="block text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1">ID Akun RZK Anggota</label>
-                                                    <input type="text" name="player_website_id[]" placeholder="Contoh: RZK-00024" class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
+                                                    <input type="text" name="player_website_id[]" placeholder="Contoh: 50595551" class="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-orange-500 focus:outline-none rounded-xl text-xs" required>
                                                 </div>
                                                 <div>
                                                     <label class="block text-[10px] font-bold text-slate-450 dark:text-slate-400 uppercase tracking-wider mb-1">Nickname Free Fire</label>
