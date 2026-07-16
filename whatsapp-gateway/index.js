@@ -23,12 +23,11 @@ async function connectToWhatsApp() {
     const { version } = await fetchLatestBaileysVersion().catch(() => ({
         version: [2, 3000, 1017551065] // Fallback version
     }));
-
     sock = makeWASocket({
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.ubuntu('Chrome'),
+        browser: Browsers.macOS('Desktop'),
     });
     
     sock.ev.on('connection.update', async (update) => {
