@@ -362,7 +362,9 @@
                     <div class="space-y-1.5">
                         <label for="max_slots" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Batasan Slot Tim</label>
                         <select id="max_slots" name="max_slots" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm font-semibold transition-all duration-200">
-                            <option value="8">8 Tim</option>
+                            <option value="2">2 Tim</option>
+                            <option value="4">4 Tim</option>
+                            <option value="8" selected>8 Tim</option>
                             <option value="16">16 Tim</option>
                             <option value="32">32 Tim</option>
                         </select>
@@ -424,6 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
             teamModeSelect.setAttribute('disabled', 'disabled');
             
             maxSlotsSelect.innerHTML = `
+                <option value="2">2 Tim</option>
+                <option value="4">4 Tim</option>
                 <option value="8" selected>8 Tim</option>
                 <option value="16">16 Tim</option>
                 <option value="32">32 Tim</option>
