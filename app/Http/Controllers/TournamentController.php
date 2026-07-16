@@ -16,11 +16,17 @@ class TournamentController extends Controller
     {
         // 1. Get active tournaments (status: registration, ongoing)
         $activeTournaments = Tournament::whereIn('status', ['registration', 'ongoing'])
+            ->withCount(['registrations as approved_registrations_count' => function ($q) {
+                $q->where('status', 'approved');
+            }])
             ->orderBy('start_date', 'asc')
             ->get();
 
         // 2. Get past tournaments (status: completed)
         $pastTournaments = Tournament::where('status', 'completed')
+            ->withCount(['registrations as approved_registrations_count' => function ($q) {
+                $q->where('status', 'approved');
+            }])
             ->orderBy('updated_at', 'desc')
             ->limit(5)
             ->get();
