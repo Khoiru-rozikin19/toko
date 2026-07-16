@@ -619,7 +619,7 @@ akun_list_users() {
     user_data=$(execute_tinker "
         try {
             foreach(\App\Models\User::all() as \$u) {
-                echo \$u->id . '|' . \$u->name . '|' . \$u->email . '|' . (\$u->phone ?? '-') . '|' . \$u->role . '|' . (\$u->is_verified ? 'Verified' : 'Unverified') . PHP_EOL;
+                echo \$u->id . '|' . \$u->getWebsiteId() . '|' . \$u->name . '|' . \$u->email . '|' . (\$u->phone ?? '-') . '|' . \$u->role . '|' . (\$u->is_verified ? 'Verified' : 'Unverified') . PHP_EOL;
             }
         } catch (\Exception \$e) {
             echo 'ERROR: ' . \$e->getMessage();
@@ -632,10 +632,10 @@ akun_list_users() {
         return 1
     fi
 
-    printf "${BOLD}${CYAN} %-3s | %-18s | %-28s | %-12s | %-8s | %-10s${NC}\n" "ID" "Nama" "Email" "Telepon" "Role" "Status"
+    printf "${BOLD}${CYAN} %-3s | %-8s | %-18s | %-28s | %-12s | %-8s | %-10s${NC}\n" "ID" "ID Web" "Nama" "Email" "Telepon" "Role" "Status"
     garis
 
-    echo "$user_data" | while IFS='|' read -r id name email phone role status; do
+    echo "$user_data" | while IFS='|' read -r id web_id name email phone role status; do
         if [ -n "$id" ]; then
             local role_color="$WHITE"
             if [ "$role" = "admin" ]; then
@@ -649,8 +649,8 @@ akun_list_users() {
                 status_color="$GREEN"
             fi
 
-            printf " %-3s | %-18s | %-28s | %-12s | ${role_color}%-8s${NC} | ${status_color}%-10s${NC}\n" \
-                "$id" "${name:0:18}" "${email:0:28}" "${phone:0:12}" "$role" "$status"
+            printf " %-3s | %-8s | %-18s | %-28s | %-12s | ${role_color}%-8s${NC} | ${status_color}%-10s${NC}\n" \
+                "$id" "$web_id" "${name:0:18}" "${email:0:28}" "${phone:0:12}" "$role" "$status"
         fi
     done
     garis
