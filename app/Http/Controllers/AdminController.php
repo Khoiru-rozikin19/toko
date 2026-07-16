@@ -1289,8 +1289,67 @@ class AdminController extends Controller
     }
 
     /**
-     * Update the status of a tournament.
+     * Show WhatsApp Bot management panel.
      */
+    public function whatsappPanel(Request $request)
+    {
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $conn = $whatsappService->getConnectionStatus();
+
+        return view('admin.whatsapp', [
+            'status' => $conn['status'],
+            'qr' => $conn['qr'],
+            'online' => $conn['online'],
+            'apiUrl' => $whatsappService->getApiUrl(),
+            'botEnabled' => \App\Models\Setting::get('whatsapp_bot_enabled', '0'),
+            'otpEnabled' => \App\Models\Setting::get('whatsapp_bot_otp_enabled', '0'),
+            'groupId' => \App\Models\Setting::get('whatsapp_bot_group_id', ''),
+        ]);
+    }
+
+    /**
+     * Update WhatsApp Bot settings.
+     */
+    public function updateWhatsappSettings(Request $request)
+    {
+        $request->validate([
+            'whatsapp_bot_enabled' => 'required|in:0,1',
+            'whatsapp_bot_otp_enabled' => 'required|in:0,1',
+            'whatsapp_bot_group_id' => 'nullable|string|max:255',
+            'whatsapp_bot_api_url' => 'required|url|max:255',
+        ]);
+
+        \App\Models\Setting::set('whatsapp_bot_enabled', $request->whatsapp_bot_enabled);
+        \App\Models\Setting::set('whatsapp_bot_otp_enabled', $request->whatsapp_bot_otp_enabled);
+        \App\Models\Setting::set('whatsapp_bot_group_id', $request->whatsapp_bot_group_id);
+        \App\Models\Setting::set('whatsapp_bot_api_url', $request->whatsapp_bot_api_url);
+
+        return redirect()->back()->with('success', 'Konfigurasi WhatsApp Bot berhasil disimpan!');
+    }
+
+    /**
+     * Disconnect/logout the WhatsApp gateway.
+     */
+    public function whatsappDisconnect(Request $request)
+    {
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        $success = $whatsappService->disconnect();
+
+        if ($success) {
+            return redirect()->back()->with('success', 'Sesi bot WhatsApp berhasil diputuskan!');
+        }
+        return redirect()->back()->with('error', 'Gagal memutuskan sesi bot WhatsApp atau gateway offline.');
+    }
+
+    /**
+     * Get connection status for AJAX polling.
+     */
+    public function whatsappStatusAjax()
+    {
+        $whatsappService = app(\App\Services\WhatsappService::class);
+        return response()->json($whatsappService->getConnectionStatus());
+    }
+
     /**
      * Update the status of a tournament.
      */
@@ -1392,6 +1451,39 @@ class AdminController extends Controller
                 }
             }
         });
+
+        // Broadcast status update to WhatsApp Group
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            if ($whatsappService->isEnabled()) {
+                $statusMessage = "";
+                $typeStr = $tournament->type === 'clash_squad' ? 'Clash Squad' : 'Battle Royale';
+                if ($tournament->status === 'registration') {
+                    $statusMessage = "📢 *TURNAMEN BARU DIBUKA!* 📢\n\n"
+                                   . "🏆 *Nama Event:* {$tournament->name}\n"
+                                   . "🎮 *Mode Game:* {$typeStr}\n"
+                                   . "💰 *Biaya Pendaftaran:* " . ($tournament->registration_fee > 0 ? 'Rp ' . number_format($tournament->registration_fee, 0, ',', '.') : 'GRATIS') . "\n"
+                                   . "🎁 *Prize Pool:* {$tournament->prize_pool}\n"
+                                   . "📅 *Jadwal Tanding:* " . ($tournament->start_date ? date('d-m-Y H:i', strtotime($tournament->start_date)) : 'Segera Diumumkan') . "\n\n"
+                                   . "Ayo daftarkan skuad terbaikmu sekarang di website RZK Store!";
+                } elseif ($tournament->status === 'ongoing') {
+                    $statusMessage = "🎮 *TURNAMEN SEDANG BERJALAN!* 🎮\n\n"
+                                   . "🏆 *Nama Event:* {$tournament->name}\n"
+                                   . "Status turnamen saat ini telah berganti menjadi *SEDANG BERJALAN*.\n"
+                                   . "Pantau bagan dan jadwal pertandingan langsung di halaman Turnamen website RZK Store!";
+                } elseif ($tournament->status === 'completed') {
+                    $statusMessage = "🏆 *TURNAMEN SELESAI!* 🏆\n\n"
+                                   . "Event turnamen *{$tournament->name}* telah selesai diselenggarakan.\n"
+                                   . "Terima kasih kepada seluruh skuad yang telah berpartisipasi. Sampai jumpa di event RZK Store berikutnya!";
+                }
+                
+                if (!empty($statusMessage)) {
+                    $whatsappService->sendGroupMessage($statusMessage);
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp group status update: " . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Status turnamen berhasil diperbarui!');
     }
@@ -1516,6 +1608,43 @@ class AdminController extends Controller
             }
         });
 
+        // Broadcast match update to WhatsApp Group
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            if ($whatsappService->isEnabled()) {
+                $t1Name = $match->team1 ? $match->team1->team_name : 'BYE';
+                $t2Name = $match->team2 ? $match->team2->team_name : 'BYE';
+                $winnerName = ($winnerId === $match->team1_id) ? $t1Name : $t2Name;
+                
+                $message = "🎮 *HASIL PERTANDINGAN* 🎮\n\n"
+                         . "🏆 *Turnamen:* {$match->tournament->name}\n"
+                         . "⚔️ *Match:* {$t1Name} vs {$t2Name}\n"
+                         . "🏁 *Skor:* {$request->team1_score} - {$request->team2_score}\n"
+                         . "🎉 *Pemenang:* Skuad *{$winnerName}* lolos ke babak berikutnya!";
+                         
+                // Jika ini adalah pertandingan final
+                $nextRound = $match->round_number + 1;
+                $nextMatchNumber = (int) ceil($match->match_number / 2);
+                $nextMatchExists = \App\Models\TournamentMatch::where('tournament_id', $match->tournament_id)
+                    ->where('round_number', $nextRound)
+                    ->where('match_number', $nextMatchNumber)
+                    ->exists();
+                    
+                if (!$nextMatchExists) {
+                    $runnerUpName = ($winnerId === $match->team1_id) ? $t2Name : $t1Name;
+                    $message = "🏆 *FINAL TURNAMEN SELESAI* 🏆\n\n"
+                             . "Event turnamen *{$match->tournament->name}* telah resmi berakhir!\n"
+                             . "🥇 *Juara 1:* Skuad *{$winnerName}*\n"
+                             . "🥈 *Juara 2:* Skuad *{$runnerUpName}*\n\n"
+                             . "Selamat kepada para pemenang! Poin leaderboard global telah dibagikan.";
+                }
+
+                $whatsappService->sendGroupMessage($message);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp match score update: " . $e->getMessage());
+        }
+
         return redirect()->back()->with('success', 'Skor berhasil diperbarui dan pemenang telah lolos!');
     }
 
@@ -1531,6 +1660,29 @@ class AdminController extends Controller
         }
 
         $registration->update(['status' => 'approved']);
+
+        // Send WhatsApp notifications
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            if ($whatsappService->isEnabled()) {
+                $captain = $registration->captain;
+                $tournament = $registration->tournament;
+                
+                // Notification to Captain
+                $captainMessage = "✅ *PENDAFTARAN DISETUJUI*\n\n"
+                                . "Halo {$captain->name},\n"
+                                . "Pendaftaran Skuad *{$registration->team_name}* Anda untuk turnamen *{$tournament->name}* telah *DISETUJUI* oleh Admin RZK Store.\n"
+                                . "Silakan pantau bagan tanding di halaman detail turnamen.";
+                $whatsappService->sendGenericMessage($captain->phone, $captainMessage);
+
+                // Broadcast to Group
+                $groupMessage = "🏆 *INFO PENDAFTARAN TURNAMEN* 🏆\n\n"
+                              . "Skuad *{$registration->team_name}* (Kapten: {$captain->name}) telah resmi terdaftar dalam turnamen *{$tournament->name}*!";
+                $whatsappService->sendGroupMessage($groupMessage);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp registration approval notifications: " . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Pendaftaran tim "' . $registration->team_name . '" disetujui!');
     }
@@ -1587,6 +1739,24 @@ class AdminController extends Controller
                 ]);
             }
         });
+
+        // Send WhatsApp notification to Captain
+        try {
+            $whatsappService = app(\App\Services\WhatsappService::class);
+            if ($whatsappService->isEnabled()) {
+                $captain = $registration->captain;
+                $tournament = $registration->tournament;
+                
+                $captainMessage = "❌ *PENDAFTARAN DITOLAK*\n\n"
+                                . "Halo {$captain->name},\n"
+                                . "Pendaftaran Skuad *{$registration->team_name}* Anda untuk turnamen *{$tournament->name}* telah *DITOLAK* oleh Admin.\n"
+                                . "⚠️ *Alasan:* \"{$request->rejection_reason}\"\n\n"
+                                . "Biaya pendaftaran sebesar Rp " . number_format($fee, 0, ',', '.') . " telah dikembalikan sepenuhnya ke saldo akun Anda. Silakan perbaiki kesalahan pendaftaran dan ajukan ulang.";
+                $whatsappService->sendGenericMessage($captain->phone, $captainMessage);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp registration rejection notification: " . $e->getMessage());
+        }
 
         return redirect()->back()->with('success', 'Pendaftaran tim "' . $registration->team_name . '" ditolak. Biaya saldo telah di-refund otomatis.');
     }

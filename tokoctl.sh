@@ -220,7 +220,7 @@ show_dashboard() {
     echo -e "    [3] ⚡  Cek Status Layanan & Sistem"
     echo -e "    [4] 📊  Pantau Aktivitas Pengunjung (Access Log)"
     echo -e "    [5] 📂  Backup & Restore Website (Files & DB)"
-    echo -e "    [6] 🤖  Menu Bot"
+    echo -e "    [6] 🤖  Menu Bot (Telegram & WA)"
     echo -e "    [7] 🐞  Lihat Log Kesalahan (Error Log)"
     echo -e "    [8] 💰  Manajemen Saldo User (DUID)"
     echo -e "    [9] 📊  Kelola Riwayat Transaksi"
@@ -1704,19 +1704,24 @@ setting_bot_token_admin() {
     fi
 }
 
-configure_telegram() {
+configure_bot() {
     while true; do
         clear
         echo
         echo -e "${BOLD}${CYAN}=====================================================================${NC}"
-        echo -e "                            🤖  MENU BOT  🤖"
+        echo -e "                            🤖  MENU BOT (TELEGRAM & WHATSAPP)  🤖"
         echo -e "${BOLD}${CYAN}=====================================================================${NC}"
-        echo -e "  [1] ⚙️   Setting Bot Token & ID Telegram Admin"
-        echo -e "  [2] 🧹  Clear Cache Konfigurasi (config:clear & optimize:clear)"
-        echo -e "  [3] ⚡  Tes Koneksi Bot (telegram:test)"
+        echo -e "  ${BOLD}${WHITE}[TELEGRAM BOT]${NC}"
+        echo -e "    [1] ⚙️   Setting Bot Token & ID Telegram Admin"
+        echo -e "    [2] 🧹  Clear Cache Konfigurasi Telegram"
+        echo -e "    [3] ⚡  Tes Koneksi Bot Telegram"
+        echo -e "  ${BOLD}${WHITE}[WHATSAPP BOT - BAILEYS]${NC}"
+        echo -e "    [4] 🟢  Start/Restart WhatsApp Bot (PM2)"
+        echo -e "    [5] 🔴  Stop WhatsApp Bot (PM2)"
+        echo -e "    [6] 📊  Lihat Log WhatsApp Bot (PM2 Logs)"
         echo -e "  [0] 🚪  Kembali ke Menu Utama"
         echo -e "${BOLD}${CYAN}=====================================================================${NC}"
-        read -p "Pilih opsi [0-3]: " bot_pilihan
+        read -p "Pilih opsi [0-6]: " bot_pilihan
         echo
 
         case "$bot_pilihan" in
@@ -1733,11 +1738,41 @@ configure_telegram() {
                 print_info "Menguji koneksi bot Telegram..."
                 php artisan telegram:test
                 ;;
+            4)
+                if ! command -v pm2 &>/dev/null; then
+                    print_error "PM2 tidak terpasang di VPS! Tidak dapat menjalankan bot di background."
+                else
+                    print_info "Menjalankan WhatsApp Bot di PM2..."
+                    pm2 delete wa-gateway &>/dev/null || true
+                    pm2 start index.js --name "wa-gateway" --cwd "$PROJECT_DIR/whatsapp-gateway"
+                    pm2 save
+                    print_success "WhatsApp Bot berhasil dijalankan di background!"
+                fi
+                ;;
+            5)
+                if ! command -v pm2 &>/dev/null; then
+                    print_error "PM2 tidak terpasang di VPS!"
+                else
+                    print_info "Menghentikan WhatsApp Bot di PM2..."
+                    pm2 stop wa-gateway &>/dev/null || true
+                    pm2 delete wa-gateway &>/dev/null || true
+                    pm2 save --force &>/dev/null || true
+                    print_success "WhatsApp Bot berhasil dihentikan!"
+                fi
+                ;;
+            6)
+                if ! command -v pm2 &>/dev/null; then
+                    print_error "PM2 tidak terpasang!"
+                else
+                    print_info "Menampilkan 20 baris log terakhir (Tekan Ctrl+C untuk keluar):"
+                    pm2 logs wa-gateway --lines 20 --no-daemon
+                fi
+                ;;
             0|"")
                 break
                 ;;
             *)
-                print_warning "Pilihan tidak valid. Silakan pilih 0-3."
+                print_warning "Pilihan tidak valid. Silakan pilih 0-6."
                 ;;
         esac
         echo
@@ -2883,7 +2918,7 @@ while true; do
             manage_backup_restore
             ;;
         6)
-            configure_telegram
+            configure_bot
             ;;
         7)
             view_error_log

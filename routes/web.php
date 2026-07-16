@@ -22,6 +22,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
+    
+    // WhatsApp OTP Routes
+    Route::get('/verify-otp', [AuthController::class, 'showVerifyOtp'])->name('verify_otp');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('resend_otp');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
@@ -85,6 +90,12 @@ Route::middleware(['auth', 'role:seller,admin'])->prefix('admin')->name('admin.'
         Route::get('/orderkuota-balance', [AdminController::class, 'orderkuotaBalance'])->name('orderkuota_balance');
         Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
         Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+        
+        // WhatsApp Bot Panel
+        Route::get('/whatsapp', [AdminController::class, 'whatsappPanel'])->name('whatsapp');
+        Route::post('/whatsapp/settings', [AdminController::class, 'updateWhatsappSettings'])->name('whatsapp.settings');
+        Route::post('/whatsapp/disconnect', [AdminController::class, 'whatsappDisconnect'])->name('whatsapp.disconnect');
+        Route::get('/whatsapp/status-ajax', [AdminController::class, 'whatsappStatusAjax'])->name('whatsapp.status_ajax');
         Route::get('/supplier-settings', [AdminController::class, 'supplierSettings'])->name('supplier_settings');
         Route::post('/supplier-settings', [AdminController::class, 'updateSupplierSettings'])->name('supplier_settings.update');
         Route::post('/products/sync-okeconnect', [AdminController::class, 'syncOkeconnectProducts'])->name('products.sync_okeconnect');
