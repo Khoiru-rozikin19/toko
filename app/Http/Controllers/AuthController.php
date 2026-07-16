@@ -101,6 +101,17 @@ class AuthController extends Controller
             $phone = '62' . substr($phone, 1);
         }
 
+        // Cek apakah nomor telepon sudah terdaftar
+        $existingUser = User::where('phone', $phone)->first();
+        if ($existingUser) {
+            if ($existingUser->is_verified) {
+                return back()->withErrors(['phone' => 'Nomor WhatsApp ini sudah terdaftar dan aktif. Silakan gunakan nomor lain atau masuk ke akun Anda.'])->withInput();
+            } else {
+                // Hapus user yang belum terverifikasi agar bisa didaftarkan ulang dengan data baru
+                $existingUser->delete();
+            }
+        }
+
         // IP Protection: Batasi maksimal 5 pendaftaran per IP per jam
         $ipKey = 'register-ip:' . $request->ip();
         if (RateLimiter::tooManyAttempts($ipKey, 5)) {
