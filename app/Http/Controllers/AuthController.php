@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
@@ -100,6 +101,31 @@ class AuthController extends Controller
             $phone = '62' . substr($phone, 1);
         }
 
+        // IP Protection: Batasi maksimal 5 pendaftaran per IP per jam
+        $ipKey = 'register-ip:' . $request->ip();
+        if (RateLimiter::tooManyAttempts($ipKey, 5)) {
+            $seconds = RateLimiter::availableIn($ipKey);
+            return back()->withErrors(['email' => 'Terlalu banyak pendaftaran dari IP ini. Coba lagi dalam ' . ceil($seconds / 60) . ' menit.'])->withInput();
+        }
+
+        // WhatsApp OTP Flow
+        $whatsappService = app(WhatsappService::class);
+        if ($whatsappService->isOtpEnabled()) {
+            $phoneKey = 'otp-phone:' . $phone;
+            $cooldownKey = 'otp-cooldown:' . $phone;
+
+            if (RateLimiter::tooManyAttempts($phoneKey, 3)) {
+                $seconds = RateLimiter::availableIn($phoneKey);
+                return back()->withErrors(['phone' => 'Nomor ini telah meminta OTP 3 kali. Silakan coba lagi dalam ' . ceil($seconds / 60) . ' menit.'])->withInput();
+            }
+
+            // Catat hit sebelum membuat user (mencegah spam pendaftaran cepat)
+            RateLimiter::hit($phoneKey, 3600); // Batas 3 kali dalam 1 jam
+            RateLimiter::hit($cooldownKey, 120); // Jeda 2 menit
+        }
+
+        RateLimiter::hit($ipKey, 3600); // Catat hit untuk IP
+
         $user = User::create([
             'name' => $request->name,
             'phone' => $phone,
@@ -117,8 +143,6 @@ class AuthController extends Controller
             Log::error("Failed to send Telegram user registration notification: " . $e->getMessage());
         }
 
-        // WhatsApp OTP Flow
-        $whatsappService = app(WhatsappService::class);
         if ($whatsappService->isOtpEnabled()) {
             $otp = (string) rand(100000, 999999);
             $user->update([
@@ -126,7 +150,18 @@ class AuthController extends Controller
                 'whatsapp_otp_expires_at' => now()->addMinutes(5)
             ]);
             
-            $whatsappService->sendOtp($user->phone, $otp);
+            try {
+                $whatsappService->sendOtp($user->phone, $otp);
+            } catch (\Exception $e) {
+                // Hapus user yang baru dibuat karena nomor WA tidak valid/aktif
+                $user->delete();
+                // Reset limiter agar tidak langsung terblokir jika salah input nomor
+                if (isset($phoneKey) && isset($cooldownKey)) {
+                    RateLimiter::clear($phoneKey);
+                    RateLimiter::clear($cooldownKey);
+                }
+                return back()->withErrors(['phone' => $e->getMessage()])->withInput();
+            }
             
             session(['verify_user_id' => $user->id]);
             return redirect()->route('verify_otp')->with('success', 'Pendaftaran berhasil! Kode OTP verifikasi telah dikirimkan ke nomor WhatsApp Anda.');
@@ -198,14 +233,38 @@ class AuthController extends Controller
             return redirect()->route('login');
         }
 
+        $phone = $user->phone;
+        $phoneKey = 'otp-phone:' . $phone;
+        $cooldownKey = 'otp-cooldown:' . $phone;
+
+        // Cek jika diblokir 1 jam (lebih dari 3 kali meminta)
+        if (RateLimiter::tooManyAttempts($phoneKey, 3)) {
+            $seconds = RateLimiter::availableIn($phoneKey);
+            return back()->withErrors(['otp' => 'Anda telah meminta OTP 3 kali. Silakan coba lagi dalam ' . ceil($seconds / 60) . ' menit.']);
+        }
+
+        // Cek jeda kirim ulang (cooldown 2 menit)
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $seconds = RateLimiter::availableIn($cooldownKey);
+            return back()->withErrors(['otp' => 'Tunggu ' . $seconds . ' detik sebelum meminta kode OTP kembali.']);
+        }
+
+        // Catat pengiriman OTP baru
+        RateLimiter::hit($phoneKey, 3600); // Batas 3 kali dalam 1 jam
+        RateLimiter::hit($cooldownKey, 120); // Jeda 2 menit
+
         $otp = (string) rand(100000, 999999);
         $user->update([
             'whatsapp_otp' => $otp,
             'whatsapp_otp_expires_at' => now()->addMinutes(5)
         ]);
 
-        $whatsappService = app(WhatsappService::class);
-        $whatsappService->sendOtp($user->phone, $otp);
+        try {
+            $whatsappService = app(WhatsappService::class);
+            $whatsappService->sendOtp($user->phone, $otp);
+        } catch (\Exception $e) {
+            return back()->withErrors(['otp' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Kode OTP baru telah dikirimkan ke WhatsApp Anda.');
     }

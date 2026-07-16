@@ -61,6 +61,9 @@ class WhatsappService
 
             if ($response->failed()) {
                 Log::error("WhatsappService sendGenericMessage Failed: " . $response->body());
+                if ($response->status() === 400 && str_contains($response->body(), 'tidak terdaftar')) {
+                    throw new \Exception("Nomor WhatsApp tidak terdaftar atau tidak aktif.");
+                }
                 return false;
             }
 
@@ -101,14 +104,22 @@ class WhatsappService
         }
     }
 
-    /**
-     * Helper to send OTP to user
-     */
     public function sendOtp($phone, $otpCode): bool
     {
-        $message = "🔐 *KODE OTP RZK STORE*\n\n"
-                 . "Kode OTP verifikasi akun Anda adalah: *{$otpCode}*\n"
-                 . "Berlaku selama 5 menit. Jangan bagikan kode ini kepada siapa pun demi keamanan akun Anda.";
+        $templates = [
+            "🔐 *KODE OTP RZK STORE*\n\nKode OTP verifikasi akun Anda adalah: *{$otpCode}*\nBerlaku selama 5 menit. Jangan bagikan kode ini kepada siapa pun demi keamanan akun Anda.",
+            "🛡️ *VERIFIKASI RZK STORE*\n\nMasukkan kode keamanan *{$otpCode}* pada halaman verifikasi website untuk mengaktifkan akun Anda. Kode ini kedaluwarsa dalam 5 menit.",
+            "🔑 *KODE KEAMANAN RZK STORE*\n\nBerikut adalah kode OTP Anda: *{$otpCode}*.\nSegera masukkan kode ini untuk melanjutkan proses registrasi. Tetap jaga kerahasiaan kode Anda.",
+            "🌟 *AKTIVASI AKUN RZK STORE*\n\nTerima kasih telah mendaftar! Kode verifikasi Anda adalah: *{$otpCode}*.\nJangan berikan kode ini kepada petugas atau pihak lain."
+        ];
+
+        // Pilih template secara acak
+        $template = $templates[array_rand($templates)];
+
+        // Tambahkan pengenal unik (reference code & timestamp) di bagian bawah agar setiap pesan unik bagi server WhatsApp
+        $refCode = strtoupper(substr(md5(uniqid()), 0, 4));
+        $timestamp = date('H:i:s');
+        $message = "{$template}\n\n_Ref: [{$refCode}] • Waktu: {$timestamp}_";
                  
         return $this->sendGenericMessage($phone, $message);
     }
