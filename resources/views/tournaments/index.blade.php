@@ -353,7 +353,4 @@ document.addEventListener('DOMContentLoaded', function() {
     switchTab(savedTab);
 });
 </script>
-@endsectionhTab(savedTab);
-});
-</script>
 @endsection
