@@ -893,11 +893,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <div id="matchDetailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <!-- Backdrop -->
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 transition-opacity bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs" onclick="closeMatchDetailModal()"></div>
+        <div class="fixed inset-0 transition-opacity bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm" onclick="closeMatchDetailModal()"></div>
 
         <!-- Modal Box -->
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full rounded-3xl p-6 sm:p-8 space-y-6">
+        <div class="relative z-10 inline-block align-bottom bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full rounded-3xl p-6 sm:p-8 space-y-6">
             
             <!-- Header -->
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-850 pb-4">
