@@ -1377,18 +1377,19 @@ class AdminController extends Controller
                     
                     // Kita buat bracket jika tim mencukupi (minimal 2 tim)
                     if ($teamCount >= 2) {
-                        // Tentukan power of 2 yang sesuai (misal: 2, 4, 8, 16, 32)
-                        $pow = 2;
-                        while ($pow < $teamCount) {
-                            $pow *= 2;
+                        // Tentukan size bracket berdasarkan max_slots
+                        $pow = (int) ($tournament->max_slots ?? 2);
+                        if ($pow < 2) {
+                            $pow = 2;
                         }
-                        
-                        // Shuffle approved teams to make seeding random and fair
-                        $teams = $approvedTeams->shuffle()->values();
+
+                        // Urutkan tim berdasarkan ID pendaftaran (urutan persetujuan) agar tetap konsisten
+                        $teams = $approvedTeams->sortBy('id')->values();
 
                         $totalRounds = log($pow, 2);
                         $matchesInRound1 = $pow / 2;
-                        
+                        $half = $pow / 2;
+
                         // Buat semua matches untuk setiap ronde
                         for ($round = 1; $round <= $totalRounds; $round++) {
                             // Jumlah pertandingan di ronde ini
@@ -1400,12 +1401,36 @@ class AdminController extends Controller
 
                                 // Hanya isi tim di Ronde 1
                                 if ($round === 1) {
-                                    $idx1 = $matchNum - 1;
+                                    // Tentukan nomor slot (1-indexed) untuk team 1 dan team 2 di match ini
+                                    if ($matchNum % 2 !== 0) {
+                                        // Match ganjil: Sisi Kiri (Slot 2m-1 vs Slot 2m+1)
+                                        $slot1 = 2 * $matchNum - 1;
+                                        $slot2 = 2 * $matchNum + 1;
+                                    } else {
+                                        // Match genap: Sisi Kanan (Slot 2m-2 vs Slot 2m)
+                                        $slot1 = 2 * $matchNum - 2;
+                                        $slot2 = 2 * $matchNum;
+                                    }
+
+                                    // Map slot ke indeks tim berdasarkan aturan ganjil-genap
+                                    // Sisi kanan (genap) terisi dulu, lalu sisi kiri (ganjil)
+                                    
+                                    // Team 1
+                                    if ($slot1 % 2 === 0) {
+                                        $idx1 = ($slot1 / 2) - 1;
+                                    } else {
+                                        $idx1 = $half + (($slot1 - 1) / 2);
+                                    }
                                     if (isset($teams[$idx1])) {
                                         $team1Id = $teams[$idx1]->id;
                                     }
-                                    
-                                    $idx2 = $matchesInRound1 + $matchNum - 1;
+
+                                    // Team 2
+                                    if ($slot2 % 2 === 0) {
+                                        $idx2 = ($slot2 / 2) - 1;
+                                    } else {
+                                        $idx2 = $half + (($slot2 - 1) / 2);
+                                    }
                                     if (isset($teams[$idx2])) {
                                         $team2Id = $teams[$idx2]->id;
                                     }

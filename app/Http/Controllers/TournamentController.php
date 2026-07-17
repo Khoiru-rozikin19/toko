@@ -57,6 +57,7 @@ class TournamentController extends Controller
         // Get approved registrations (teams)
         $approvedTeams = $tournament->registrations()
             ->where('status', 'approved')
+            ->orderBy('id', 'asc')
             ->with(['captain', 'participants.user'])
             ->get();
 
