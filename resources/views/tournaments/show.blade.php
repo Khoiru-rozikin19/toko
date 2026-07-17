@@ -178,16 +178,16 @@
                         $teamsBySlot = [];
                         foreach ($approvedTeams as $idx => $team) {
                             if ($idx < $half) {
-                                // Sisi kanan terisi dulu (slot > half)
+                                // Sisi kanan/bawah terisi dulu
                                 $slotNum = $half + 1 + $idx;
                             } else {
-                                // Sisi kiri terisi setelahnya (slot <= half)
+                                // Sisi kiri/atas terisi setelahnya
                                 $slotNum = 1 + ($idx - $half);
                             }
                             $teamsBySlot[$slotNum] = $team;
                         }
 
-                        // Index database matches if they exist
+                        // Index database matches
                         $dbMatches = [];
                         if (isset($matches) && !$matches->isEmpty()) {
                             foreach ($matches as $m) {
@@ -200,7 +200,6 @@
                         for ($round = 1; $round <= $totalRounds; $round++) {
                             $matchesCount = $maxSlots / pow(2, $round);
                             for ($matchNum = 1; $matchNum <= $matchesCount; $matchNum++) {
-                                // Check if we have database match
                                 if (isset($dbMatches[$round][$matchNum])) {
                                     $m = $dbMatches[$round][$matchNum];
                                     $team1 = $m->team1;
@@ -209,14 +208,15 @@
                                     $team2Score = $m->team2_score;
                                     $winnerId = $m->winner_id;
                                     $status = $m->status;
+                                    $id = $m->id;
                                 } else {
-                                    // Mock match for registration phase
                                     $team1 = null;
                                     $team2 = null;
                                     $team1Score = null;
                                     $team2Score = null;
                                     $winnerId = null;
                                     $status = 'pending';
+                                    $id = null;
 
                                     if ($round === 1) {
                                         $slot1 = 2 * $matchNum - 1;
@@ -227,6 +227,7 @@
                                 }
 
                                 $bracketStructure[$round][$matchNum] = [
+                                    'id' => $id,
                                     'team1' => $team1,
                                     'team2' => $team2,
                                     'team1_score' => $team1Score,
@@ -239,40 +240,60 @@
                                 ];
                             }
                         }
+
+                        // Fetch third place match
+                        $thirdPlaceMatch = isset($dbMatches[99][1]) ? $dbMatches[99][1] : null;
+
+                        // Dynamic round names
+                        $roundNames = [];
+                        for ($round = 1; $round <= $totalRounds; $round++) {
+                            $matchesInRound = $maxSlots / pow(2, $round);
+                            if ($matchesInRound == 8) {
+                                $roundNames[$round] = '16 Besar';
+                            } elseif ($matchesInRound == 4) {
+                                $roundNames[$round] = 'Perempat Final';
+                            } elseif ($matchesInRound == 2) {
+                                $roundNames[$round] = 'Semifinal';
+                            } elseif ($matchesInRound == 1) {
+                                $roundNames[$round] = 'Final';
+                            } else {
+                                $roundNames[$round] = 'Ronde ' . $round;
+                            }
+                        }
+
+                        // Helper to get premium circular colored avatars
+                        $getAvatar = function($team) {
+                            if (!$team) {
+                                return '<div class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-bold flex items-center justify-center text-slate-400 border border-slate-200/10">?</div>';
+                            }
+                            $name = $team->team_name;
+                            $initial = strtoupper(substr($name, 0, 1));
+                            $colors = ['bg-rose-500', 'bg-sky-500', 'bg-emerald-500', 'bg-amber-500', 'bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-orange-500'];
+                            $colorIndex = crc32($name) % count($colors);
+                            $color = $colors[$colorIndex];
+                            return '<div class="w-5 h-5 rounded-full ' . $color . ' text-white text-[10px] font-black flex items-center justify-center shadow-xs border border-white/10">' . $initial . '</div>';
+                        };
                     @endphp
 
-                    <!-- Styles for Double-Sided Bracket -->
+                    <!-- Styles for Single-Sided Left-to-Right Bracket -->
                     <style>
                         .bracket-scroll-container {
                             overflow-x: auto;
                             padding: 1rem 0;
+                            display: flex;
+                            flex-direction: column;
                         }
                         .bracket-wrapper {
                             display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            gap: 2rem;
-                            min-width: 900px;
-                            padding: 1.5rem;
+                            gap: 2.5rem;
+                            padding: 1rem 0.5rem;
+                            min-width: max-content;
                         }
                         .bracket-column {
                             display: flex;
                             flex-direction: column;
-                            justify-content: space-around;
-                            height: 520px;
-                            width: 14rem;
-                            flex-shrink: 0;
-                            position: relative;
-                        }
-                        .bracket-column-final {
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: center;
-                            height: 520px;
                             width: 15rem;
                             flex-shrink: 0;
-                            gap: 2.5rem;
                         }
                         .bracket-match-card {
                             background-color: #ffffff;
@@ -281,7 +302,7 @@
                             padding: 0.85rem;
                             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
                             position: relative;
-                            transition: all 0.2s ease;
+                            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         .dark .bracket-match-card {
                             background-color: #0f172a;
@@ -289,7 +310,7 @@
                         }
                         .bracket-match-card:hover {
                             transform: translateY(-2px);
-                            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                            box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.08);
                         }
                     </style>
 
@@ -306,159 +327,162 @@
                         </div>
 
                         <div class="bracket-scroll-container no-scrollbar">
-                            <div class="bracket-wrapper">
-                                @if($totalRounds > 1)
-                                    <!-- ================== WING KIRI (First Half of Matches) ================== -->
-                                    @for($r = 1; $r < $totalRounds; $r++)
-                                        @php $roundMatchesCount = $maxSlots / pow(2, $r); @endphp
-                                        <div class="bracket-column">
-                                            <div class="text-center absolute top-0 left-0 right-0">
-                                                <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200/10">
-                                                    @if($r === 1) Babak Awal @else Ronde {{ $r }} @endif
-                                                </span>
-                                            </div>
+                            <div class="bracket-wrapper" style="height: 620px;">
+                                @for($r = 1; $r <= $totalRounds; $r++)
+                                    <div class="bracket-column h-full">
+                                        <!-- Column Header -->
+                                        <div class="text-center pb-3 border-b border-slate-100 dark:border-slate-800/60 mb-2">
+                                            <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200/10">
+                                                {{ $roundNames[$r] }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Column Matches -->
+                                        <div class="flex-1 flex flex-col justify-around py-4">
                                             @foreach($bracketStructure[$r] as $matchNum => $match)
-                                                @if($matchNum <= $roundMatchesCount / 2)
-                                                    <!-- Match Box -->
-                                                    <div class="bracket-match-card space-y-2">
-                                                        <!-- Team 1 -->
-                                                        <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                                <span>🛡️</span>
-                                                                <span class="truncate" title="{{ $match['team1'] ? $match['team1']->team_name : '' }}">
-                                                                    {{ $match['team1'] ? $match['team1']->team_name : ($match['slot1_num'] ? 'Slot ' . $match['slot1_num'] : 'TBD') }}
-                                                                </span>
-                                                            </div>
+                                                <div class="bracket-match-card space-y-2">
+                                                    <!-- Top Metadata -->
+                                                    <div class="flex items-center justify-between text-[9px] text-slate-400 dark:text-slate-500 font-bold px-0.5">
+                                                        <span>Match {{ $matchNum }}</span>
+                                                        @if($match['status'] === 'completed')
+                                                            <span class="bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-extrabold border border-slate-200/10">FT</span>
+                                                        @else
+                                                            <span class="text-orange-500 font-extrabold uppercase tracking-wider text-[8px]">Scheduled</span>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- Team 1 -->
+                                                    <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
+                                                        <div class="flex items-center space-x-2 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-slate-900 dark:text-slate-100 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }}">
+                                                            {!! $getAvatar($match['team1']) !!}
+                                                            <span class="truncate" title="{{ $match['team1'] ? $match['team1']->team_name : '' }}">
+                                                                {{ $match['team1'] ? $match['team1']->team_name : ($match['slot1_num'] ? 'Slot ' . $match['slot1_num'] : 'TBD') }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="flex items-center space-x-1.5 flex-shrink-0">
                                                             @if($match['status'] === 'completed' && $match['team1_score'] !== null)
-                                                                <span class="font-black {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
+                                                                <span class="font-black text-slate-850 dark:text-slate-200 {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' }}">
                                                                     {{ $match['team1_score'] }}
                                                                 </span>
                                                             @endif
-                                                        </div>
-
-                                                        <div class="border-t border-slate-100 dark:border-slate-850/60"></div>
-
-                                                        <!-- Team 2 -->
-                                                        <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                                <span>🛡️</span>
-                                                                <span class="truncate" title="{{ $match['team2'] ? $match['team2']->team_name : '' }}">
-                                                                    {{ $match['team2'] ? $match['team2']->team_name : ($match['slot2_num'] ? 'Slot ' . $match['slot2_num'] : 'TBD') }}
-                                                                </span>
-                                                            </div>
-                                                            @if($match['status'] === 'completed' && $match['team2_score'] !== null)
-                                                                <span class="font-black {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
-                                                                    {{ $match['team2_score'] }}
-                                                                </span>
+                                                            @if($match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null))
+                                                                <span class="text-[8px] text-slate-950 dark:text-slate-50">◀</span>
                                                             @endif
                                                         </div>
                                                     </div>
-                                                @endif
+
+                                                    <div class="border-t border-slate-100 dark:border-slate-850/60"></div>
+
+                                                    <!-- Team 2 -->
+                                                    <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
+                                                        <div class="flex items-center space-x-2 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-slate-900 dark:text-slate-100 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }}">
+                                                            {!! $getAvatar($match['team2']) !!}
+                                                            <span class="truncate" title="{{ $match['team2'] ? $match['team2']->team_name : '' }}">
+                                                                {{ $match['team2'] ? $match['team2']->team_name : ($match['slot2_num'] ? 'Slot ' . $match['slot2_num'] : 'TBD') }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                                            @if($match['status'] === 'completed' && $match['team2_score'] !== null)
+                                                                <span class="font-black text-slate-850 dark:text-slate-200 {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' }}">
+                                                                    {{ $match['team2_score'] }}
+                                                                </span>
+                                                            @endif
+                                                            @if($match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null))
+                                                                <span class="text-[8px] text-slate-950 dark:text-slate-50">◀</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             @endforeach
                                         </div>
-                                    @endfor
-                                @endif
-
-                                <!-- ================== CENTER (Final Match) ================== -->
-                                <div class="bracket-column-final">
-                                    <div class="text-center flex flex-col items-center">
-                                        <div class="w-14 h-14 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center shadow-md shadow-amber-500/5 mb-1.5 border border-amber-550/10">
-                                            <span class="text-2xl animate-pulse">🏆</span>
-                                        </div>
-                                        <span class="text-[9px] font-black uppercase tracking-widest text-amber-500">Perebutan Juara</span>
                                     </div>
+                                @endfor
+                            </div>
+                        </div>
 
+                        <!-- ================== THIRD PLACE PLAYOFF (Tempat Ketiga) ================== -->
+                        @if($maxSlots >= 4)
+                            <div class="border-t border-slate-100 dark:border-slate-800/80 pt-6 mt-6">
+                                <div class="max-w-[15rem]">
+                                    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3 px-1">
+                                        🥉 Tempat Ketiga
+                                    </div>
                                     @php
-                                        $finalMatch = $bracketStructure[$totalRounds][1];
+                                        $t1 = $thirdPlaceMatch ? $thirdPlaceMatch->team1 : null;
+                                        $t2 = $thirdPlaceMatch ? $thirdPlaceMatch->team2 : null;
+                                        $t1Score = $thirdPlaceMatch ? $thirdPlaceMatch->team1_score : null;
+                                        $t2Score = $thirdPlaceMatch ? $thirdPlaceMatch->team2_score : null;
+                                        $wId = $thirdPlaceMatch ? $thirdPlaceMatch->winner_id : null;
+                                        $tStatus = $thirdPlaceMatch ? $thirdPlaceMatch->status : 'pending';
+                                        
+                                        $mockThirdPlace = [
+                                            'team1' => $t1,
+                                            'team2' => $t2,
+                                            'team1_score' => $t1Score,
+                                            'team2_score' => $t2Score,
+                                            'winner_id' => $wId,
+                                            'status' => $tStatus,
+                                            'slot1_num' => null,
+                                            'slot2_num' => null,
+                                        ];
                                     @endphp
-                                    <div class="bracket-match-card space-y-2 w-full border-2 border-amber-500/30 shadow-md">
+                                    
+                                    <div class="bracket-match-card space-y-2 border-2 border-slate-100 dark:border-slate-800/80 shadow-xs">
+                                        <!-- Top Metadata -->
+                                        <div class="flex items-center justify-between text-[9px] text-slate-400 dark:text-slate-500 font-bold px-0.5">
+                                            <span>Perebutan Juara 3</span>
+                                            @if($mockThirdPlace['status'] === 'completed')
+                                                <span class="bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider font-extrabold border border-slate-200/10">FT</span>
+                                            @else
+                                                <span class="text-orange-500 font-extrabold uppercase tracking-wider text-[8px]">Scheduled</span>
+                                            @endif
+                                        </div>
+
                                         <!-- Team 1 -->
                                         <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $finalMatch['winner_id'] && $finalMatch['winner_id'] === ($finalMatch['team1'] ? $finalMatch['team1']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                <span>🛡️</span>
-                                                <span class="truncate font-bold" title="{{ $finalMatch['team1'] ? $finalMatch['team1']->team_name : '' }}">
-                                                    {{ $finalMatch['team1'] ? $finalMatch['team1']->team_name : ($finalMatch['slot1_num'] ? 'Slot ' . $finalMatch['slot1_num'] : 'TBD') }}
+                                            <div class="flex items-center space-x-2 min-w-0 {{ $mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team1'] ? $mockThirdPlace['team1']->id : null) ? 'text-slate-900 dark:text-slate-100 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }}">
+                                                {!! $getAvatar($mockThirdPlace['team1']) !!}
+                                                <span class="truncate" title="{{ $mockThirdPlace['team1'] ? $mockThirdPlace['team1']->team_name : '' }}">
+                                                    {{ $mockThirdPlace['team1'] ? $mockThirdPlace['team1']->team_name : 'Kalah Semifinal 1' }}
                                                 </span>
                                             </div>
-                                            @if($finalMatch['status'] === 'completed' && $finalMatch['team1_score'] !== null)
-                                                <span class="font-black {{ $finalMatch['winner_id'] && $finalMatch['winner_id'] === ($finalMatch['team1'] ? $finalMatch['team1']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
-                                                    {{ $finalMatch['team1_score'] }}
-                                                </span>
-                                            @endif
+                                            <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                                @if($mockThirdPlace['status'] === 'completed' && $mockThirdPlace['team1_score'] !== null)
+                                                    <span class="font-black text-slate-850 dark:text-slate-200 {{ $mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team1'] ? $mockThirdPlace['team1']->id : null) ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' }}">
+                                                        {{ $mockThirdPlace['team1_score'] }}
+                                                    </span>
+                                                @endif
+                                                @if($mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team1'] ? $mockThirdPlace['team1']->id : null))
+                                                    <span class="text-[8px] text-slate-950 dark:text-slate-50">◀</span>
+                                                @endif
+                                            </div>
                                         </div>
 
                                         <div class="border-t border-slate-100 dark:border-slate-850/60"></div>
 
                                         <!-- Team 2 -->
                                         <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $finalMatch['winner_id'] && $finalMatch['winner_id'] === ($finalMatch['team2'] ? $finalMatch['team2']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                <span>🛡️</span>
-                                                <span class="truncate font-bold" title="{{ $finalMatch['team2'] ? $finalMatch['team2']->team_name : '' }}">
-                                                    {{ $finalMatch['team2'] ? $finalMatch['team2']->team_name : ($finalMatch['slot2_num'] ? 'Slot ' . $finalMatch['slot2_num'] : 'TBD') }}
+                                            <div class="flex items-center space-x-2 min-w-0 {{ $mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team2'] ? $mockThirdPlace['team2']->id : null) ? 'text-slate-900 dark:text-slate-100 font-bold' : 'text-slate-500 dark:text-slate-400 font-medium' }}">
+                                                {!! $getAvatar($mockThirdPlace['team2']) !!}
+                                                <span class="truncate" title="{{ $mockThirdPlace['team2'] ? $mockThirdPlace['team2']->team_name : '' }}">
+                                                    {{ $mockThirdPlace['team2'] ? $mockThirdPlace['team2']->team_name : 'Kalah Semifinal 2' }}
                                                 </span>
                                             </div>
-                                            @if($finalMatch['status'] === 'completed' && $finalMatch['team2_score'] !== null)
-                                                <span class="font-black {{ $finalMatch['winner_id'] && $finalMatch['winner_id'] === ($finalMatch['team2'] ? $finalMatch['team2']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
-                                                    {{ $finalMatch['team2_score'] }}
-                                                </span>
-                                            @endif
+                                            <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                                @if($mockThirdPlace['status'] === 'completed' && $mockThirdPlace['team2_score'] !== null)
+                                                    <span class="font-black text-slate-850 dark:text-slate-200 {{ $mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team2'] ? $mockThirdPlace['team2']->id : null) ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' }}">
+                                                        {{ $mockThirdPlace['team2_score'] }}
+                                                    </span>
+                                                @endif
+                                                @if($mockThirdPlace['winner_id'] && $mockThirdPlace['winner_id'] === ($mockThirdPlace['team2'] ? $mockThirdPlace['team2']->id : null))
+                                                    <span class="text-[8px] text-slate-950 dark:text-slate-50">◀</span>
+                                                @endif
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                @if($totalRounds > 1)
-                                    <!-- ================== WING KANAN (Second Half of Matches) ================== -->
-                                    @for($r = $totalRounds - 1; $r >= 1; $r--)
-                                        @php $roundMatchesCount = $maxSlots / pow(2, $r); @endphp
-                                        <div class="bracket-column">
-                                            <div class="text-center absolute top-0 left-0 right-0">
-                                                <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200/10">
-                                                    @if($r === 1) Babak Awal @else Ronde {{ $r }} @endif
-                                                </span>
-                                            </div>
-                                            @foreach($bracketStructure[$r] as $matchNum => $match)
-                                                @if($matchNum > $roundMatchesCount / 2)
-                                                    <!-- Match Box -->
-                                                    <div class="bracket-match-card space-y-2">
-                                                        <!-- Team 1 -->
-                                                        <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                                <span>🛡️</span>
-                                                                <span class="truncate" title="{{ $match['team1'] ? $match['team1']->team_name : '' }}">
-                                                                    {{ $match['team1'] ? $match['team1']->team_name : ($match['slot1_num'] ? 'Slot ' . $match['slot1_num'] : 'TBD') }}
-                                                                </span>
-                                                            </div>
-                                                            @if($match['status'] === 'completed' && $match['team1_score'] !== null)
-                                                                <span class="font-black {{ $match['winner_id'] && $match['winner_id'] === ($match['team1'] ? $match['team1']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
-                                                                    {{ $match['team1_score'] }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
-
-                                                        <div class="border-t border-slate-100 dark:border-slate-850/60"></div>
-
-                                                        <!-- Team 2 -->
-                                                        <div class="flex items-center justify-between text-xs min-h-[1.5rem]">
-                                                            <div class="flex items-center space-x-1.5 min-w-0 {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-emerald-500 font-extrabold' : 'text-slate-700 dark:text-slate-300' }}">
-                                                                <span>🛡️</span>
-                                                                <span class="truncate" title="{{ $match['team2'] ? $match['team2']->team_name : '' }}">
-                                                                    {{ $match['team2'] ? $match['team2']->team_name : ($match['slot2_num'] ? 'Slot ' . $match['slot2_num'] : 'TBD') }}
-                                                                </span>
-                                                            </div>
-                                                            @if($match['status'] === 'completed' && $match['team2_score'] !== null)
-                                                                <span class="font-black {{ $match['winner_id'] && $match['winner_id'] === ($match['team2'] ? $match['team2']->id : null) ? 'text-emerald-500' : 'text-slate-400' }}">
-                                                                    {{ $match['team2_score'] }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                    @endfor
-                                @endif
                             </div>
-                        </div>
+                        @endif
                     </div>
                 @else
                     <!-- Format Battle Royale -->

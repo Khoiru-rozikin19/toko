@@ -1441,6 +1441,18 @@ class AdminController extends Controller
                             }
                         }
 
+                        // Buat perebutan juara 3 jika slots >= 4
+                        if ($pow >= 4) {
+                            \App\Models\TournamentMatch::create([
+                                'tournament_id' => $tournament->id,
+                                'round_number' => 99,
+                                'match_number' => 1,
+                                'team1_id' => null,
+                                'team2_id' => null,
+                                'status' => 'pending',
+                            ]);
+                        }
+
                         // Jika ada match di ronde 1 yang salah satu timnya null (BYE) karena jumlah tim bukan power of 2, 
                         // kita otomatis loloskan tim yang ada ke ronde berikutnya!
                         $round1Matches = \App\Models\TournamentMatch::where('tournament_id', $tournament->id)
@@ -1512,6 +1524,29 @@ class AdminController extends Controller
      */
     private function advanceWinner($match, $winnerId)
     {
+        $maxSlots = (int) ($match->tournament->max_slots ?? 2);
+        $totalRounds = (int) log($maxSlots, 2);
+
+        // Jika ini adalah babak Semifinal (ronde totalRounds - 1), 
+        // kirim tim yang kalah (loser) ke perebutan juara 3 (Round 99 Match 1)
+        if ($maxSlots >= 4 && $match->round_number === $totalRounds - 1) {
+            $loserId = ($winnerId === $match->team1_id) ? $match->team2_id : $match->team1_id;
+            
+            $thirdPlaceMatch = \App\Models\TournamentMatch::firstOrCreate([
+                'tournament_id' => $match->tournament_id,
+                'round_number' => 99,
+                'match_number' => 1,
+            ], [
+                'status' => 'pending',
+            ]);
+
+            if ($match->match_number === 1) {
+                $thirdPlaceMatch->update(['team1_id' => $loserId]);
+            } else {
+                $thirdPlaceMatch->update(['team2_id' => $loserId]);
+            }
+        }
+
         $nextRound = $match->round_number + 1;
         $nextMatchNumber = (int) ceil($match->match_number / 2);
 
