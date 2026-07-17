@@ -209,6 +209,21 @@
                                     $winnerId = $m->winner_id;
                                     $status = $m->status;
                                     $id = $m->id;
+                                    
+                                    $roomId = $m->room_id;
+                                    $roomPassword = $m->room_password;
+                                    $t1ReportedWinnerId = $m->t1_reported_winner_id;
+                                    $t1Team1Score = $m->t1_team1_score;
+                                    $t1Team2Score = $m->t1_team2_score;
+                                    $t1Screenshot1 = $m->t1_screenshot_1;
+                                    $t1Screenshot2 = $m->t1_screenshot_2;
+                                    $t1Screenshot3 = $m->t1_screenshot_3;
+                                    $t2ReportedWinnerId = $m->t2_reported_winner_id;
+                                    $t2Team1Score = $m->t2_team1_score;
+                                    $t2Team2Score = $m->t2_team2_score;
+                                    $t2Screenshot1 = $m->t2_screenshot_1;
+                                    $t2Screenshot2 = $m->t2_screenshot_2;
+                                    $t2Screenshot3 = $m->t2_screenshot_3;
                                 } else {
                                     $team1 = null;
                                     $team2 = null;
@@ -217,6 +232,21 @@
                                     $winnerId = null;
                                     $status = 'pending';
                                     $id = null;
+                                    
+                                    $roomId = null;
+                                    $roomPassword = null;
+                                    $t1ReportedWinnerId = null;
+                                    $t1Team1Score = null;
+                                    $t1Team2Score = null;
+                                    $t1Screenshot1 = null;
+                                    $t1Screenshot2 = null;
+                                    $t1Screenshot3 = null;
+                                    $t2ReportedWinnerId = null;
+                                    $t2Team1Score = null;
+                                    $t2Team2Score = null;
+                                    $t2Screenshot1 = null;
+                                    $t2Screenshot2 = null;
+                                    $t2Screenshot3 = null;
 
                                     if ($round === 1) {
                                         $slot1 = 2 * $matchNum - 1;
@@ -237,6 +267,20 @@
                                     'match_number' => $matchNum,
                                     'slot1_num' => ($round === 1) ? (2 * $matchNum - 1) : null,
                                     'slot2_num' => ($round === 1) ? (2 * $matchNum) : null,
+                                    'room_id' => $roomId,
+                                    'room_password' => $roomPassword,
+                                    't1_reported_winner_id' => $t1ReportedWinnerId,
+                                    't1_team1_score' => $t1Team1Score,
+                                    't1_team2_score' => $t1Team2Score,
+                                    't1_screenshot_1' => $t1Screenshot1,
+                                    't1_screenshot_2' => $t1Screenshot2,
+                                    't1_screenshot_3' => $t1Screenshot3,
+                                    't2_reported_winner_id' => $t2ReportedWinnerId,
+                                    't2_team1_score' => $t2Team1Score,
+                                    't2_team2_score' => $t2Team2Score,
+                                    't2_screenshot_1' => $t2Screenshot1,
+                                    't2_screenshot_2' => $t2Screenshot2,
+                                    't2_screenshot_3' => $t2Screenshot3,
                                 ];
                             }
                         }
@@ -363,6 +407,18 @@
                                                          data-room-password="{{ $match['room_password'] ?? '' }}"
                                                          data-roster1="{{ json_encode($match['team1'] ? $match['team1']->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
                                                          data-roster2="{{ json_encode($match['team2'] ? $match['team2']->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
+                                                         data-t1-reported-winner-id="{{ $match['t1_reported_winner_id'] ?? '' }}"
+                                                         data-t1-team1-score="{{ $match['t1_team1_score'] ?? '' }}"
+                                                         data-t1-team2-score="{{ $match['t1_team2_score'] ?? '' }}"
+                                                         data-t1-screenshot-1="{{ $match['t1_screenshot_1'] ?? '' }}"
+                                                         data-t1-screenshot-2="{{ $match['t1_screenshot_2'] ?? '' }}"
+                                                         data-t1-screenshot-3="{{ $match['t1_screenshot_3'] ?? '' }}"
+                                                         data-t2-reported-winner-id="{{ $match['t2_reported_winner_id'] ?? '' }}"
+                                                         data-t2-team1-score="{{ $match['t2_team1_score'] ?? '' }}"
+                                                         data-t2-team2-score="{{ $match['t2_team2_score'] ?? '' }}"
+                                                         data-t2-screenshot-1="{{ $match['t2_screenshot_1'] ?? '' }}"
+                                                         data-t2-screenshot-2="{{ $match['t2_screenshot_2'] ?? '' }}"
+                                                         data-t2-screenshot-3="{{ $match['t2_screenshot_3'] ?? '' }}"
                                                      @endif
                                                 >
                                                     <!-- Top Metadata -->
@@ -470,7 +526,19 @@
                                              data-team2-captain-name="{{ $thirdPlaceMatch->team2 && $thirdPlaceMatch->team2->captain ? $thirdPlaceMatch->team2->captain->name : '' }}"
                                              data-team1-captain-id="{{ $thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->captain_id : '' }}"
                                              data-team2-captain-id="{{ $thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->captain_id : '' }}"
-                                             data-room-id="{{ $thirdPlaceMatch->room_id ?? '' }}"
+                                             data-t1-reported-winner-id="{{ $thirdPlaceMatch->t1_reported_winner_id ?? '' }}"
+                                              data-t1-team1-score="{{ $thirdPlaceMatch->t1_team1_score ?? '' }}"
+                                              data-t1-team2-score="{{ $thirdPlaceMatch->t1_team2_score ?? '' }}"
+                                              data-t1-screenshot-1="{{ $thirdPlaceMatch->t1_screenshot_1 ?? '' }}"
+                                              data-t1-screenshot-2="{{ $thirdPlaceMatch->t1_screenshot_2 ?? '' }}"
+                                              data-t1-screenshot-3="{{ $thirdPlaceMatch->t1_screenshot_3 ?? '' }}"
+                                              data-t2-reported-winner-id="{{ $thirdPlaceMatch->t2_reported_winner_id ?? '' }}"
+                                              data-t2-team1-score="{{ $thirdPlaceMatch->t2_team1_score ?? '' }}"
+                                              data-t2-team2-score="{{ $thirdPlaceMatch->t2_team2_score ?? '' }}"
+                                              data-t2-screenshot-1="{{ $thirdPlaceMatch->t2_screenshot_1 ?? '' }}"
+                                              data-t2-screenshot-2="{{ $thirdPlaceMatch->t2_screenshot_2 ?? '' }}"
+                                              data-t2-screenshot-3="{{ $thirdPlaceMatch->t2_screenshot_3 ?? '' }}"
+                                              data-room-id="{{ $thirdPlaceMatch->room_id ?? '' }}"
                                              data-room-password="{{ $thirdPlaceMatch->room_password ?? '' }}"
                                              data-roster1="{{ json_encode($thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
                                              data-roster2="{{ json_encode($thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
@@ -1176,8 +1244,17 @@ function openMatchDetailModal(card) {
         if (isCaptain && status !== 'completed' && team1Id && team2Id) {
             containerReport.style.display = 'block';
             document.getElementById('modalFormReport').action = `/tournaments/matches/${matchId}/report`;
-            document.getElementById('input_score1').value = '';
-            document.getElementById('input_score2').value = '';
+            
+            const isCap1 = (currentUserId && currentUserId == team1CaptainId);
+            const prefix = isCap1 ? 't1' : 't2';
+            
+            const prevWinnerId = card.getAttribute(`data-${prefix}-reported-winner-id`) || '';
+            const prevScore1 = card.getAttribute(`data-${prefix}-team1-score`) || '';
+            const prevScore2 = card.getAttribute(`data-${prefix}-team2-score`) || '';
+            
+            document.getElementById('reported_winner_id').value = prevWinnerId;
+            document.getElementById('input_score1').value = prevScore1;
+            document.getElementById('input_score2').value = prevScore2;
         } else {
             containerReport.style.display = 'none';
         }

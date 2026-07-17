@@ -373,20 +373,25 @@ class TournamentController extends Controller
             mkdir(public_path('uploads/screenshots'), 0777, true);
         }
 
+        // Tentukan prefix kolom (t1_ atau t2_)
+        $prefix = $isCaptain1 ? 't1_' : 't2_';
+
         foreach (['screenshot_1', 'screenshot_2', 'screenshot_3'] as $key) {
             if ($request->hasFile($key)) {
                 $file = $request->file($key);
-                $fileName = 'match_' . $id . '_' . $key . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fileName = 'match_' . $id . '_' . $prefix . $key . '_' . time() . '.' . $file->getClientOriginalExtension();
                 $file->move(public_path('uploads/screenshots'), $fileName);
-                $paths[$key] = '/uploads/screenshots/' . $fileName;
+                $paths[$prefix . $key] = '/uploads/screenshots/' . $fileName;
             }
         }
 
-        $match->update(array_merge([
-            'reported_winner_id' => $request->reported_winner_id,
-            'team1_score' => $request->team1_score,
-            'team2_score' => $request->team2_score,
-        ], $paths));
+        $updateData = [
+            $prefix . 'reported_winner_id' => $request->reported_winner_id,
+            $prefix . 'team1_score' => $request->team1_score,
+            $prefix . 'team2_score' => $request->team2_score,
+        ];
+
+        $match->update(array_merge($updateData, $paths));
 
         // Kirim WhatsApp jika grup terhubung
         $tournament = $match->tournament;
@@ -394,11 +399,11 @@ class TournamentController extends Controller
             try {
                 $team1Name = $match->team1 ? $match->team1->team_name : 'TBD';
                 $team2Name = $match->team2 ? $match->team2->team_name : 'TBD';
-                $reporter = auth()->user()->name;
+                $reporterTeam = $isCaptain1 ? $team1Name : $team2Name;
                 $message = "📢 *LAPORAN HASIL PERTANDINGAN (Match {$match->match_number})*\n\n"
                          . "*Tim*: {$team1Name} vs {$team2Name}\n"
                          . "*Skor Dilaporkan*: {$request->team1_score} - {$request->team2_score}\n"
-                         . "*Dilaporkan oleh*: {$reporter}\n\n"
+                         . "*Dilaporkan oleh*: Kapten {$reporterTeam}\n\n"
                          . "Bukti hasil pertandingan (screenshot Bo3) telah berhasil diunggah ke website. Menunggu persetujuan & verifikasi dari Admin!";
                 
                 $waService = app(\App\Services\WhatsappService::class);

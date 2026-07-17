@@ -195,36 +195,81 @@
                                             </div>
                                         </div>
 
-                                        <!-- Bukti Laporan Hasil Pertandingan (Jika ada) -->
-                                        @if($m->screenshot_1)
-                                            <div class="bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 rounded-2xl p-4 space-y-3 text-left">
-                                                <span class="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block border-b border-amber-200/20 pb-1">📸 Bukti Laporan Hasil (Kapten)</span>
+                                        <!-- Bukti Laporan Hasil Pertandingan (Kubu Tim 1 & Tim 2) -->
+                                        @if($m->t1_screenshot_1 || $m->t2_screenshot_1)
+                                            @php
+                                                $isDispute = false;
+                                                $hasMatch = false;
                                                 
-                                                <div class="text-xs space-y-1">
-                                                    <p class="text-slate-600 dark:text-slate-400">
-                                                        🏆 Klaim Pemenang: <span class="font-extrabold text-slate-850 dark:text-slate-200">{{ $m->reportedWinner ? $m->reportedWinner->team_name : 'N/A' }}</span>
-                                                    </p>
-                                                    <p class="text-slate-600 dark:text-slate-400">
-                                                        📊 Skor Dilaporkan: <span class="font-extrabold text-slate-850 dark:text-slate-200">{{ $m->team1_score }} - {{ $m->team2_score }}</span>
-                                                    </p>
-                                                </div>
+                                                if ($m->t1_screenshot_1 && $m->t2_screenshot_1) {
+                                                    if ($m->t1_reported_winner_id !== $m->t2_reported_winner_id || $m->t1_team1_score !== $m->t2_team1_score || $m->t1_team2_score !== $m->t2_team2_score) {
+                                                        $isDispute = true;
+                                                    } else {
+                                                        $hasMatch = true;
+                                                    }
+                                                }
+                                            @endphp
 
-                                                <div class="flex items-center gap-3 pt-1">
-                                                    @if($m->screenshot_1)
-                                                        <a href="{{ asset($m->screenshot_1) }}" target="_blank" title="Buka gambar 1 di tab baru">
-                                                            <img src="{{ asset($m->screenshot_1) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
-                                                        </a>
-                                                    @endif
-                                                    @if($m->screenshot_2)
-                                                        <a href="{{ asset($m->screenshot_2) }}" target="_blank" title="Buka gambar 2 di tab baru">
-                                                            <img src="{{ asset($m->screenshot_2) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
-                                                        </a>
-                                                    @endif
-                                                    @if($m->screenshot_3)
-                                                        <a href="{{ asset($m->screenshot_3) }}" target="_blank" title="Buka gambar 3 di tab baru">
-                                                            <img src="{{ asset($m->screenshot_3) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
-                                                        </a>
-                                                    @endif
+                                            <div class="border border-slate-100 dark:border-slate-850 rounded-2xl p-4 space-y-4 text-left">
+                                                <!-- Status Alert -->
+                                                @if($isDispute)
+                                                    <div class="bg-red-500/15 border border-red-500/30 text-red-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center justify-center space-x-1.5">
+                                                        <span>⚠️ TERDETEKSI SENGKETA (DISPUTE)! Harap bandingkan bukti screenshot.</span>
+                                                    </div>
+                                                @elseif($hasMatch)
+                                                    <div class="bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center justify-center space-x-1.5">
+                                                        <span>✅ LAPORAN TIM COCOK (Klaim Pemenang & Skor Sama)</span>
+                                                    </div>
+                                                @else
+                                                    <div class="bg-amber-500/15 border border-amber-500/30 text-amber-500 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl flex items-center justify-center space-x-1.5">
+                                                        <span>⏳ Menunggu Laporan Tim Lawan</span>
+                                                    </div>
+                                                @endif
+
+                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <!-- Column Tim 1 -->
+                                                    <div class="space-y-2 p-3 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-850">
+                                                        <span class="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest block border-b border-slate-200/20 pb-1">🛡️ Tim 1: {{ $m->team1 ? $m->team1->team_name : 'TBD' }}</span>
+                                                        @if($m->t1_screenshot_1)
+                                                            <div class="text-xs space-y-0.5">
+                                                                <p class="text-slate-500 dark:text-slate-450">🏆 Klaim: <span class="font-extrabold text-slate-800 dark:text-slate-250">{{ $m->t1ReportedWinner ? $m->t1ReportedWinner->team_name : 'N/A' }}</span></p>
+                                                                <p class="text-slate-500 dark:text-slate-450">📊 Skor: <span class="font-extrabold text-slate-800 dark:text-slate-250">{{ $m->t1_team1_score }} - {{ $m->t1_team2_score }}</span></p>
+                                                            </div>
+                                                            <div class="flex items-center gap-2 pt-1">
+                                                                @foreach(['t1_screenshot_1', 't1_screenshot_2', 't1_screenshot_3'] as $scr)
+                                                                    @if($m->$scr)
+                                                                        <a href="{{ asset($m->$scr) }}" target="_blank" class="block">
+                                                                            <img src="{{ asset($m->$scr) }}" class="w-10 h-10 object-cover rounded-lg border border-slate-250 dark:border-slate-800 hover:scale-105 transition" />
+                                                                        </a>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        @else
+                                                            <p class="text-xs text-slate-400 italic py-2">Belum mengirimkan laporan</p>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- Column Tim 2 -->
+                                                    <div class="space-y-2 p-3 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-100 dark:border-slate-850">
+                                                        <span class="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest block border-b border-slate-200/20 pb-1">🛡️ Tim 2: {{ $m->team2 ? $m->team2->team_name : 'TBD' }}</span>
+                                                        @if($m->t2_screenshot_1)
+                                                            <div class="text-xs space-y-0.5">
+                                                                <p class="text-slate-500 dark:text-slate-450">🏆 Klaim: <span class="font-extrabold text-slate-800 dark:text-slate-250">{{ $m->t2ReportedWinner ? $m->t2ReportedWinner->team_name : 'N/A' }}</span></p>
+                                                                <p class="text-slate-500 dark:text-slate-450">📊 Skor: <span class="font-extrabold text-slate-800 dark:text-slate-250">{{ $m->t2_team1_score }} - {{ $m->t2_team2_score }}</span></p>
+                                                            </div>
+                                                            <div class="flex items-center gap-2 pt-1">
+                                                                @foreach(['t2_screenshot_1', 't2_screenshot_2', 't2_screenshot_3'] as $scr)
+                                                                    @if($m->$scr)
+                                                                        <a href="{{ asset($m->$scr) }}" target="_blank" class="block">
+                                                                            <img src="{{ asset($m->$scr) }}" class="w-10 h-10 object-cover rounded-lg border border-slate-250 dark:border-slate-800 hover:scale-105 transition" />
+                                                                        </a>
+                                                                    @endif
+                                                                @endforeach
+                                                            </div>
+                                                        @else
+                                                            <p class="text-xs text-slate-400 italic py-2">Belum mengirimkan laporan</p>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
                                         @endif

@@ -22,10 +22,18 @@ class TournamentMatch extends Model
         'scheduled_time',
         'room_id',
         'room_password',
-        'reported_winner_id',
-        'screenshot_1',
-        'screenshot_2',
-        'screenshot_3',
+        't1_reported_winner_id',
+        't1_team1_score',
+        't1_team2_score',
+        't1_screenshot_1',
+        't1_screenshot_2',
+        't1_screenshot_3',
+        't2_reported_winner_id',
+        't2_team1_score',
+        't2_team2_score',
+        't2_screenshot_1',
+        't2_screenshot_2',
+        't2_screenshot_3',
     ];
 
     protected $casts = [
@@ -65,10 +73,18 @@ class TournamentMatch extends Model
     }
 
     /**
-     * Get the team reported as winner by the captain.
+     * Get the team reported as winner by Team 1.
      */
-    public function reportedWinner()
+    public function t1ReportedWinner()
     {
-        return $this->belongsTo(TournamentRegistration::class, 'reported_winner_id');
+        return $this->belongsTo(TournamentRegistration::class, 't1_reported_winner_id');
+    }
+
+    /**
+     * Get the team reported as winner by Team 2.
+     */
+    public function t2ReportedWinner()
+    {
+        return $this->belongsTo(TournamentRegistration::class, 't2_reported_winner_id');
     }
 }
