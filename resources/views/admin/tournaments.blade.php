@@ -195,6 +195,40 @@
                                             </div>
                                         </div>
 
+                                        <!-- Bukti Laporan Hasil Pertandingan (Jika ada) -->
+                                        @if($m->screenshot_1)
+                                            <div class="bg-amber-50/20 dark:bg-amber-950/10 border border-amber-100/50 dark:border-amber-900/30 rounded-2xl p-4 space-y-3 text-left">
+                                                <span class="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest block border-b border-amber-200/20 pb-1">📸 Bukti Laporan Hasil (Kapten)</span>
+                                                
+                                                <div class="text-xs space-y-1">
+                                                    <p class="text-slate-600 dark:text-slate-400">
+                                                        🏆 Klaim Pemenang: <span class="font-extrabold text-slate-850 dark:text-slate-200">{{ $m->reportedWinner ? $m->reportedWinner->team_name : 'N/A' }}</span>
+                                                    </p>
+                                                    <p class="text-slate-600 dark:text-slate-400">
+                                                        📊 Skor Dilaporkan: <span class="font-extrabold text-slate-850 dark:text-slate-200">{{ $m->team1_score }} - {{ $m->team2_score }}</span>
+                                                    </p>
+                                                </div>
+
+                                                <div class="flex items-center gap-3 pt-1">
+                                                    @if($m->screenshot_1)
+                                                        <a href="{{ asset($m->screenshot_1) }}" target="_blank" title="Buka gambar 1 di tab baru">
+                                                            <img src="{{ asset($m->screenshot_1) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
+                                                        </a>
+                                                    @endif
+                                                    @if($m->screenshot_2)
+                                                        <a href="{{ asset($m->screenshot_2) }}" target="_blank" title="Buka gambar 2 di tab baru">
+                                                            <img src="{{ asset($m->screenshot_2) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
+                                                        </a>
+                                                    @endif
+                                                    @if($m->screenshot_3)
+                                                        <a href="{{ asset($m->screenshot_3) }}" target="_blank" title="Buka gambar 3 di tab baru">
+                                                            <img src="{{ asset($m->screenshot_3) }}" class="w-16 h-16 object-cover rounded-xl border border-slate-200 dark:border-slate-800 hover:scale-105 transition" />
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endif
+
                                         <!-- Score Input Form -->
                                         @if($m->status === 'pending' && $m->team1_id && $m->team2_id)
                                             <div class="space-y-3 bg-blue-50/20 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/30 rounded-2xl p-4">

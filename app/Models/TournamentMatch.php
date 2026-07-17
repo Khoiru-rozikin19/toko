@@ -63,4 +63,12 @@ class TournamentMatch extends Model
     {
         return $this->belongsTo(TournamentRegistration::class, 'winner_id');
     }
+
+    /**
+     * Get the team reported as winner by the captain.
+     */
+    public function reportedWinner()
+    {
+        return $this->belongsTo(TournamentRegistration::class, 'reported_winner_id');
+    }
 }
