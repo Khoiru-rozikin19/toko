@@ -128,6 +128,24 @@ app.post('/send-group-message', async (req, res) => {
     }
 });
 
+app.get('/groups', async (req, res) => {
+    if (connectionStatus !== 'ready') {
+        return res.status(503).json({ error: 'WhatsApp is not ready' });
+    }
+    
+    try {
+        const groups = await sock.groupFetchAllParticipating();
+        const list = Object.values(groups).map(g => ({
+            id: g.id,
+            subject: g.subject
+        }));
+        res.json({ success: true, groups: list });
+    } catch (err) {
+        console.error('Error fetching groups:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/disconnect', async (req, res) => {
     try {
         if (sock) {

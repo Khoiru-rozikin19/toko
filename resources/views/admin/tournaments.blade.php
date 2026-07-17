@@ -197,22 +197,31 @@
 
                                         <!-- Score Input Form -->
                                         @if($m->status === 'pending' && $m->team1_id && $m->team2_id)
-                                            <form action="{{ route('admin.tournaments.update_match_score', $m->id) }}" method="POST" class="bg-blue-50/20 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/30 rounded-2xl p-4 space-y-3">
-                                                @csrf
-                                                <div class="flex items-center gap-3">
-                                                    <div class="flex-1 space-y-1">
-                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 1</label>
-                                                        <input type="number" name="team1_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
+                                            <div class="space-y-3 bg-blue-50/20 dark:bg-blue-950/10 border border-blue-100/50 dark:border-blue-900/30 rounded-2xl p-4">
+                                                <form action="{{ route('admin.tournaments.update_match_score', $m->id) }}" method="POST" class="space-y-3">
+                                                    @csrf
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="flex-1 space-y-1">
+                                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 1</label>
+                                                            <input type="number" name="team1_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
+                                                        </div>
+                                                        <div class="flex-1 space-y-1">
+                                                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 2</label>
+                                                            <input type="number" name="team2_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
+                                                        </div>
                                                     </div>
-                                                    <div class="flex-1 space-y-1">
-                                                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Skor Tim 2</label>
-                                                        <input type="number" name="team2_score" min="0" max="7" placeholder="Skor" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none text-center font-bold" required>
-                                                    </div>
-                                                </div>
-                                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs transition duration-150">
-                                                    💾 Simpan & Loloskan Pemenang
-                                                </button>
-                                            </form>
+                                                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs transition duration-150">
+                                                        💾 Simpan & Loloskan Pemenang
+                                                    </button>
+                                                </form>
+                                                
+                                                <form action="{{ route('admin.tournaments.matches.remind', $m->id) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-2 rounded-xl text-xs transition duration-150 flex items-center justify-center space-x-1.5">
+                                                        <span>📢 Colek Kapten via WA (Grup + Japri)</span>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         @endif
                                     </div>
                                 @endforeach
@@ -373,6 +382,26 @@
                     <div class="space-y-1.5">
                         <label for="start_date" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Jadwal Tanding</label>
                         <input type="datetime-local" id="start_date" name="start_date" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="whatsapp_group_jid" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Grup WhatsApp Turnamen</label>
+                        <select id="whatsapp_group_jid" name="whatsapp_group_jid" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm font-semibold transition-all duration-200">
+                            <option value="">-- Tanpa Grup WhatsApp / Hubungkan Nanti --</option>
+                            @foreach($whatsappGroups as $g)
+                                <option value="{{ $g['id'] }}">{{ $g['subject'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="start_time" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Waktu Mulai Babak 1 (Ronde 1)</label>
+                        <input type="datetime-local" id="start_time" name="start_time" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="session_interval" class="block text-xs font-bold text-slate-550 dark:text-slate-400 uppercase tracking-wider">Jeda Waktu per Sesi (Menit)</label>
+                        <input type="number" id="session_interval" name="session_interval" min="5" value="60" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 focus:outline-none rounded-xl text-sm transition-all duration-200">
                     </div>
 
                     <div class="space-y-1.5 sm:col-span-2">

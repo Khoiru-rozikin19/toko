@@ -42,6 +42,27 @@ class WhatsappService
     }
 
     /**
+     * Get list of all WhatsApp groups the bot is in
+     */
+    public function getGroups(): array
+    {
+        if (!$this->enabled) {
+            return [];
+        }
+
+        try {
+            $response = Http::timeout(5)->get("{$this->apiUrl}/groups");
+            if ($response->successful()) {
+                return $response->json('groups') ?? [];
+            }
+        } catch (\Exception $e) {
+            Log::error("WhatsappService failed to fetch groups: " . $e->getMessage());
+        }
+
+        return [];
+    }
+
+    /**
      * Send message to personal JID
      */
     public function sendGenericMessage($phone, $message): bool
@@ -100,6 +121,36 @@ class WhatsappService
             return $response->json('success', false);
         } catch (\Exception $e) {
             Log::error("WhatsappService sendGroupMessage Exception: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send message to a specific WhatsApp Group
+     */
+    public function sendGroupMessageTo($groupId, $message): bool
+    {
+        if (!$this->enabled || empty($groupId)) {
+            Log::info("WhatsappService: Bot is disabled or target Group JID is empty.");
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(8)
+                ->withoutVerifying()
+                ->post("{$this->apiUrl}/send-group-message", [
+                    'groupId' => $groupId,
+                    'message' => $message
+                ]);
+
+            if ($response->failed()) {
+                Log::error("WhatsappService sendGroupMessageTo Failed: " . $response->body());
+                return false;
+            }
+
+            return $response->json('success', false);
+        } catch (\Exception $e) {
+            Log::error("WhatsappService sendGroupMessageTo Exception: " . $e->getMessage());
             return false;
         }
     }

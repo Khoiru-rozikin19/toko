@@ -340,7 +340,31 @@
                                         <!-- Column Matches -->
                                         <div class="flex-1 flex flex-col justify-around py-4">
                                             @foreach($bracketStructure[$r] as $matchNum => $match)
-                                                <div class="bracket-match-card space-y-2">
+                                                <div class="bracket-match-card space-y-2 {{ $match['id'] ? 'cursor-pointer hover:border-blue-500/50' : 'opacity-75' }}"
+                                                     @if($match['id'])
+                                                         onclick="openMatchDetailModal(this)"
+                                                         data-id="{{ $match['id'] }}"
+                                                         data-status="{{ $match['status'] }}"
+                                                         data-match-num="{{ $match['match_number'] }}"
+                                                         data-round-name="{{ $roundNames[$r] }}"
+                                                         data-team1-id="{{ $match['team1'] ? $match['team1']->id : '' }}"
+                                                         data-team2-id="{{ $match['team2'] ? $match['team2']->id : '' }}"
+                                                         data-team1-name="{{ $match['team1'] ? $match['team1']->team_name : ($match['slot1_num'] ? 'Slot ' . $match['slot1_num'] : 'TBD') }}"
+                                                         data-team2-name="{{ $match['team2'] ? $match['team2']->team_name : ($match['slot2_num'] ? 'Slot ' . $match['slot2_num'] : 'TBD') }}"
+                                                         data-team1-score="{{ $match['team1_score'] ?? '-' }}"
+                                                         data-team2-score="{{ $match['team2_score'] ?? '-' }}"
+                                                         data-team1-phone="{{ $match['team1'] && $match['team1']->captain ? $match['team1']->captain->phone : '' }}"
+                                                         data-team2-phone="{{ $match['team2'] && $match['team2']->captain ? $match['team2']->captain->phone : '' }}"
+                                                         data-team1-captain-name="{{ $match['team1'] && $match['team1']->captain ? $match['team1']->captain->name : '' }}"
+                                                         data-team2-captain-name="{{ $match['team2'] && $match['team2']->captain ? $match['team2']->captain->name : '' }}"
+                                                         data-team1-captain-id="{{ $match['team1'] ? $match['team1']->captain_id : '' }}"
+                                                         data-team2-captain-id="{{ $match['team2'] ? $match['team2']->captain_id : '' }}"
+                                                         data-room-id="{{ $match['room_id'] ?? '' }}"
+                                                         data-room-password="{{ $match['room_password'] ?? '' }}"
+                                                         data-roster1="{{ json_encode($match['team1'] ? $match['team1']->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
+                                                         data-roster2="{{ json_encode($match['team2'] ? $match['team2']->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
+                                                     @endif
+                                                >
                                                     <!-- Top Metadata -->
                                                     <div class="flex items-center justify-between text-[9px] text-slate-400 dark:text-slate-500 font-bold px-0.5">
                                                         <span>Match {{ $matchNum }}</span>
@@ -427,7 +451,31 @@
                                         ];
                                     @endphp
                                     
-                                    <div class="bracket-match-card space-y-2 border-2 border-slate-100 dark:border-slate-800/80 shadow-xs">
+                                    <div class="bracket-match-card space-y-2 border-2 border-slate-100 dark:border-slate-800/80 shadow-xs {{ $thirdPlaceMatch ? 'cursor-pointer hover:border-blue-500/50' : 'opacity-75' }}"
+                                         @if($thirdPlaceMatch)
+                                             onclick="openMatchDetailModal(this)"
+                                             data-id="{{ $thirdPlaceMatch->id }}"
+                                             data-status="{{ $thirdPlaceMatch->status }}"
+                                             data-match-num="1"
+                                             data-round-name="Tempat Ketiga"
+                                             data-team1-id="{{ $thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->id : '' }}"
+                                             data-team2-id="{{ $thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->id : '' }}"
+                                             data-team1-name="{{ $thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->team_name : 'Kalah Semifinal 1' }}"
+                                             data-team2-name="{{ $thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->team_name : 'Kalah Semifinal 2' }}"
+                                             data-team1-score="{{ $thirdPlaceMatch->team1_score ?? '-' }}"
+                                             data-team2-score="{{ $thirdPlaceMatch->team2_score ?? '-' }}"
+                                             data-team1-phone="{{ $thirdPlaceMatch->team1 && $thirdPlaceMatch->team1->captain ? $thirdPlaceMatch->team1->captain->phone : '' }}"
+                                             data-team2-phone="{{ $thirdPlaceMatch->team2 && $thirdPlaceMatch->team2->captain ? $thirdPlaceMatch->team2->captain->phone : '' }}"
+                                             data-team1-captain-name="{{ $thirdPlaceMatch->team1 && $thirdPlaceMatch->team1->captain ? $thirdPlaceMatch->team1->captain->name : '' }}"
+                                             data-team2-captain-name="{{ $thirdPlaceMatch->team2 && $thirdPlaceMatch->team2->captain ? $thirdPlaceMatch->team2->captain->name : '' }}"
+                                             data-team1-captain-id="{{ $thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->captain_id : '' }}"
+                                             data-team2-captain-id="{{ $thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->captain_id : '' }}"
+                                             data-room-id="{{ $thirdPlaceMatch->room_id ?? '' }}"
+                                             data-room-password="{{ $thirdPlaceMatch->room_password ?? '' }}"
+                                             data-roster1="{{ json_encode($thirdPlaceMatch->team1 ? $thirdPlaceMatch->team1->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
+                                             data-roster2="{{ json_encode($thirdPlaceMatch->team2 ? $thirdPlaceMatch->team2->participants->map(fn($p) => ['nickname' => $p->nickname, 'game_id' => $p->game_id, 'role' => $p->role]) : []) }}"
+                                         @endif
+                                    >
                                         <!-- Top Metadata -->
                                         <div class="flex items-center justify-between text-[9px] text-slate-400 dark:text-slate-500 font-bold px-0.5">
                                             <span>Perebutan Juara 3</span>
@@ -839,5 +887,330 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedTab = localStorage.getItem('tournament_detail_active_tab_{{ $tournament->id }}') || 'bagan';
     switchDetailTab(savedTab);
 });
+</script>
+
+<!-- Modal Detail Match -->
+<div id="matchDetailModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- Backdrop -->
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs" onclick="closeMatchDetailModal()"></div>
+
+        <!-- Modal Box -->
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full rounded-3xl p-6 sm:p-8 space-y-6">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-850 pb-4">
+                <div>
+                    <span id="modalRoundName" class="bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-blue-200/20">ROUND</span>
+                    <h4 class="text-base font-extrabold text-slate-855 dark:text-slate-150 mt-1" id="modalMatchTitle">Match Detail</h4>
+                </div>
+                <button type="button" class="text-slate-400 hover:text-slate-650 dark:hover:text-slate-250 transition" onclick="closeMatchDetailModal()">
+                    <span class="text-xl">✕</span>
+                </button>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="flex border-b border-slate-100 dark:border-slate-850 text-xs font-bold gap-4">
+                <button type="button" id="tabBtnInfo" onclick="switchModalTab('info')" class="pb-3 border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 focus:outline-none">
+                    🎮 Info & Koordinasi
+                </button>
+                <button type="button" id="tabBtnRoster" onclick="switchModalTab('roster')" class="pb-3 border-b-2 border-transparent text-slate-400 dark:text-slate-500 focus:outline-none">
+                    🛡️ Daftar Roster Nickname
+                </button>
+            </div>
+
+            <!-- Tab Content: Info & Koordinasi -->
+            <div id="modalTabContentInfo" class="space-y-5">
+                
+                <!-- Captain Contacts -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl text-center space-y-2">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Kapten Tim 1</span>
+                        <p id="modalTeam1Captain" class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">-</p>
+                        <a id="modalTeam1WA" href="#" target="_blank" class="inline-flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-full transition shadow-xs">
+                            <span>💬 Hubungi WA</span>
+                        </a>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl text-center space-y-2">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Kapten Tim 2</span>
+                        <p id="modalTeam2Captain" class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">-</p>
+                        <a id="modalTeam2WA" href="#" target="_blank" class="inline-flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-full transition shadow-xs">
+                            <span>💬 Hubungi WA</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Room Credentials Display & Input -->
+                <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl space-y-3">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200/30 pb-1">🔑 Kredensial Room Lobby FF</span>
+                    
+                    <!-- View Room ID/Password -->
+                    <div id="modalViewRoom" class="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400">ROOM ID</p>
+                            <p id="modalShowRoomId" class="font-extrabold text-slate-800 dark:text-slate-200 text-sm mt-0.5">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400">PASSWORD</p>
+                            <p id="modalShowRoomPassword" class="font-extrabold text-slate-800 dark:text-slate-200 text-sm mt-0.5">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Edit Room ID/Password (Captains only) -->
+                    @auth
+                        <form id="modalFormRoom" action="#" method="POST" class="space-y-3 pt-2 border-t border-slate-200/20" style="display: none;">
+                            @csrf
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label for="input_room_id" class="block text-[10px] font-bold text-slate-400 uppercase">Input Room ID</label>
+                                    <input type="text" name="room_id" id="input_room_id" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none rounded-xl text-xs" placeholder="Misal: 1234567" required>
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="input_room_password" class="block text-[10px] font-bold text-slate-400 uppercase">Input Password</label>
+                                    <input type="text" name="room_password" id="input_room_password" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none rounded-xl text-xs" placeholder="Password Room" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl text-xs transition">
+                                🚀 Bagikan Info Room ke WhatsApp Group & Lawan
+                            </button>
+                        </form>
+                    @endauth
+                </div>
+
+                <!-- Upload Screenshot Form (Captains only) -->
+                @auth
+                    <div id="modalContainerReport" class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-4 rounded-2xl space-y-3" style="display: none;">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200/30 pb-1">🏆 Unggah Hasil Pertandingan (Bo3)</span>
+                        
+                        <form id="modalFormReport" action="#" method="POST" enctype="multipart/form-data" class="space-y-4">
+                            @csrf
+                            
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="space-y-1 col-span-2">
+                                    <label for="reported_winner_id" class="block text-[10px] font-bold text-slate-400 uppercase">Klaim Pemenang Match</label>
+                                    <select id="reported_winner_id" name="reported_winner_id" class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs" required>
+                                        <!-- Will be populated dynamically by JS -->
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Skor Match (Game)</label>
+                                    <div class="flex items-center space-x-1">
+                                        <input type="number" name="team1_score" id="input_score1" min="0" max="3" class="w-10 px-1 py-2 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none rounded-xl text-xs" required>
+                                        <span class="text-xs text-slate-400">-</span>
+                                        <input type="number" name="team2_score" id="input_score2" min="0" max="3" class="w-10 px-1 py-2 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none rounded-xl text-xs" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="space-y-1">
+                                    <label for="screenshot_1" class="block text-[10px] font-bold text-slate-400 uppercase">Bukti Screenshot Game 1 (Wajib)</label>
+                                    <input type="file" name="screenshot_1" id="screenshot_1" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-slate-850 file:text-blue-700 dark:file:text-blue-300" required>
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="screenshot_2" class="block text-[10px] font-bold text-slate-400 uppercase">Bukti Screenshot Game 2 (Opsional)</label>
+                                    <input type="file" name="screenshot_2" id="screenshot_2" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-slate-850 file:text-blue-700 dark:file:text-blue-300">
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="screenshot_3" class="block text-[10px] font-bold text-slate-400 uppercase">Bukti Screenshot Game 3 (Opsional)</label>
+                                    <input type="file" name="screenshot_3" id="screenshot_3" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 dark:file:bg-slate-850 file:text-blue-700 dark:file:text-blue-300">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-emerald-600/10">
+                                ✅ Kirim Laporan Hasil & Bukti Screenshot
+                            </button>
+                        </form>
+                    </div>
+                @endauth
+            </div>
+
+            <!-- Tab Content: Roster List -->
+            <div id="modalTabContentRoster" class="space-y-4 hidden">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Team 1 Roster -->
+                    <div class="space-y-2">
+                        <span id="modalTeam1RosterTitle" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200/30 pb-1">TIM 1</span>
+                        <div id="modalTeam1RosterList" class="space-y-2 text-xs">
+                            <!-- Will be populated dynamically by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Team 2 Roster -->
+                    <div class="space-y-2">
+                        <span id="modalTeam2RosterTitle" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200/30 pb-1">TIM 2</span>
+                        <div id="modalTeam2RosterList" class="space-y-2 text-xs">
+                            <!-- Will be populated dynamically by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function switchDetailTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.detail-tab-content').forEach(el => {
+        el.classList.add('hidden');
+    });
+
+    // Reset button styles to inactive
+    document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+        btn.className = "detail-tab-btn pb-3 text-sm font-bold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition duration-150 whitespace-nowrap flex items-center space-x-2";
+    });
+
+    // Show selected content
+    const activeContent = document.getElementById('detail-tab-content-' + tabName);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+    }
+
+    // Set active button styles
+    const activeBtn = document.getElementById('detail-tab-button-' + tabName);
+    if (activeBtn) {
+        activeBtn.className = "detail-tab-btn pb-3 text-sm font-extrabold border-b-2 border-orange-500 text-orange-500 dark:text-orange-400 transition duration-150 whitespace-nowrap flex items-center space-x-2";
+    }
+    
+    // Store current tab in localStorage
+    localStorage.setItem('tournament_detail_active_tab_{{ $tournament->id }}', tabName);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Read tab from localStorage if exists, default to 'bagan'
+    const savedTab = localStorage.getItem('tournament_detail_active_tab_{{ $tournament->id }}') || 'bagan';
+    switchDetailTab(savedTab);
+});
+
+function openMatchDetailModal(card) {
+    const matchId = card.getAttribute('data-id');
+    if (!matchId) return;
+
+    const status = card.getAttribute('data-status');
+    const matchNum = card.getAttribute('data-match-num');
+    const roundName = card.getAttribute('data-round-name');
+    const team1Name = card.getAttribute('data-team1-name');
+    const team2Name = card.getAttribute('data-team2-name');
+    const team1Id = card.getAttribute('data-team1-id');
+    const team2Id = card.getAttribute('data-team2-id');
+    
+    const team1Captain = card.getAttribute('data-team1-captain-name') || '-';
+    const team2Captain = card.getAttribute('data-team2-captain-name') || '-';
+    const team1Phone = card.getAttribute('data-team1-phone') || '';
+    const team2Phone = card.getAttribute('data-team2-phone') || '';
+    
+    const roomId = card.getAttribute('data-room-id') || '-';
+    const roomPassword = card.getAttribute('data-room-password') || '-';
+    
+    const roster1 = JSON.parse(card.getAttribute('data-roster1') || '[]');
+    const roster2 = JSON.parse(card.getAttribute('data-roster2') || '[]');
+
+    const currentUserId = {{ auth()->check() ? auth()->id() : 'null' }};
+    const team1CaptainId = card.getAttribute('data-team1-captain-id') || null;
+    const team2CaptainId = card.getAttribute('data-team2-captain-id') || null;
+    const isCaptain = (currentUserId && (currentUserId == team1CaptainId || currentUserId == team2CaptainId));
+
+    // Set basic texts
+    document.getElementById('modalRoundName').innerText = roundName;
+    document.getElementById('modalMatchTitle').innerText = `${team1Name} vs ${team2Name}`;
+    document.getElementById('modalTeam1Captain').innerText = team1Captain;
+    document.getElementById('modalTeam2Captain').innerText = team2Captain;
+    document.getElementById('modalShowRoomId').innerText = roomId;
+    document.getElementById('modalShowRoomPassword').innerText = roomPassword;
+
+    // Set WA links
+    const waUrl = (phone) => phone ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}` : '#';
+    const t1WA = document.getElementById('modalTeam1WA');
+    const t2WA = document.getElementById('modalTeam2WA');
+    
+    t1WA.href = waUrl(team1Phone);
+    t1WA.style.display = team1Phone ? 'inline-flex' : 'none';
+    t2WA.href = waUrl(team2Phone);
+    t2WA.style.display = team2Phone ? 'inline-flex' : 'none';
+
+    // Populating dropdown reported winner
+    const selectWinner = document.getElementById('reported_winner_id');
+    if (selectWinner) {
+        selectWinner.innerHTML = `
+            <option value="">-- Pilih Tim Pemenang --</option>
+            ${team1Id ? `<option value="${team1Id}">${team1Name}</option>` : ''}
+            ${team2Id ? `<option value="${team2Id}">${team2Name}</option>` : ''}
+        `;
+    }
+
+    // Populate Roster lists
+    document.getElementById('modalTeam1RosterTitle').innerText = `Roster: ${team1Name}`;
+    document.getElementById('modalTeam2RosterTitle').innerText = `Roster: ${team2Name}`;
+
+    const rosterListHtml = (roster) => {
+        if (roster.length === 0) return '<p class="text-slate-400 italic p-2">Belum ada roster terdaftar</p>';
+        return roster.map(p => `
+            <div class="bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-2.5 rounded-xl space-y-0.5">
+                <p class="font-extrabold text-slate-800 dark:text-slate-200 text-xs">🛡️ Nick: ${p.nickname}</p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID: ${p.game_id} | Role: ${p.role}</p>
+            </div>
+        `).join('');
+    };
+
+    document.getElementById('modalTeam1RosterList').innerHTML = rosterListHtml(roster1);
+    document.getElementById('modalTeam2RosterList').innerHTML = rosterListHtml(roster2);
+
+    // Configure room credentials form visibility
+    const formRoom = document.getElementById('modalFormRoom');
+    if (formRoom) {
+        if (isCaptain && status !== 'completed') {
+            formRoom.style.display = 'block';
+            formRoom.action = `/tournaments/matches/${matchId}/room`;
+            document.getElementById('input_room_id').value = roomId !== '-' ? roomId : '';
+            document.getElementById('input_room_password').value = roomPassword !== '-' ? roomPassword : '';
+        } else {
+            formRoom.style.display = 'none';
+        }
+    }
+
+    // Configure score reporting form visibility
+    const containerReport = document.getElementById('modalContainerReport');
+    if (containerReport) {
+        if (isCaptain && status !== 'completed' && team1Id && team2Id) {
+            containerReport.style.display = 'block';
+            document.getElementById('modalFormReport').action = `/tournaments/matches/${matchId}/report`;
+            document.getElementById('input_score1').value = '';
+            document.getElementById('input_score2').value = '';
+        } else {
+            containerReport.style.display = 'none';
+        }
+    }
+
+    // Switch default tab to info
+    switchModalTab('info');
+
+    // Show modal
+    document.getElementById('matchDetailModal').classList.remove('hidden');
+}
+
+function closeMatchDetailModal() {
+    document.getElementById('matchDetailModal').classList.add('hidden');
+}
+
+function switchModalTab(tab) {
+    const btnInfo = document.getElementById('tabBtnInfo');
+    const btnRoster = document.getElementById('tabBtnRoster');
+    const contentInfo = document.getElementById('modalTabContentInfo');
+    const contentRoster = document.getElementById('modalTabContentRoster');
+
+    if (tab === 'info') {
+        btnInfo.className = "pb-3 border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 focus:outline-none";
+        btnRoster.className = "pb-3 border-b-2 border-transparent text-slate-400 dark:text-slate-550 focus:outline-none";
+        contentInfo.classList.remove('hidden');
+        contentRoster.classList.add('hidden');
+    } else {
+        btnRoster.className = "pb-3 border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 focus:outline-none";
+        btnInfo.className = "pb-3 border-b-2 border-transparent text-slate-400 dark:text-slate-550 focus:outline-none";
+        contentRoster.classList.remove('hidden');
+        contentInfo.classList.add('hidden');
+    }
+}
 </script>
 @endsection

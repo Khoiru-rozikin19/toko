@@ -22,3 +22,4 @@ Artisan::command('products:sync-okeconnect', function () {
 })->purpose('Sync product open/close status from Okeconnect price list page');
 
 Schedule::command('products:sync-okeconnect')->everyFiveMinutes();
+Schedule::command('tournament:send-reminders')->everyMinute();

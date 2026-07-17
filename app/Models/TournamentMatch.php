@@ -19,6 +19,17 @@ class TournamentMatch extends Model
         'team2_score',
         'winner_id',
         'status', // pending, ongoing, completed
+        'scheduled_time',
+        'room_id',
+        'room_password',
+        'reported_winner_id',
+        'screenshot_1',
+        'screenshot_2',
+        'screenshot_3',
+    ];
+
+    protected $casts = [
+        'scheduled_time' => 'datetime',
     ];
 
     /**

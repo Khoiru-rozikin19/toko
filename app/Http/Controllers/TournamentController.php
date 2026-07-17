@@ -291,4 +291,125 @@ class TournamentController extends Controller
 
         return back()->with('success', $successMsg);
     }
+
+    /**
+     * Update room credentials for a match (Captains only).
+     */
+    public function updateRoomCredentials(Request $request, $id)
+    {
+        $request->validate([
+            'room_id' => 'required|string|max:100',
+            'room_password' => 'required|string|max:100',
+        ]);
+
+        $match = \App\Models\TournamentMatch::findOrFail($id);
+
+        // Pastikan user adalah kapten dari salah satu tim
+        $userId = auth()->id();
+        $isCaptain1 = $match->team1 && $match->team1->captain_id === $userId;
+        $isCaptain2 = $match->team2 && $match->team2->captain_id === $userId;
+
+        if (!$isCaptain1 && !$isCaptain2) {
+            return back()->with('error', 'Hanya Kapten Tim yang dapat menginput Room ID & Password.');
+        }
+
+        $match->update([
+            'room_id' => $request->room_id,
+            'room_password' => $request->room_password,
+        ]);
+
+        // Kirim WhatsApp jika grup terhubung
+        $tournament = $match->tournament;
+        if ($tournament->whatsapp_group_jid) {
+            try {
+                $team1Name = $match->team1 ? $match->team1->team_name : 'TBD';
+                $team2Name = $match->team2 ? $match->team2->team_name : 'TBD';
+                $message = "📢 *INFO KREDENSIAL ROOM FF (Match {$match->match_number})*\n\n"
+                         . "*Tim*: {$team1Name} vs {$team2Name}\n"
+                         . "*Room ID*: {$request->room_id}\n"
+                         . "*Password*: {$request->room_password}\n\n"
+                         . "Silakan kedua tim segera masuk dan memulai pertandingan!";
+                
+                $waService = app(\App\Services\WhatsappService::class);
+                if ($waService->isEnabled()) {
+                    $waService->sendGenericMessage($tournament->whatsapp_group_jid, $message);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp room update: " . $e->getMessage());
+            }
+        }
+
+        return back()->with('success', 'Kredensial Room berhasil dibagikan!');
+    }
+
+    /**
+     * Report score and upload screenshots for a match (Captains only).
+     */
+    public function reportMatchScore(Request $request, $id)
+    {
+        $request->validate([
+            'reported_winner_id' => 'required|integer|exists:tournament_registrations,id',
+            'team1_score' => 'required|integer|min:0',
+            'team2_score' => 'required|integer|min:0',
+            'screenshot_1' => 'required|file|image|max:5120',
+            'screenshot_2' => 'nullable|file|image|max:5120',
+            'screenshot_3' => 'nullable|file|image|max:5120',
+        ]);
+
+        $match = \App\Models\TournamentMatch::findOrFail($id);
+
+        // Pastikan user adalah kapten dari salah satu tim
+        $userId = auth()->id();
+        $isCaptain1 = $match->team1 && $match->team1->captain_id === $userId;
+        $isCaptain2 = $match->team2 && $match->team2->captain_id === $userId;
+
+        if (!$isCaptain1 && !$isCaptain2) {
+            return back()->with('error', 'Hanya Kapten Tim yang dapat melaporkan hasil pertandingan.');
+        }
+
+        // Upload files
+        $paths = [];
+        if (!file_exists(public_path('uploads/screenshots'))) {
+            mkdir(public_path('uploads/screenshots'), 0777, true);
+        }
+
+        foreach (['screenshot_1', 'screenshot_2', 'screenshot_3'] as $key) {
+            if ($request->hasFile($key)) {
+                $file = $request->file($key);
+                $fileName = 'match_' . $id . '_' . $key . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path('uploads/screenshots'), $fileName);
+                $paths[$key] = '/uploads/screenshots/' . $fileName;
+            }
+        }
+
+        $match->update(array_merge([
+            'reported_winner_id' => $request->reported_winner_id,
+            'team1_score' => $request->team1_score,
+            'team2_score' => $request->team2_score,
+        ], $paths));
+
+        // Kirim WhatsApp jika grup terhubung
+        $tournament = $match->tournament;
+        if ($tournament->whatsapp_group_jid) {
+            try {
+                $team1Name = $match->team1 ? $match->team1->team_name : 'TBD';
+                $team2Name = $match->team2 ? $match->team2->team_name : 'TBD';
+                $reporter = auth()->user()->name;
+                $message = "📢 *LAPORAN HASIL PERTANDINGAN (Match {$match->match_number})*\n\n"
+                         . "*Tim*: {$team1Name} vs {$team2Name}\n"
+                         . "*Skor Dilaporkan*: {$request->team1_score} - {$request->team2_score}\n"
+                         . "*Dilaporkan oleh*: {$reporter}\n\n"
+                         . "Bukti hasil pertandingan (screenshot Bo3) telah berhasil diunggah ke website. Menunggu persetujuan & verifikasi dari Admin!";
+                
+                $waService = app(\App\Services\WhatsappService::class);
+                if ($waService->isEnabled()) {
+                    $waService->sendGenericMessage($tournament->whatsapp_group_jid, $message);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send WhatsApp score report update: " . $e->getMessage());
+            }
+        }
+
+        return back()->with('success', 'Laporan skor dan screenshot berhasil dikirim!');
+    }
 }

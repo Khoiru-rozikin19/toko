@@ -19,11 +19,15 @@ class Tournament extends Model
         'prize_pool',
         'max_slots',
         'start_date',
+        'whatsapp_group_jid',
+        'start_time',
+        'session_interval',
     ];
 
     protected $casts = [
         'registration_fee' => 'decimal:2',
         'start_date' => 'datetime',
+        'start_time' => 'datetime',
     ];
 
     /**

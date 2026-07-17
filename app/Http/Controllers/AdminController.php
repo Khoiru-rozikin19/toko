@@ -1224,6 +1224,16 @@ class AdminController extends Controller
             $tournaments = \App\Models\Tournament::orderBy('created_at', 'desc')->get();
         }
 
+        $whatsappGroups = [];
+        if ($tab === 'create') {
+            try {
+                $whatsappService = app(\App\Services\WhatsappService::class);
+                $whatsappGroups = $whatsappService->getGroups();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to load WhatsApp groups: " . $e->getMessage());
+            }
+        }
+
         return view('admin.tournaments', [
             'title' => 'Manajemen Turnamen',
             'activeTab' => $tab,
@@ -1232,6 +1242,7 @@ class AdminController extends Controller
             'ongoingMatches' => $ongoingMatches,
             'pendingRegistrationsCount' => $pendingRegistrationsCount,
             'ongoingMatchesCount' => $ongoingMatchesCount,
+            'whatsappGroups' => $whatsappGroups,
         ]);
     }
 
@@ -1250,6 +1261,9 @@ class AdminController extends Controller
             'prize_pool' => 'required|string|max:255',
             'max_slots' => 'nullable|integer',
             'start_date' => 'nullable|date',
+            'whatsapp_group_jid' => 'nullable|string|max:255',
+            'start_time' => 'nullable|date',
+            'session_interval' => 'nullable|integer|min:5',
         ]);
 
         $type = $request->type;
@@ -1283,6 +1297,9 @@ class AdminController extends Controller
             'prize_pool' => $request->prize_pool,
             'max_slots' => $maxSlots,
             'start_date' => $request->start_date,
+            'whatsapp_group_jid' => $request->whatsapp_group_jid,
+            'start_time' => $request->start_time,
+            'session_interval' => $request->session_interval ?? 60,
         ]);
 
         return redirect()->route('admin.tournaments', ['tab' => 'list'])->with('success', 'Turnamen berhasil dibuat!');
@@ -1389,6 +1406,8 @@ class AdminController extends Controller
                         $totalRounds = log($pow, 2);
                         $matchesInRound1 = $pow / 2;
                         $half = $pow / 2;
+                        $startTime = $tournament->start_time;
+                        $sessionInterval = (int) ($tournament->session_interval ?? 60);
 
                         // Buat semua matches untuk setiap ronde
                         for ($round = 1; $round <= $totalRounds; $round++) {
@@ -1430,6 +1449,12 @@ class AdminController extends Controller
                                     }
                                 }
 
+                                $scheduledTime = null;
+                                if ($round === 1 && $startTime) {
+                                    $sessionIndex = (int) floor(($matchNum - 1) / 4);
+                                    $scheduledTime = (clone $startTime)->addMinutes($sessionIndex * $sessionInterval);
+                                }
+
                                 \App\Models\TournamentMatch::create([
                                     'tournament_id' => $tournament->id,
                                     'round_number' => $round,
@@ -1437,6 +1462,7 @@ class AdminController extends Controller
                                     'team1_id' => $team1Id,
                                     'team2_id' => $team2Id,
                                     'status' => 'pending',
+                                    'scheduled_time' => $scheduledTime,
                                 ]);
                             }
                         }
@@ -1502,6 +1528,23 @@ class AdminController extends Controller
                                    . "🏆 *Nama Event:* {$tournament->name}\n"
                                    . "Status turnamen saat ini telah berganti menjadi *SEDANG BERJALAN*.\n"
                                    . "Pantau bagan dan jadwal pertandingan langsung di halaman Turnamen website RZK Store!";
+
+                    $round1Matches = \App\Models\TournamentMatch::where('tournament_id', $tournament->id)
+                        ->where('round_number', 1)
+                        ->with(['team1', 'team2'])
+                        ->get();
+
+                    if ($round1Matches->isNotEmpty()) {
+                        $matchesText = "";
+                        foreach ($round1Matches as $m) {
+                            $t1Name = $m->team1 ? $m->team1->team_name : 'TBD';
+                            $t2Name = $m->team2 ? $m->team2->team_name : 'TBD';
+                            $timeStr = $m->scheduled_time ? $m->scheduled_time->translatedFormat('H:i') : 'Segera';
+                            $matchesText .= "⚔️ *Match {$m->match_number}*: {$t1Name} vs {$t2Name} (Jam {$timeStr} WIB)\n";
+                        }
+
+                        $statusMessage .= "\n\n📋 *Jadwal Pertandingan Ronde 1:*\n" . $matchesText;
+                    }
                 } elseif ($tournament->status === 'completed') {
                     $statusMessage = "🏆 *TURNAMEN SELESAI!* 🏆\n\n"
                                    . "Event turnamen *{$tournament->name}* telah selesai diselenggarakan.\n"
@@ -1509,7 +1552,11 @@ class AdminController extends Controller
                 }
                 
                 if (!empty($statusMessage)) {
-                    $whatsappService->sendGroupMessage($statusMessage);
+                    if ($tournament->whatsapp_group_jid) {
+                        $whatsappService->sendGroupMessageTo($tournament->whatsapp_group_jid, $statusMessage);
+                    } else {
+                        $whatsappService->sendGroupMessage($statusMessage);
+                    }
                 }
             }
         } catch (\Exception $e) {
@@ -1842,6 +1889,53 @@ class AdminController extends Controller
         });
 
         return redirect()->back()->with('success', 'Turnamen "' . $tournament->name . '" beserta seluruh data terkait berhasil dihapus!');
+    }
+
+    /**
+     * Send manual WhatsApp colek/reminder to both captains of a match.
+     */
+    public function remindMatchCaptains($id)
+    {
+        $match = \App\Models\TournamentMatch::findOrFail($id);
+        $tournament = $match->tournament;
+
+        $team1Name = $match->team1 ? $match->team1->team_name : 'TBD';
+        $team2Name = $match->team2 ? $match->team2->team_name : 'TBD';
+
+        $waService = app(\App\Services\WhatsappService::class);
+        if (!$waService->isEnabled()) {
+            return redirect()->back()->with('error', 'WhatsApp Bot dinonaktifkan.');
+        }
+
+        // 1. Kirim pesan ke WhatsApp Group jika terhubung
+        if ($tournament->whatsapp_group_jid) {
+            $groupMessage = "⚠️ *PENGINGAT MATCH LOBBY: {$team1Name} vs {$team2Name} (Match {$match->match_number})*\n\n"
+                          . "Kepada kapten tim *{$team1Name}* dan *{$team2Name}*, mohon segera membuat Room dan bertanding!\n\n"
+                          . "🛡️ Kapten Tim 1: " . ($match->team1 && $match->team1->captain ? $match->team1->captain->name : '-') . "\n"
+                          . "🛡️ Kapten Tim 2: " . ($match->team2 && $match->team2->captain ? $match->team2->captain->name : '-') . "\n\n"
+                          . "Harap koordinasikan pembuatan Custom Room secepatnya.";
+            $waService->sendGroupMessageTo($tournament->whatsapp_group_jid, $groupMessage);
+        }
+
+        // 2. Kirim pesan japri ke Kapten Tim 1
+        if ($match->team1 && $match->team1->captain && $match->team1->captain->phone) {
+            $directMessage1 = "🔔 *PANGGILAN BERTANDING (RZK Turnamen)*\n\n"
+                            . "Halo Kapten *{$match->team1->captain->name}* dari tim *{$team1Name}*,\n"
+                            . "Lawan Anda *{$team2Name}* sedang menunggu. Harap segera hubungi Kapten lawan dan buat/masuk Custom Room!\n\n"
+                            . "Tautan WhatsApp Kapten lawan: wa.me/" . preg_replace('/[^0-9]/', '', $match->team2 && $match->team2->captain ? $match->team2->captain->phone : '');
+            $waService->sendGenericMessage($match->team1->captain->phone, $directMessage1);
+        }
+
+        // 3. Kirim pesan japri ke Kapten Tim 2
+        if ($match->team2 && $match->team2->captain && $match->team2->captain->phone) {
+            $directMessage2 = "🔔 *PANGGILAN BERTANDING (RZK Turnamen)*\n\n"
+                            . "Halo Kapten *{$match->team2->captain->name}* dari tim *{$team2Name}*,\n"
+                            . "Lawan Anda *{$team1Name}* sedang menunggu. Harap segera hubungi Kapten lawan dan buat/masuk Custom Room!\n\n"
+                            . "Tautan WhatsApp Kapten lawan: wa.me/" . preg_replace('/[^0-9]/', '', $match->team1 && $match->team1->captain ? $match->team1->captain->phone : '');
+            $waService->sendGenericMessage($match->team2->captain->phone, $directMessage2);
+        }
+
+        return redirect()->back()->with('success', 'Pengingat WhatsApp berhasil dikirim ke kapten dan grup!');
     }
 }
 
