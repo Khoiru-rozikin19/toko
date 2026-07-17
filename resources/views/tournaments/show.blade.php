@@ -178,11 +178,11 @@
                         $teamsBySlot = [];
                         foreach ($approvedTeams as $idx => $team) {
                             if ($idx < $half) {
-                                // Slot genap: 2, 4, 6... N
-                                $slotNum = 2 * ($idx + 1);
+                                // Sisi kanan terisi dulu (slot > half)
+                                $slotNum = $half + 1 + $idx;
                             } else {
-                                // Slot ganjil: 1, 3, 5... N-1
-                                $slotNum = 1 + 2 * ($idx - $half);
+                                // Sisi kiri terisi setelahnya (slot <= half)
+                                $slotNum = 1 + ($idx - $half);
                             }
                             $teamsBySlot[$slotNum] = $team;
                         }
@@ -219,13 +219,8 @@
                                     $status = 'pending';
 
                                     if ($round === 1) {
-                                        if ($matchNum % 2 !== 0) {
-                                            $slot1 = 2 * $matchNum - 1;
-                                            $slot2 = 2 * $matchNum + 1;
-                                        } else {
-                                            $slot1 = 2 * $matchNum - 2;
-                                            $slot2 = 2 * $matchNum;
-                                        }
+                                        $slot1 = 2 * $matchNum - 1;
+                                        $slot2 = 2 * $matchNum;
                                         $team1 = $teamsBySlot[$slot1] ?? null;
                                         $team2 = $teamsBySlot[$slot2] ?? null;
                                     }
@@ -239,8 +234,8 @@
                                     'winner_id' => $winnerId,
                                     'status' => $status,
                                     'match_number' => $matchNum,
-                                    'slot1_num' => ($round === 1) ? (($matchNum % 2 !== 0) ? (2 * $matchNum - 1) : (2 * $matchNum - 2)) : null,
-                                    'slot2_num' => ($round === 1) ? (($matchNum % 2 !== 0) ? (2 * $matchNum + 1) : (2 * $matchNum)) : null,
+                                    'slot1_num' => ($round === 1) ? (2 * $matchNum - 1) : null,
+                                    'slot2_num' => ($round === 1) ? (2 * $matchNum) : null,
                                 ];
                             }
                         }
@@ -313,8 +308,9 @@
                         <div class="bracket-scroll-container no-scrollbar">
                             <div class="bracket-wrapper">
                                 @if($totalRounds > 1)
-                                    <!-- ================== WING KIRI (Odd Matches) ================== -->
+                                    <!-- ================== WING KIRI (First Half of Matches) ================== -->
                                     @for($r = 1; $r < $totalRounds; $r++)
+                                        @php $roundMatchesCount = $maxSlots / pow(2, $r); @endphp
                                         <div class="bracket-column">
                                             <div class="text-center absolute top-0 left-0 right-0">
                                                 <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200/10">
@@ -322,7 +318,7 @@
                                                 </span>
                                             </div>
                                             @foreach($bracketStructure[$r] as $matchNum => $match)
-                                                @if($matchNum % 2 !== 0)
+                                                @if($matchNum <= $roundMatchesCount / 2)
                                                     <!-- Match Box -->
                                                     <div class="bracket-match-card space-y-2">
                                                         <!-- Team 1 -->
@@ -411,8 +407,9 @@
                                 </div>
 
                                 @if($totalRounds > 1)
-                                    <!-- ================== WING KANAN (Even Matches) ================== -->
+                                    <!-- ================== WING KANAN (Second Half of Matches) ================== -->
                                     @for($r = $totalRounds - 1; $r >= 1; $r--)
+                                        @php $roundMatchesCount = $maxSlots / pow(2, $r); @endphp
                                         <div class="bracket-column">
                                             <div class="text-center absolute top-0 left-0 right-0">
                                                 <span class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-slate-200/10">
@@ -420,7 +417,7 @@
                                                 </span>
                                             </div>
                                             @foreach($bracketStructure[$r] as $matchNum => $match)
-                                                @if($matchNum % 2 === 0)
+                                                @if($matchNum > $roundMatchesCount / 2)
                                                     <!-- Match Box -->
                                                     <div class="bracket-match-card space-y-2">
                                                         <!-- Team 1 -->

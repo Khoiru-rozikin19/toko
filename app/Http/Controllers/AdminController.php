@@ -1402,34 +1402,28 @@ class AdminController extends Controller
                                 // Hanya isi tim di Ronde 1
                                 if ($round === 1) {
                                     // Tentukan nomor slot (1-indexed) untuk team 1 dan team 2 di match ini
-                                    if ($matchNum % 2 !== 0) {
-                                        // Match ganjil: Sisi Kiri (Slot 2m-1 vs Slot 2m+1)
-                                        $slot1 = 2 * $matchNum - 1;
-                                        $slot2 = 2 * $matchNum + 1;
-                                    } else {
-                                        // Match genap: Sisi Kanan (Slot 2m-2 vs Slot 2m)
-                                        $slot1 = 2 * $matchNum - 2;
-                                        $slot2 = 2 * $matchNum;
-                                    }
+                                    $slot1 = 2 * $matchNum - 1;
+                                    $slot2 = 2 * $matchNum;
 
-                                    // Map slot ke indeks tim berdasarkan aturan ganjil-genap
-                                    // Sisi kanan (genap) terisi dulu, lalu sisi kiri (ganjil)
+                                    // Map slot ke indeks tim berdasarkan aturan World Cup (Sisi kanan terisi dulu, baru sisi kiri)
+                                    // Sisi kanan (slot > half): index = slot - half - 1
+                                    // Sisi kiri (slot <= half): index = half + slot - 1
                                     
                                     // Team 1
-                                    if ($slot1 % 2 === 0) {
-                                        $idx1 = ($slot1 / 2) - 1;
+                                    if ($slot1 > $half) {
+                                        $idx1 = $slot1 - $half - 1;
                                     } else {
-                                        $idx1 = $half + (($slot1 - 1) / 2);
+                                        $idx1 = $half + $slot1 - 1;
                                     }
                                     if (isset($teams[$idx1])) {
                                         $team1Id = $teams[$idx1]->id;
                                     }
 
                                     // Team 2
-                                    if ($slot2 % 2 === 0) {
-                                        $idx2 = ($slot2 / 2) - 1;
+                                    if ($slot2 > $half) {
+                                        $idx2 = $slot2 - $half - 1;
                                     } else {
-                                        $idx2 = $half + (($slot2 - 1) / 2);
+                                        $idx2 = $half + $slot2 - 1;
                                     }
                                     if (isset($teams[$idx2])) {
                                         $team2Id = $teams[$idx2]->id;
